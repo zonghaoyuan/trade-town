@@ -14,6 +14,12 @@
   --town-red: #e15d57;
   --town-blue: #7ab5ff;
   --town-pixel-shadow: 4px 4px 0 rgba(18, 15, 28, 0.82);
+  /* A compact, readable type scale for the pixel font. */
+  --town-text-micro: 0.625rem;
+  --town-text-caption: 0.6875rem;
+  --town-text-small: 0.75rem;
+  --town-text-body: 0.8125rem;
+  --town-text-ui: 0.875rem;
 }
 
 html,
@@ -139,13 +145,13 @@ textarea {
 .pixel-brand p {
   margin: 9px 0 0;
   color: var(--town-cream);
-  font-size: 9px;
+  font-size: var(--town-text-small);
   letter-spacing: 1.2px;
   text-transform: uppercase;
 }
 
 .pixel-network {
-  min-width: 248px;
+  min-width: 288px;
   padding: 9px 13px 8px 12px;
   border: 4px solid var(--town-shadow);
   background: var(--town-clay);
@@ -184,7 +190,7 @@ textarea {
 
 .pixel-network strong {
   color: var(--town-paper);
-  font-size: 11px;
+  font-size: var(--town-text-body);
   font-weight: 400;
   letter-spacing: 0.7px;
   text-transform: uppercase;
@@ -193,7 +199,7 @@ textarea {
 .pixel-network span {
   overflow: hidden;
   color: var(--town-mist);
-  font-size: 7px;
+  font-size: var(--town-text-caption);
   letter-spacing: 0.7px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -207,14 +213,14 @@ textarea {
 }
 
 .pixel-button {
-  min-height: 42px;
+  min-height: 44px;
   padding: 7px 13px 9px;
   border: 9px solid transparent;
   border-image: url('../assets/ui/button.svg') 4 fill stretch;
   color: white;
   background: transparent;
   cursor: pointer;
-  font-size: 10px;
+  font-size: var(--town-text-small);
   letter-spacing: 0.4px;
   text-shadow: 0 2px 0 rgba(18, 15, 28, 0.72);
   text-transform: uppercase;
@@ -263,6 +269,7 @@ textarea {
 
 .pixel-market-ticker button {
   min-width: 0;
+  min-height: 44px;
   padding: 7px 10px;
   border: 3px solid var(--town-night);
   color: var(--town-paper);
@@ -287,18 +294,18 @@ textarea {
 
 .pixel-market-ticker strong {
   color: var(--town-gold);
-  font-size: 11px;
+  font-size: var(--town-text-body);
   font-weight: 400;
 }
 
 .pixel-market-ticker span {
   overflow: hidden;
-  font-size: 11px;
+  font-size: var(--town-text-body);
   text-overflow: ellipsis;
 }
 
 .pixel-market-ticker small {
-  font-size: 8px;
+  font-size: var(--town-text-caption);
 }
 
 .pixel-up {
@@ -316,7 +323,7 @@ textarea {
   margin: 0 auto;
   padding: 15px;
   display: grid;
-  grid-template-columns: 242px minmax(640px, 1fr) 62px;
+  grid-template-columns: 284px minmax(640px, 1fr) 86px;
   align-items: start;
   gap: 14px;
 }
@@ -344,7 +351,7 @@ textarea {
 .pixel-board-title > span,
 .pixel-board-title > div > span {
   color: var(--town-mist);
-  font-size: 7px;
+  font-size: var(--town-text-caption);
   letter-spacing: 0.9px;
   text-transform: uppercase;
 }
@@ -365,7 +372,7 @@ textarea {
 
 .pixel-market-hero > span {
   color: var(--town-cream);
-  font-size: 7px;
+  font-size: var(--town-text-caption);
   text-transform: uppercase;
 }
 
@@ -395,7 +402,7 @@ textarea {
 }
 
 .pixel-market-hero small {
-  font-size: 9px;
+  font-size: var(--town-text-small);
 }
 
 .pixel-candle-wrap {
@@ -415,7 +422,7 @@ textarea {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  font-size: 6px;
+  font-size: var(--town-text-micro);
   text-transform: uppercase;
 }
 
@@ -442,8 +449,8 @@ textarea {
 }
 
 .pixel-quote-grid div {
-  min-height: 43px;
-  padding: 7px 8px;
+  min-height: 52px;
+  padding: 9px 10px;
   border-right: 2px solid var(--town-night);
   border-bottom: 2px solid var(--town-night);
 }
@@ -458,7 +465,7 @@ textarea {
 
 .pixel-quote-grid dt {
   color: var(--town-mist);
-  font-size: 6px;
+  font-size: var(--town-text-micro);
   letter-spacing: 0.7px;
   text-transform: uppercase;
 }
@@ -466,7 +473,7 @@ textarea {
 .pixel-quote-grid dd {
   margin: 5px 0 0;
   color: var(--town-paper);
-  font-size: 9px;
+  font-size: var(--town-text-small);
 }
 
 .pixel-market-list {
@@ -486,8 +493,8 @@ textarea {
 }
 
 .pixel-market-list button {
-  min-height: 49px;
-  padding: 6px 8px;
+  min-height: 58px;
+  padding: 8px 10px;
   display: grid;
   grid-template-columns: 7px 1fr auto;
   align-items: center;
@@ -523,7 +530,7 @@ textarea {
 .pixel-market-list strong,
 .pixel-agent-list strong {
   overflow: hidden;
-  font-size: 9px;
+  font-size: var(--town-text-small);
   font-weight: 400;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -533,13 +540,13 @@ textarea {
 .pixel-agent-list small {
   overflow: hidden;
   color: var(--town-mist);
-  font-size: 7px;
+  font-size: var(--town-text-micro);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .pixel-market-list button > span:last-child {
-  font-size: 8px;
+  font-size: var(--town-text-caption);
 }
 
 .pixel-chain-rule {
@@ -559,15 +566,15 @@ textarea {
 
 .pixel-chain-rule p {
   margin: 0;
-  font-size: 7px;
-  line-height: 1.55;
+  font-size: var(--town-text-caption);
+  line-height: 1.6;
 }
 
 .pixel-chain-rule strong {
   display: block;
   margin-bottom: 3px;
   color: var(--town-gold);
-  font-size: 8px;
+  font-size: var(--town-text-caption);
   font-weight: 400;
   text-transform: uppercase;
 }
@@ -602,7 +609,7 @@ textarea {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  font-size: 7px;
+  font-size: var(--town-text-caption);
   letter-spacing: 0.7px;
   text-transform: uppercase;
 }
@@ -684,7 +691,8 @@ textarea {
   color: var(--town-cream);
   background: rgba(63, 40, 50, 0.92);
   box-shadow: var(--town-pixel-shadow);
-  font-size: 7px;
+  font-size: var(--town-text-caption);
+  line-height: 1.45;
   text-transform: uppercase;
   pointer-events: none;
 }
@@ -700,7 +708,7 @@ textarea {
   place-items: center;
   align-content: center;
   gap: 13px;
-  font-size: 9px;
+  font-size: var(--town-text-body);
 }
 
 .town-loading span {
@@ -728,8 +736,8 @@ textarea {
   color: var(--town-gold);
   background: var(--town-plum);
   box-shadow: var(--town-pixel-shadow);
-  font-size: 7px;
-  line-height: 1.4;
+  font-size: var(--town-text-micro);
+  line-height: 1.5;
   text-transform: uppercase;
 }
 
@@ -752,7 +760,7 @@ textarea {
   flex-direction: column;
   justify-content: center;
   gap: 3px;
-  font-size: 6px;
+  font-size: var(--town-text-micro);
   text-transform: uppercase;
 }
 
@@ -802,7 +810,7 @@ textarea {
   border: 2px solid var(--town-night);
   color: var(--town-gold);
   background: var(--town-clay);
-  font-size: 5px;
+  font-size: var(--town-text-micro);
   font-style: normal;
 }
 
@@ -814,8 +822,8 @@ textarea {
 }
 
 .pixel-agent-list button {
-  min-height: 52px;
-  padding: 5px 7px;
+  min-height: 58px;
+  padding: 7px 9px;
   display: grid;
   grid-template-columns: 40px 1fr auto;
   align-items: center;
@@ -827,7 +835,7 @@ textarea {
   border: 2px solid var(--town-night);
   color: var(--town-gold);
   background: #262b44;
-  font-size: 6px;
+  font-size: var(--town-text-micro);
   font-style: normal;
 }
 
@@ -865,12 +873,12 @@ textarea {
   justify-content: space-between;
   gap: 8px;
   color: var(--town-mist);
-  font-size: 6px;
+  font-size: var(--town-text-micro);
   text-transform: uppercase;
 }
 
 .pixel-agent-card-top strong {
-  font-size: 7px;
+  font-size: var(--town-text-caption);
   font-weight: 400;
 }
 
@@ -886,8 +894,8 @@ textarea {
 .pixel-agent-card > p {
   margin: 0;
   color: var(--town-cream);
-  font-size: 7px;
-  line-height: 1.55;
+  font-size: var(--town-text-small);
+  line-height: 1.6;
 }
 
 .pixel-risk {
@@ -897,7 +905,7 @@ textarea {
   align-items: center;
   gap: 7px;
   color: var(--town-mist);
-  font-size: 6px;
+  font-size: var(--town-text-micro);
   text-transform: uppercase;
 }
 
@@ -915,7 +923,7 @@ textarea {
 
 .pixel-risk > strong {
   color: var(--town-paper);
-  font-size: 7px;
+  font-size: var(--town-text-caption);
   font-weight: 400;
 }
 
@@ -925,8 +933,8 @@ textarea {
   border: 3px solid var(--town-night);
   color: var(--town-cream);
   background: #262b44;
-  font-size: 7px;
-  line-height: 1.4;
+  font-size: var(--town-text-caption);
+  line-height: 1.5;
 }
 
 .pixel-agent-activity i {
@@ -950,7 +958,7 @@ textarea {
   border: 2px solid var(--town-night);
   color: var(--town-gold);
   background: var(--town-wine);
-  font-size: 6px;
+  font-size: var(--town-text-micro);
 }
 
 .pixel-event-board {
@@ -974,7 +982,7 @@ textarea {
   border: 3px solid var(--town-night);
   color: var(--town-gold);
   background: var(--town-plum);
-  font-size: 6px;
+  font-size: var(--town-text-micro);
   font-weight: 400;
   text-transform: uppercase;
 }
@@ -991,21 +999,21 @@ textarea {
 
 .pixel-event {
   position: relative;
-  min-height: 152px;
-  padding: 8px 9px 9px;
+  min-height: 176px;
+  padding: 10px 11px 12px;
   border-right: 3px solid var(--town-night);
 }
 
 .pixel-event-number {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   margin-bottom: 7px;
   border: 3px solid var(--town-night);
   color: var(--town-night);
   background: var(--town-gold);
   display: grid;
   place-items: center;
-  font-size: 7px;
+  font-size: var(--town-text-micro);
 }
 
 .pixel-event time {
@@ -1013,14 +1021,14 @@ textarea {
   top: 12px;
   right: 8px;
   color: var(--town-mist);
-  font-size: 6px;
+  font-size: var(--town-text-micro);
 }
 
 .pixel-event > strong {
-  min-height: 28px;
+  min-height: 34px;
   color: var(--town-paper);
   display: block;
-  font-size: 8px;
+  font-size: var(--town-text-small);
   font-weight: 400;
   line-height: 1.35;
 }
@@ -1029,14 +1037,14 @@ textarea {
   margin-top: 5px;
   color: var(--town-orange);
   display: block;
-  font-size: 6px;
+  font-size: var(--town-text-micro);
 }
 
 .pixel-event p {
   margin: 7px 0 0;
   color: var(--town-cream);
-  font-size: 6px;
-  line-height: 1.55;
+  font-size: var(--town-text-caption);
+  line-height: 1.6;
 }
 
 .pixel-event code {
@@ -1044,7 +1052,7 @@ textarea {
   color: var(--town-green);
   display: block;
   font-family: inherit;
-  font-size: 6px;
+  font-size: var(--town-text-micro);
 }
 
 .pixel-event.event-chain .pixel-event-number,
@@ -1086,7 +1094,7 @@ textarea {
 
 .pixel-truth-rule {
   color: var(--town-cream);
-  font-size: 7px;
+  font-size: var(--town-text-micro);
   letter-spacing: 0.5px;
   text-transform: uppercase;
 }
@@ -1097,7 +1105,7 @@ textarea {
 }
 
 .pixel-town-footer {
-  min-height: 42px;
+  min-height: 48px;
   padding: 10px clamp(15px, 3vw, 48px);
   border-top: 5px solid var(--town-shadow);
   color: var(--town-mist);
@@ -1105,7 +1113,7 @@ textarea {
   display: flex;
   align-items: center;
   gap: 22px;
-  font-size: 7px;
+  font-size: var(--town-text-micro);
   letter-spacing: 0.7px;
   text-transform: uppercase;
 }
@@ -1201,7 +1209,7 @@ textarea {
 
 .pixel-modal-kicker {
   color: var(--town-orange);
-  font-size: 8px;
+  font-size: var(--town-text-caption);
   letter-spacing: 1px;
   text-transform: uppercase;
 }
@@ -1219,7 +1227,7 @@ textarea {
 
 .pixel-help-modal > p {
   color: var(--town-cream);
-  font-size: 10px;
+  font-size: var(--town-text-ui);
   line-height: 1.7;
 }
 
@@ -1250,14 +1258,14 @@ textarea {
   margin-top: 7px;
   color: var(--town-paper);
   display: block;
-  font-size: 8px;
-  line-height: 1.55;
+  font-size: var(--town-text-small);
+  line-height: 1.6;
 }
 
 .pixel-help-shortcuts {
   margin-bottom: 0;
   color: var(--town-mist) !important;
-  font-size: 7px !important;
+  font-size: var(--town-text-caption) !important;
   text-transform: uppercase;
 }
 
@@ -1353,7 +1361,7 @@ textarea {
   display: grid;
   place-items: center;
   box-shadow: 3px 3px 0 rgba(24, 20, 37, 0.45);
-  font-size: 8px;
+  font-size: var(--town-text-micro);
 }
 
 .pixel-town-stage .preview-agent.preview-mm > span {
@@ -1369,7 +1377,7 @@ textarea {
   color: white;
   background: rgba(24, 20, 37, 0.86);
   transform: translateX(-50%);
-  font-size: 6px;
+  font-size: var(--town-text-micro);
   white-space: nowrap;
 }
 
@@ -1386,8 +1394,8 @@ textarea {
   border-image: url('../assets/ui/bubble-left.svg') 20 fill stretch;
   color: var(--town-night);
   background: white;
-  font-size: 8px;
-  line-height: 1.45;
+  font-size: var(--town-text-small);
+  line-height: 1.55;
 }
 
 .pixel-town-stage .preview-conversation strong {
@@ -1547,13 +1555,14 @@ textarea {
 
 .pixel-hud-dock button {
   min-width: 82px;
+  min-height: 44px;
   padding: 8px 9px;
   border: 3px solid var(--town-shadow);
   color: white;
   background: var(--town-clay);
   cursor: pointer;
   box-shadow: inset -3px -3px 0 #262b44;
-  font-size: 8px;
+  font-size: var(--town-text-caption);
   text-transform: uppercase;
 }
 
@@ -1569,7 +1578,7 @@ textarea {
 
 @media (max-width: 1320px) {
   .pixel-town-layout {
-    grid-template-columns: 226px minmax(540px, 1fr) 58px;
+    grid-template-columns: 264px minmax(540px, 1fr) 82px;
   }
 }
 
@@ -1689,13 +1698,13 @@ textarea {
 
   .pixel-view-toggle {
     padding-inline: 8px;
-    font-size: 8px;
+    font-size: var(--town-text-caption);
   }
 
   .pixel-market-ticker {
     min-height: 50px;
     padding: 5px;
-    grid-template-columns: repeat(4, 150px);
+    grid-template-columns: repeat(4, 180px);
   }
 
   .pixel-market-ticker button {
