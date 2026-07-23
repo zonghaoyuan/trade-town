@@ -22,7 +22,7 @@ settlement authority.
 - A TokenFactory and spot-market provisioning plan for `TOWNUSD`, `ACME`, `NOVA`, `AURUM`, and
   `CRUDE`.
 - An 8-bit exchange terminal wrapped around the live Pixi town, with market state, agent inspection,
-  and a causal event replay.
+  a causal event replay, and responsive candlestick charts.
 - A standalone preview that works without Convex credentials.
 
 The repository does **not** contain a wallet or private key and has not spent testnet listing fees.
@@ -70,7 +70,14 @@ npm run dev
 ```
 
 The existing AI Town LLM adapters still support Ollama and OpenAI-compatible endpoints. The
-financial order path is independent of the chat model.
+financial order path is independent of the chat model. For a chat-only OpenAI-compatible gateway,
+set `LLM_EMBEDDING_MODEL=local-hash`; this deterministic local fallback is suitable for demos but
+does not provide production-grade semantic retrieval. `LLM_API_URL` accepts either a host URL or a
+URL ending in `/v1`.
+
+The live simulation calls the configured chat model while agents converse. Use the in-game
+**Freeze** control when you are not actively testing so a metered API quota is not consumed in the
+background.
 
 ## Injective Testnet
 
@@ -135,5 +142,8 @@ See [docs/HACKATHON_DEMO.md](docs/HACKATHON_DEMO.md) for the operator runbook.
 
 Trade Town is a derivative of a16z's AI Town and retains its original credits and assets. Financial
 agent concepts are adapted from TwinMarket without copying its off-chain exchange engine.
+Candlestick rendering uses
+[TradingView Lightweight Charts](https://github.com/tradingview/lightweight-charts) under
+Apache-2.0, with the required attribution displayed inside each chart.
 
 Released under the [MIT License](LICENSE).

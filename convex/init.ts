@@ -52,6 +52,13 @@ async function getOrCreateDefaultWorld(ctx: MutationCtx) {
     .unique();
   if (worldStatus) {
     const engine = (await ctx.db.get(worldStatus.engineId))!;
+    const existingMap = await ctx.db
+      .query('maps')
+      .withIndex('worldId', (q) => q.eq('worldId', worldStatus!.worldId))
+      .unique();
+    if (existingMap && existingMap.tileSetUrl !== map.tilesetpath) {
+      await ctx.db.patch(existingMap._id, { tileSetUrl: map.tilesetpath });
+    }
     return { worldStatus, engine };
   }
 

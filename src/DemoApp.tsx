@@ -3,5 +3,5 @@ import TownPreview from './components/finance/TownPreview';
 import { previewDashboard } from './finance/demoData';
 
 export default function DemoApp() {
-  return <TradeTownShell dashboard={previewDashboard} town={<TownPreview />} />;
+  return <TradeTownShell dashboard={previewDashboard} town={<TownPreview />} townMode="preview" />;
 }

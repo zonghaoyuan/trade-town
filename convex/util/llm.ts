@@ -43,8 +43,12 @@ export interface LLMConfig {
   apiKey: string | undefined;
 }
 
+export function normalizeApiBaseUrl(url: string): string {
+  return url.replace(/\/+$/, '').replace(/\/v1$/, '');
+}
+
 export function getLLMConfig(): LLMConfig {
-  let provider = process.env.LLM_PROVIDER;
+  const provider = process.env.LLM_PROVIDER;
   if (provider ? provider === 'openai' : process.env.OPENAI_API_KEY) {
     if (EMBEDDING_DIMENSION !== OPENAI_EMBEDDING_DIMENSION) {
       throw new Error('EMBEDDING_DIMENSION must be 1536 for OpenAI');
@@ -74,11 +78,10 @@ export function getLLMConfig(): LLMConfig {
   }
   if (process.env.LLM_API_URL) {
     const apiKey = process.env.LLM_API_KEY;
-    const url = process.env.LLM_API_URL;
+    const url = normalizeApiBaseUrl(process.env.LLM_API_URL);
     const chatModel = process.env.LLM_MODEL;
     if (!chatModel) throw new Error('LLM_MODEL is required');
-    const embeddingModel = process.env.LLM_EMBEDDING_MODEL;
-    if (!embeddingModel) throw new Error('LLM_EMBEDDING_MODEL is required');
+    const embeddingModel = process.env.LLM_EMBEDDING_MODEL ?? 'local-hash';
     return {
       provider: 'custom',
       url,
@@ -204,6 +207,16 @@ export async function tryPullOllama(model: string, error: string) {
 
 export async function fetchEmbeddingBatch(texts: string[]) {
   const config = getLLMConfig();
+  if (config.embeddingModel === 'local-hash') {
+    const start = Date.now();
+    return {
+      ollama: false as const,
+      embeddings: texts.map(localHashEmbedding),
+      usage: 0,
+      retries: 0,
+      ms: Date.now() - start,
+    };
+  }
   if (config.provider === 'ollama') {
     return {
       ollama: true as const,
@@ -250,6 +263,32 @@ export async function fetchEmbeddingBatch(texts: string[]) {
     retries,
     ms,
   };
+}
+
+export function localHashEmbedding(text: string): number[] {
+  const embedding = new Array<number>(EMBEDDING_DIMENSION).fill(0);
+  const tokens = text.toLocaleLowerCase().match(/[\p{L}\p{N}_-]+/gu) ?? [];
+  const features = [
+    ...tokens,
+    ...tokens.slice(1).map((token, index) => `${token}:${tokens[index]}`),
+  ];
+
+  for (const feature of features) {
+    let hash = 2166136261;
+    for (let i = 0; i < feature.length; i++) {
+      hash ^= feature.charCodeAt(i);
+      hash = Math.imul(hash, 16777619);
+    }
+    const index = (hash >>> 0) % EMBEDDING_DIMENSION;
+    embedding[index] += hash & 1 ? 1 : -1;
+  }
+
+  const magnitude = Math.sqrt(embedding.reduce((sum, value) => sum + value * value, 0));
+  if (magnitude === 0) {
+    embedding[0] = 1;
+    return embedding;
+  }
+  return embedding.map((value) => value / magnitude);
 }
 
 export async function fetchEmbedding(text: string) {

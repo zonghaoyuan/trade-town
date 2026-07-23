@@ -47,7 +47,11 @@ export default function Game() {
   return (
     <>
       {SHOW_DEBUG_UI && <DebugTimeManager timeManager={timeManager} width={200} height={100} />}
-      <div className="trade-town-game grid grid-rows-[320px_1fr] lg:grid-rows-[1fr] lg:grid-cols-[1fr_300px]">
+      <div
+        className={`trade-town-game game-frame grid ${
+          selectedElement ? 'has-town-selection' : 'has-no-town-selection'
+        }`}
+      >
         {/* Game area */}
         <div className="town-map-pane relative overflow-hidden bg-brown-900" ref={gameWrapperRef}>
           <div className="absolute inset-0">
@@ -69,21 +73,26 @@ https://github.com/michalochman/react-pixi-fiber/issues/145#issuecomment-5315492
               </Stage>
             </div>
           </div>
+          {!selectedElement && (
+            <div className="town-selection-hint">Select a citizen to open their story</div>
+          )}
         </div>
         {/* Right column area */}
-        <div
-          className="town-detail-pane flex flex-col overflow-y-auto shrink-0 px-4 py-5 text-brown-100"
-          ref={scrollViewRef}
-        >
-          <PlayerDetails
-            worldId={worldId}
-            engineId={engineId}
-            game={game}
-            playerId={selectedElement?.id}
-            setSelectedElement={setSelectedElement}
-            scrollViewRef={scrollViewRef}
-          />
-        </div>
+        {selectedElement && (
+          <div
+            className="town-detail-pane flex flex-col overflow-y-auto shrink-0 px-4 py-5 text-brown-100"
+            ref={scrollViewRef}
+          >
+            <PlayerDetails
+              worldId={worldId}
+              engineId={engineId}
+              game={game}
+              playerId={selectedElement.id}
+              setSelectedElement={setSelectedElement}
+              scrollViewRef={scrollViewRef}
+            />
+          </div>
+        )}
       </div>
     </>
   );

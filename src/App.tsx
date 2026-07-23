@@ -4,6 +4,9 @@ import Game from './components/Game';
 import TradeTownShell from './components/finance/TradeTownShell';
 import { mergeLiveDashboard } from './finance/demoData';
 import { ToastContainer } from 'react-toastify';
+import FreezeButton from './components/FreezeButton';
+import MusicButton from './components/buttons/MusicButton';
+import InteractButton from './components/buttons/InteractButton';
 
 export default function Home() {
   const financeState = useQuery((api as any).finance.dashboard);
@@ -11,7 +14,18 @@ export default function Home() {
 
   return (
     <>
-      <TradeTownShell dashboard={dashboard} town={<Game />} />
+      <TradeTownShell
+        dashboard={dashboard}
+        town={<Game />}
+        townMode="live"
+        townControls={
+          <>
+            <FreezeButton />
+            <MusicButton />
+            <InteractButton />
+          </>
+        }
+      />
       <ToastContainer position="bottom-right" autoClose={2500} closeOnClick theme="dark" />
     </>
   );

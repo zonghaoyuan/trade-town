@@ -33,6 +33,8 @@ import type * as constants from "../constants.js";
 import type * as crons from "../crons.js";
 import type * as engine_abstractGame from "../engine/abstractGame.js";
 import type * as engine_historicalObject from "../engine/historicalObject.js";
+import type * as finance from "../finance.js";
+import type * as finance_decision from "../finance/decision.js";
 import type * as http from "../http.js";
 import type * as init from "../init.js";
 import type * as messages from "../messages.js";
@@ -84,6 +86,8 @@ declare const fullApi: ApiFromModules<{
   crons: typeof crons;
   "engine/abstractGame": typeof engine_abstractGame;
   "engine/historicalObject": typeof engine_historicalObject;
+  finance: typeof finance;
+  "finance/decision": typeof finance_decision;
   http: typeof http;
   init: typeof init;
   messages: typeof messages;
