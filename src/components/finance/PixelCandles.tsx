@@ -25,7 +25,7 @@ export default function PixelCandles({
       autoSize: true,
       height: 142,
       layout: {
-        attributionLogo: true,
+        attributionLogo: false,
         background: { type: ColorType.Solid, color: '#33253a' },
         textColor: '#8b9bb4',
         fontFamily: '"VCR OSD Mono", monospace',

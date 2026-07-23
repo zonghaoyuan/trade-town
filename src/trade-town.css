@@ -1118,8 +1118,11 @@ textarea {
   text-transform: uppercase;
 }
 
-.pixel-town-footer a {
+.pixel-town-footer a:first-of-type {
   margin-left: auto;
+}
+
+.pixel-town-footer a {
   color: var(--town-gold);
   text-decoration: none;
 }

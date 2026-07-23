@@ -144,6 +144,6 @@ Trade Town is a derivative of a16z's AI Town and retains its original credits an
 agent concepts are adapted from TwinMarket without copying its off-chain exchange engine.
 Candlestick rendering uses
 [TradingView Lightweight Charts](https://github.com/tradingview/lightweight-charts) under
-Apache-2.0, with the required attribution displayed inside each chart.
+Apache-2.0, with the required attribution linked from the application footer.
 
 Released under the [MIT License](LICENSE).

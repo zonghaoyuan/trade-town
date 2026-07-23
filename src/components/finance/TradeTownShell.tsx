@@ -212,6 +212,7 @@ export default function TradeTownShell({
           <span>TwinMarket minds</span>
           <span>Convex realtime</span>
           <span>Injective CLOB</span>
+          <a href="https://www.tradingview.com/">TradingView charts ↗</a>
           <a href="https://github.com/zonghaoyuan/trade-town">MIT source ↗</a>
         </footer>
       )}
