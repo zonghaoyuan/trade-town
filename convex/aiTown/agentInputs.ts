@@ -119,16 +119,13 @@ export const agentInputs = {
   createAgent: inputHandler({
     args: {
       descriptionIndex: v.number(),
+      instance: v.optional(v.number()),
     },
     handler: (game, now, args) => {
       const description = Descriptions[args.descriptionIndex];
-      const playerId = Player.join(
-        game,
-        now,
-        description.name,
-        description.character,
-        description.identity,
-      );
+      const instance = args.instance ?? 0;
+      const name = instance === 0 ? description.name : `${description.name} ${instance + 1}`;
+      const playerId = Player.join(game, now, name, description.character, description.identity);
       const agentId = game.allocId('agents');
       game.world.agents.set(
         agentId,

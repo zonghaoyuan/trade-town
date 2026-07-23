@@ -51,7 +51,7 @@ export async function fetchBatch(ctx: ActionCtx, texts: string[]) {
   };
 }
 
-async function hashText(text: string) {
+async function hashText(text: string): Promise<ArrayBuffer> {
   const textEncoder = new TextEncoder();
   const buf = textEncoder.encode(text);
   if (typeof crypto === 'undefined') {
@@ -60,7 +60,7 @@ async function hashText(text: string) {
     const crypto = (await import(f())) as typeof import('crypto');
     const hash = crypto.createHash('sha256');
     hash.update(buf);
-    return hash.digest().buffer;
+    return Uint8Array.from(hash.digest()).buffer;
   } else {
     return await crypto.subtle.digest('SHA-256', buf);
   }

@@ -1,5 +1,5 @@
 import { v } from 'convex/values';
-import { internal } from './_generated/api';
+import { api, internal } from './_generated/api';
 import { DatabaseReader, MutationCtx, mutation } from './_generated/server';
 import { Descriptions } from '../data/characters';
 import * as map from '../data/gentle';
@@ -8,6 +8,7 @@ import { Id } from './_generated/dataModel';
 import { createEngine } from './aiTown/main';
 import { ENGINE_ACTION_DURATION } from './constants';
 import { detectMismatchedLLMProvider } from './util/llm';
+import { DEFAULT_AGENT_COUNT, MAX_AGENT_COUNT } from '../shared/finance';
 
 const init = mutation({
   args: {
@@ -28,13 +29,16 @@ const init = mutation({
       worldStatus.engineId,
     );
     if (shouldCreate) {
-      const toCreate = args.numAgents !== undefined ? args.numAgents : Descriptions.length;
+      const requested = args.numAgents !== undefined ? args.numAgents : DEFAULT_AGENT_COUNT;
+      const toCreate = Math.max(1, Math.min(Math.floor(requested), MAX_AGENT_COUNT));
       for (let i = 0; i < toCreate; i++) {
         await insertInput(ctx, worldStatus.worldId, 'createAgent', {
           descriptionIndex: i % Descriptions.length,
+          instance: Math.floor(i / Descriptions.length),
         });
       }
     }
+    await ctx.scheduler.runAfter(0, (api as any).finance.bootstrapTown, {});
   },
 });
 export default init;

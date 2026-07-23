@@ -65,9 +65,10 @@ export const DELETE_BATCH_SIZE = 64;
 export const HUMAN_IDLE_TOO_LONG = 5 * 60 * 1000;
 
 export const ACTIVITIES = [
-  { description: 'reading a book', emoji: '📖', duration: 60_000 },
-  { description: 'daydreaming', emoji: '🤔', duration: 60_000 },
-  { description: 'gardening', emoji: '🥕', duration: 60_000 },
+  { description: 'reading the market wire', emoji: '📰', duration: 45_000 },
+  { description: 'revising a market belief', emoji: '🧠', duration: 45_000 },
+  { description: 'checking portfolio risk', emoji: '🛡️', duration: 45_000 },
+  { description: 'walking to the exchange', emoji: '🏛️', duration: 45_000 },
 ];
 
 export const ENGINE_ACTION_DURATION = 30000;

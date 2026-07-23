@@ -1,15 +1,24 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import ReactDOM from 'react-dom/client';
-import Home from './App.tsx';
 import './index.css';
 import 'uplot/dist/uPlot.min.css';
 import 'react-toastify/dist/ReactToastify.css';
 import ConvexClientProvider from './components/ConvexClientProvider.tsx';
+import { hasConvexDeployment } from './components/ConvexClientProvider.tsx';
+import DemoApp from './DemoApp.tsx';
+
+const Home = lazy(() => import('./App.tsx'));
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <ConvexClientProvider>
-      <Home />
-    </ConvexClientProvider>
+    {hasConvexDeployment ? (
+      <ConvexClientProvider>
+        <Suspense fallback={null}>
+          <Home />
+        </Suspense>
+      </ConvexClientProvider>
+    ) : (
+      <DemoApp />
+    )}
   </React.StrictMode>,
 );
