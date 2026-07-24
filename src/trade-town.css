@@ -3278,7 +3278,6 @@ textarea {
   .pixel-town-shell.is-overview .pixel-network {
     min-width: 205px;
   }
-
 }
 
 @media (max-width: 1100px) {
@@ -4804,12 +4803,12 @@ textarea {
 
 /* Town activity — conversation-first live feed below the map. */
 .pixel-town-shell.is-overview .pixel-world-column {
-  grid-template-rows: 620px 286px;
+  grid-template-rows: 620px 426px;
 }
 
 .pixel-activity-panel {
   min-width: 0;
-  height: 286px;
+  height: 426px;
   overflow: hidden;
   border: 12px solid transparent;
   border-image: url('../assets/ui/box.svg') 16 fill stretch;
@@ -4987,7 +4986,7 @@ textarea {
 .pixel-talk-stream {
   padding: 6px;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 6px;
 }
 
@@ -5011,7 +5010,6 @@ textarea {
 }
 
 .pixel-talk-message.is-latest {
-  grid-column: 1 / -1;
   background: #403147;
   box-shadow:
     inset 4px 0 0 var(--town-gold),
@@ -5080,12 +5078,15 @@ textarea {
 
 .pixel-trade-ledger {
   min-width: 660px;
+  display: flex;
+  flex-direction: column;
 }
 
 .pixel-trade-columns,
 .pixel-trade-row {
   display: grid;
-  grid-template-columns: minmax(150px, 1.25fr) minmax(115px, 1fr) minmax(90px, 0.8fr)
+  grid-template-columns:
+    minmax(150px, 1.25fr) minmax(115px, 1fr) minmax(90px, 0.8fr)
     minmax(105px, 0.9fr) minmax(108px, 0.9fr);
 }
 
@@ -5238,6 +5239,8 @@ textarea {
 
 .pixel-history-stream {
   padding: 5px 8px 9px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .pixel-history-event {
@@ -5424,14 +5427,6 @@ textarea {
   order: 2;
 }
 
-.pixel-hud-drawer .pixel-talk-stream {
-  grid-template-columns: 1fr;
-}
-
-.pixel-hud-drawer .pixel-talk-message.is-latest {
-  grid-column: auto;
-}
-
 @media (max-width: 1420px) {
   .pixel-activity-header {
     grid-template-columns: minmax(0, 1fr);
@@ -5448,22 +5443,21 @@ textarea {
 
 @media (max-width: 1100px) {
   .pixel-town-shell.is-overview .pixel-world-column {
-    grid-template-rows: 580px 276px;
+    grid-template-rows: 580px 360px;
   }
 
   .pixel-activity-panel {
-    height: 276px;
+    height: 360px;
   }
-
 }
 
 @media (max-width: 640px) {
   .pixel-town-shell.is-overview .pixel-world-column {
-    grid-template-rows: 520px 240px;
+    grid-template-rows: 520px 320px;
   }
 
   .pixel-activity-panel {
-    height: 240px;
+    height: 320px;
     border-width: 9px;
     grid-template-rows: 68px minmax(0, 1fr);
   }
@@ -5490,14 +5484,6 @@ textarea {
   .pixel-activity-tabs button > b {
     min-width: 17px;
     padding: 2px;
-  }
-
-  .pixel-talk-stream {
-    grid-template-columns: 1fr;
-  }
-
-  .pixel-talk-message.is-latest {
-    grid-column: auto;
   }
 
   .pixel-talk-content p {
