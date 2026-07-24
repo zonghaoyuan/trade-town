@@ -362,6 +362,28 @@ export default function TradeTownShell({
                 <span>Verify ACME orders and fills when the Injective gateway is connected.</span>
               </div>
             </div>
+            <p className="pixel-asset-credits">
+              Town visuals:{' '}
+              <a href="https://kenney.nl/assets/rpg-urban-pack" target="_blank" rel="noreferrer">
+                Kenney RPG Urban Pack
+              </a>{' '}
+              (CC0) · characters composed from the{' '}
+              <a
+                href="https://github.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Universal LPC Generator
+              </a>
+              .{' '}
+              <a
+                href="/assets/trade-town/licenses/LPC-Selected-Assets-Credits.csv"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Detailed art credits
+              </a>
+            </p>
             <p className="pixel-help-shortcuts">ESC closes panels · M toggles music</p>
           </section>
         </div>

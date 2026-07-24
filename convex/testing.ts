@@ -168,6 +168,43 @@ export const randomPositions = internalMutation({
   },
 });
 
+/**
+ * Developer-only reset for visual movement checks. Call while the engine is
+ * stopped to clear stale conversation/LLM operations without touching finance
+ * profiles, memories, or player descriptions.
+ */
+export const resetAgentMotion = internalMutation({
+  handler: async (ctx) => {
+    const { worldStatus } = await getDefaultWorld(ctx.db);
+    const world = await ctx.db.get(worldStatus.worldId);
+    if (!world) {
+      throw new Error(`No world for world ${worldStatus.worldId}`);
+    }
+
+    const agentPlayerIds = new Set(world.agents.map((agent) => agent.playerId));
+    const players = world.players.map((player) => {
+      if (!agentPlayerIds.has(player.id)) return player;
+      const resetPlayer = { ...player, speed: 0 };
+      delete resetPlayer.activity;
+      delete resetPlayer.pathfinding;
+      return resetPlayer;
+    });
+    const agents = world.agents.map((agent) => {
+      const resetAgent = { ...agent };
+      delete resetAgent.inProgressOperation;
+      delete resetAgent.toRemember;
+      delete resetAgent.lastInviteAttempt;
+      return resetAgent;
+    });
+
+    await ctx.db.patch(world._id, {
+      agents,
+      conversations: [],
+      players,
+    });
+  },
+});
+
 export const testEmbedding = internalAction({
   args: { input: v.string() },
   handler: async (_ctx, args) => {

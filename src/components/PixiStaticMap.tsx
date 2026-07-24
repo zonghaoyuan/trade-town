@@ -6,6 +6,7 @@ import * as gentlesparkle from '../../data/animations/gentlesparkle.json';
 import * as gentlewaterfall from '../../data/animations/gentlewaterfall.json';
 import * as gentlesplash from '../../data/animations/gentlesplash.json';
 import * as windmill from '../../data/animations/windmill.json';
+import { buildings as urbanBuildings, tilesetpath as urbanTilesetPath } from '../../data/urban';
 
 const animations = {
   'campfire.json': { spritesheet: campfire, url: '/assets/spritesheets/campfire.png' },
@@ -64,6 +65,47 @@ export const PixiStaticMap = PixiComponent('StaticMap', {
         ctile.x = xPx;
         ctile.y = yPx;
         container.addChild(ctile);
+      }
+    }
+
+    if (map.tileSetUrl === urbanTilesetPath) {
+      for (const building of urbanBuildings) {
+        if (!building.mapLabel) continue;
+        const labelContainer = new PIXI.Container();
+        labelContainer.eventMode = 'none';
+        const isLandmark = building.labelProminence === 'landmark';
+        const isQuiet = building.labelProminence === 'quiet';
+
+        const label = new PIXI.Text(building.mapLabel, {
+          align: 'center',
+          fill: isLandmark ? 0xffe8a6 : isQuiet ? 0xd9e0cf : 0xf4e2b7,
+          fontFamily: '"PingFang SC", "Microsoft YaHei", sans-serif',
+          fontSize: isLandmark ? 30 : isQuiet ? 22 : 26,
+          fontWeight: 'bold',
+          letterSpacing: isLandmark ? 1.6 : 1.2,
+          lineHeight: isLandmark ? 32 : 28,
+          stroke: 0x201d29,
+          strokeThickness: isLandmark ? 6 : 5,
+        });
+        label.anchor.set(0.5);
+        label.resolution = 2;
+        label.roundPixels = true;
+
+        const plate = new PIXI.Graphics();
+        plate.lineStyle(isLandmark ? 2 : 1, 0x201d29, isQuiet ? 0.72 : 0.9);
+        plate.beginFill(isLandmark ? 0x5b343a : 0x34404a, isQuiet ? 0.72 : 0.9);
+        plate.drawRect(
+          Math.round(-label.width / 2) - (isLandmark ? 8 : 6),
+          Math.round(-label.height / 2) - (isLandmark ? 6 : 5),
+          Math.round(label.width) + (isLandmark ? 16 : 12),
+          Math.round(label.height) + (isLandmark ? 12 : 10),
+        );
+        plate.endFill();
+
+        labelContainer.x = building.labelPoint.x * map.tileDim;
+        labelContainer.y = building.labelPoint.y * map.tileDim;
+        labelContainer.addChild(plate, label);
+        container.addChild(labelContainer);
       }
     }
 

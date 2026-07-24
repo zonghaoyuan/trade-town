@@ -3,6 +3,26 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { AnimatedSprite, Container, Graphics, Text } from '@pixi/react';
 import * as PIXI from 'pixi.js';
 
+const spriteSheetCache = new Map<string, Promise<Spritesheet>>();
+
+function loadSpriteSheet(textureUrl: string, spritesheetData: ISpritesheetData) {
+  const cached = spriteSheetCache.get(textureUrl);
+  if (cached) return cached;
+
+  const pending = (async () => {
+    const sheet = new Spritesheet(
+      BaseTexture.from(textureUrl, {
+        scaleMode: PIXI.SCALE_MODES.NEAREST,
+      }),
+      spritesheetData,
+    );
+    await sheet.parse();
+    return sheet;
+  })();
+  spriteSheetCache.set(textureUrl, pending);
+  return pending;
+}
+
 export const Character = ({
   textureUrl,
   spritesheetData,
@@ -39,18 +59,14 @@ export const Character = ({
 }) => {
   const [spriteSheet, setSpriteSheet] = useState<Spritesheet>();
   useEffect(() => {
-    const parseSheet = async () => {
-      const sheet = new Spritesheet(
-        BaseTexture.from(textureUrl, {
-          scaleMode: PIXI.SCALE_MODES.NEAREST,
-        }),
-        spritesheetData,
-      );
-      await sheet.parse();
-      setSpriteSheet(sheet);
+    let cancelled = false;
+    void loadSpriteSheet(textureUrl, spritesheetData).then((sheet) => {
+      if (!cancelled) setSpriteSheet(sheet);
+    });
+    return () => {
+      cancelled = true;
     };
-    void parseSheet();
-  }, []);
+  }, [spritesheetData, textureUrl]);
 
   // The first "left" is "right" but reflected.
   const roundedOrientation = Math.floor(orientation / 90);
@@ -66,22 +82,6 @@ export const Character = ({
   }, [direction, isMoving]);
 
   if (!spriteSheet) return null;
-
-  let blockOffset = { x: 0, y: 0 };
-  switch (roundedOrientation) {
-    case 2:
-      blockOffset = { x: -20, y: 0 };
-      break;
-    case 0:
-      blockOffset = { x: 20, y: 0 };
-      break;
-    case 3:
-      blockOffset = { x: 0, y: -20 };
-      break;
-    case 1:
-      blockOffset = { x: 0, y: 20 };
-      break;
-  }
 
   return (
     <Container x={x} y={y} interactive={true} pointerdown={onClick} cursor="pointer">
@@ -99,10 +99,11 @@ export const Character = ({
         isPlaying={isMoving}
         textures={spriteSheet.animations[direction]}
         animationSpeed={speed}
-        anchor={{ x: 0.5, y: 0.5 }}
+        anchor={{ x: 0.5, y: 0.78 }}
+        roundPixels={true}
       />
       {emoji && (
-        <Text x={0} y={-24} scale={{ x: -0.8, y: 0.8 }} text={emoji} anchor={{ x: 0.5, y: 0.5 }} />
+        <Text x={0} y={-34} scale={{ x: -0.8, y: 0.8 }} text={emoji} anchor={{ x: 0.5, y: 0.5 }} />
       )}
     </Container>
   );

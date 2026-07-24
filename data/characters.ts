@@ -1,79 +1,77 @@
-import { data as f1SpritesheetData } from './spritesheets/f1';
-import { data as f2SpritesheetData } from './spritesheets/f2';
-import { data as f3SpritesheetData } from './spritesheets/f3';
-import { data as f4SpritesheetData } from './spritesheets/f4';
-import { data as f5SpritesheetData } from './spritesheets/f5';
-import { data as f6SpritesheetData } from './spritesheets/f6';
-import { data as f7SpritesheetData } from './spritesheets/f7';
-import { data as f8SpritesheetData } from './spritesheets/f8';
+import type { ISpritesheetData } from 'pixi.js';
 import { TOWN_TRADERS } from '../shared/finance';
 
-const characterByIndex = ['f1', 'f4', 'f6', 'f3', 'f7', 'f2', 'f8', 'f5', 'f1', 'f4'];
+const roamingTraders = TOWN_TRADERS.filter((trader) => trader.kind === 'ai');
+const characterByIndex = ['f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8'];
+const characterAssetByIndex = [
+  'mira',
+  'theo',
+  'imani',
+  'sora',
+  'omar',
+  'lin',
+  'jules',
+  'neha',
+];
 
-export const Descriptions = TOWN_TRADERS.map((trader, index) => ({
+/**
+ * Standalone LPC walk sheets contain 9 frames in each 64px row:
+ * up, left, down, right. Frame names include the character key so PIXI's
+ * shared texture cache never aliases two citizens.
+ */
+function lpcWalkSheet(characterKey: string): ISpritesheetData {
+  const frames: ISpritesheetData['frames'] = {};
+  const animations: Record<string, string[]> = {};
+  const rowByDirection = {
+    up: 0,
+    left: 1,
+    down: 2,
+    right: 3,
+  };
+
+  for (const [direction, row] of Object.entries(rowByDirection)) {
+    animations[direction] = [];
+    for (let frame = 0; frame < 9; frame++) {
+      const frameName = `${characterKey}-${direction}-${frame}`;
+      frames[frameName] = {
+        frame: { x: frame * 64, y: row * 64, w: 64, h: 64 },
+        rotated: false,
+        trimmed: false,
+        spriteSourceSize: { x: 0, y: 0 },
+        sourceSize: { w: 64, h: 64 },
+      };
+      animations[direction].push(frameName);
+    }
+  }
+
+  return {
+    frames,
+    animations,
+    meta: {
+      scale: '1',
+    },
+  };
+}
+
+export const Descriptions = roamingTraders.map((trader, index) => ({
   name: trader.name,
   character: characterByIndex[index],
-  identity: `${trader.name} is the town's ${trader.role}. ${trader.style} ${
-    trader.kind === 'market_maker'
-      ? 'This is a deterministic market-making agent: explain quotes plainly and never pretend to use an LLM for order placement.'
-      : 'Form beliefs from news, conversations, portfolio constraints, and confirmed market data. Distinguish facts from opinions.'
-  }`,
+  identity: `${trader.name} is the town's ${trader.role}. ${trader.style} Form beliefs from news, conversations, portfolio constraints, and confirmed market data. Distinguish facts from opinions.`,
   plan: `Protect portfolio solvency while monitoring ${trader.focusSymbols.join(
     ', ',
   )}. Only treat a position as changed after an Injective Testnet fill is confirmed.`,
   finance: trader,
 }));
 
-export const characters = [
-  {
-    name: 'f1',
-    textureUrl: '/assets/32x32folk.png',
-    spritesheetData: f1SpritesheetData,
-    speed: 0.1,
-  },
-  {
-    name: 'f2',
-    textureUrl: '/assets/32x32folk.png',
-    spritesheetData: f2SpritesheetData,
-    speed: 0.1,
-  },
-  {
-    name: 'f3',
-    textureUrl: '/assets/32x32folk.png',
-    spritesheetData: f3SpritesheetData,
-    speed: 0.1,
-  },
-  {
-    name: 'f4',
-    textureUrl: '/assets/32x32folk.png',
-    spritesheetData: f4SpritesheetData,
-    speed: 0.1,
-  },
-  {
-    name: 'f5',
-    textureUrl: '/assets/32x32folk.png',
-    spritesheetData: f5SpritesheetData,
-    speed: 0.1,
-  },
-  {
-    name: 'f6',
-    textureUrl: '/assets/32x32folk.png',
-    spritesheetData: f6SpritesheetData,
-    speed: 0.1,
-  },
-  {
-    name: 'f7',
-    textureUrl: '/assets/32x32folk.png',
-    spritesheetData: f7SpritesheetData,
-    speed: 0.1,
-  },
-  {
-    name: 'f8',
-    textureUrl: '/assets/32x32folk.png',
-    spritesheetData: f8SpritesheetData,
-    speed: 0.1,
-  },
-];
+export const characters = characterByIndex.map((name, index) => {
+  const asset = characterAssetByIndex[index];
+  return {
+    name,
+    textureUrl: `/assets/trade-town/characters/${asset}.png`,
+    spritesheetData: lpcWalkSheet(asset),
+    speed: 0.12,
+  };
+});
 
 // Characters move at 0.75 tiles per second.
 export const movementSpeed = 0.75;
