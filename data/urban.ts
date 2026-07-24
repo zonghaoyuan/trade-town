@@ -7,7 +7,7 @@
  * interaction work can attach to stable IDs and entrances.
  */
 
-export const mapVersion = 'kenney-urban-v2';
+export const mapVersion = 'kenney-urban-v5';
 export const tilesetpath = `/assets/trade-town/kenney-urban-32.png?v=${mapVersion}`;
 export const tiledim = 32;
 export const screenxtiles = 64;
@@ -44,7 +44,7 @@ export type UrbanBuilding = {
 const buildingProfiles: Record<string, Pick<UrbanBuilding, 'stories' | 'roofForm'>> = {
   injective_exchange: { stories: 3, roofForm: 'dutch' },
   town_central_bank: { stories: 3, roofForm: 'dutch' },
-  news_bureau: { stories: 2, roofForm: 'steep' },
+  news_bureau: { stories: 3, roofForm: 'cross' },
   fund_house: { stories: 3, roofForm: 'dutch' },
   market_cafe: { stories: 2, roofForm: 'cross' },
   harbor_residences: { stories: 2, roofForm: 'steep' },
@@ -56,17 +56,13 @@ const buildingProfiles: Record<string, Pick<UrbanBuilding, 'stories' | 'roofForm
   crude_depot: { stories: 1, roofForm: 'industrial' },
   blue_rowhouse: { stories: 3, roofForm: 'dutch' },
   teal_rowhouse: { stories: 2, roofForm: 'steep' },
-  guild_rowhouse: { stories: 3, roofForm: 'cross' },
   garden_shop: { stories: 1, roofForm: 'steep' },
   harbor_inn: { stories: 3, roofForm: 'cross' },
-  artisan_house: { stories: 2, roofForm: 'steep' },
   clock_house: { stories: 3, roofForm: 'dutch' },
   market_archive: { stories: 2, roofForm: 'steep' },
-  enterprise_townhouse: { stories: 3, roofForm: 'dutch' },
   gateway_chapel: { stories: 2, roofForm: 'cross' },
   gate_lodge: { stories: 1, roofForm: 'steep' },
   customs_house: { stories: 2, roofForm: 'dutch' },
-  fishermans_house: { stories: 1, roofForm: 'steep' },
   east_watchtower: { stories: 3, roofForm: 'tower' },
 };
 
@@ -118,12 +114,12 @@ export const buildings: UrbanBuilding[] = [
     name: 'News Bureau',
     mapLabel: '报社',
     district: 'Knowledge Quarter',
-    rect: { x: 2, y: 3, width: 6, height: 5 },
-    footprint: [{ x: 2, y: 3, width: 6, height: 5 }],
-    entrance: { x: 5, y: 7 },
-    labelPoint: { x: 5, y: 5 },
+    rect: { x: 11, y: 11, width: 5, height: 6 },
+    footprint: [{ x: 11, y: 11, width: 5, height: 6 }],
+    entrance: { x: 13, y: 16 },
+    labelPoint: { x: 13.5, y: 13.5 },
     labelProminence: 'district',
-    style: 'blue',
+    style: 'sandstone',
     architecture: 'gable',
     decorative: false,
     futureCapabilities: ['news feed', 'source inspection', 'belief catalysts'],
@@ -148,10 +144,10 @@ export const buildings: UrbanBuilding[] = [
     name: 'Market Café',
     mapLabel: '咖啡馆',
     district: 'Garden Promenade',
-    rect: { x: 9, y: 23, width: 6, height: 5 },
-    footprint: [{ x: 9, y: 23, width: 6, height: 5 }],
-    entrance: { x: 12, y: 27 },
-    labelPoint: { x: 12, y: 25 },
+    rect: { x: 9, y: 24, width: 6, height: 5 },
+    footprint: [{ x: 9, y: 24, width: 6, height: 5 }],
+    entrance: { x: 12, y: 28 },
+    labelPoint: { x: 12, y: 26 },
     labelProminence: 'quiet',
     style: 'brick',
     architecture: 'gable',
@@ -193,10 +189,10 @@ export const buildings: UrbanBuilding[] = [
     name: 'NOVA Laboratory',
     mapLabel: 'NOVA 实验室',
     district: 'Enterprise Gardens',
-    rect: { x: 33, y: 37, width: 7, height: 5 },
-    footprint: [{ x: 33, y: 37, width: 7, height: 5 }],
-    entrance: { x: 36, y: 41 },
-    labelPoint: { x: 36.5, y: 39 },
+    rect: { x: 33, y: 38, width: 7, height: 5 },
+    footprint: [{ x: 33, y: 38, width: 7, height: 5 }],
+    entrance: { x: 36, y: 42 },
+    labelPoint: { x: 36.5, y: 40 },
     labelProminence: 'district',
     style: 'slate',
     architecture: 'civic',
@@ -253,10 +249,10 @@ export const buildings: UrbanBuilding[] = [
     name: 'CRUDE Commodity Depot',
     mapLabel: '原油仓库',
     district: 'Merchant Quay',
-    rect: { x: 49, y: 41, width: 8, height: 5 },
-    footprint: [{ x: 49, y: 41, width: 8, height: 5 }],
-    entrance: { x: 53, y: 45 },
-    labelPoint: { x: 53, y: 43 },
+    rect: { x: 49, y: 36, width: 8, height: 5 },
+    footprint: [{ x: 49, y: 36, width: 8, height: 5 }],
+    entrance: { x: 53, y: 40 },
+    labelPoint: { x: 53, y: 38 },
     labelProminence: 'district',
     style: 'industrial',
     architecture: 'industrial',
@@ -264,6 +260,14 @@ export const buildings: UrbanBuilding[] = [
     futureCapabilities: ['commodity inventory', 'spot reference', 'supply news'],
   }),
   ...[
+    {
+      id: 'north_blue_house',
+      name: 'North Blue House',
+      district: 'Knowledge Quarter',
+      rect: { x: 2, y: 3, width: 6, height: 5 },
+      entrance: { x: 5, y: 7 },
+      style: 'blue' as const,
+    },
     {
       id: 'blue_rowhouse',
       name: 'Blue Rowhouse',
@@ -279,14 +283,6 @@ export const buildings: UrbanBuilding[] = [
       rect: { x: 13, y: 4, width: 4, height: 5 },
       entrance: { x: 15, y: 8 },
       style: 'slate' as const,
-    },
-    {
-      id: 'guild_rowhouse',
-      name: 'Guild Rowhouse',
-      district: 'Knowledge Quarter',
-      rect: { x: 11, y: 12, width: 5, height: 6 },
-      entrance: { x: 13, y: 17 },
-      style: 'sandstone' as const,
     },
     {
       id: 'garden_shop',
@@ -305,14 +301,6 @@ export const buildings: UrbanBuilding[] = [
       style: 'blue' as const,
     },
     {
-      id: 'artisan_house',
-      name: 'Artisan House',
-      district: 'Garden Promenade',
-      rect: { x: 14, y: 38, width: 3, height: 6 },
-      entrance: { x: 15, y: 43 },
-      style: 'brick' as const,
-    },
-    {
       id: 'clock_house',
       name: 'Clock House',
       district: 'Exchange Square',
@@ -327,14 +315,6 @@ export const buildings: UrbanBuilding[] = [
       rect: { x: 36, y: 29, width: 4, height: 5 },
       entrance: { x: 38, y: 33 },
       style: 'brick' as const,
-    },
-    {
-      id: 'enterprise_townhouse',
-      name: 'Enterprise Townhouse',
-      district: 'Enterprise Gardens',
-      rect: { x: 29, y: 39, width: 4, height: 5 },
-      entrance: { x: 31, y: 43 },
-      style: 'copper' as const,
     },
     {
       id: 'gateway_chapel',
@@ -361,19 +341,11 @@ export const buildings: UrbanBuilding[] = [
       style: 'brick' as const,
     },
     {
-      id: 'fishermans_house',
-      name: "Fisherman's House",
-      district: 'Merchant Quay',
-      rect: { x: 43, y: 41, width: 5, height: 5 },
-      entrance: { x: 45, y: 45 },
-      style: 'blue' as const,
-    },
-    {
       id: 'east_watchtower',
       name: 'East Watchtower',
       district: 'Merchant Quay',
-      rect: { x: 57, y: 39, width: 3, height: 7 },
-      entrance: { x: 58, y: 45 },
+      rect: { x: 58, y: 36, width: 3, height: 7 },
+      entrance: { x: 59, y: 42 },
       style: 'sandstone' as const,
     },
   ].map(
@@ -470,8 +442,6 @@ const TILE = {
   crossGableSlate: 657,
   chimney: 658,
   flowerBox: 659,
-  benchLeft: 221,
-  benchRight: 222,
   treeTeal: 238,
   treeOrange: 346,
   lamp: 166,
@@ -577,22 +547,12 @@ function stoneStreet(rect: Rect) {
 fillRect(terrain, { x: 23, y: 14, width: 15, height: 15 }, TILE.plaza);
 fillRect(terrain, { x: 25, y: 16, width: 11, height: 11 }, TILE.paver);
 
-// A stepped pedestrian lane links the garden block to Exchange Square.
-for (const rect of [
-  { x: 0, y: 30, width: 17, height: 3 },
-  { x: 14, y: 28, width: 3, height: 5 },
-  { x: 17, y: 26, width: 6, height: 3 },
-] as const) {
-  fillRect(terrain, rect, TILE.paver);
-}
-fillRect(terrain, { x: 19, y: 43, width: 22, height: 2 }, TILE.paver);
-fillRect(terrain, { x: 43, y: 37, width: 21, height: 3 }, TILE.paver);
-fillRect(terrain, { x: 43, y: 46, width: 21, height: 2 }, TILE.industrialGround);
+// Grass buffers separate the two side buildings from the civic square while
+// preserving a horizontally balanced southern edge.
+for (const x of [23, 24, 36, 37]) setTile(terrain, x, 28, EMPTY);
 
-// Pocket park and internal paths.
-fillRect(terrain, { x: 1, y: 23, width: 5, height: 6 }, TILE.pocketGarden);
-fillRect(terrain, { x: 1, y: 27, width: 13, height: 2 }, TILE.paver);
-fillRect(terrain, { x: 12, y: 22, width: 3, height: 9 }, TILE.paver);
+fillRect(terrain, { x: 19, y: 43, width: 22, height: 2 }, TILE.paver);
+fillRect(terrain, { x: 43, y: 46, width: 21, height: 2 }, TILE.industrialGround);
 
 // Draw streets last so pedestrian paving never overwrites a carriageway. The
 // two halves of Market Street terminate cleanly at the civic square.
@@ -694,53 +654,45 @@ for (const [x, y, tile] of [
   [3, 6, TILE.flowerBox],
   [8, 11, TILE.chimney],
   [7, 15, TILE.flowerBox],
-  [10, 23, TILE.chimney],
-  [10, 26, TILE.flowerBox],
+  [10, 24, TILE.chimney],
+  [10, 27, TILE.flowerBox],
   [5, 37, TILE.chimney],
   [3, 41, TILE.flowerBox],
   [27, 37, TILE.chimney],
-  [34, 37, TILE.chimney],
+  [34, 38, TILE.chimney],
   [54, 3, TILE.chimney],
   [50, 7, TILE.flowerBox],
   [56, 13, TILE.chimney],
   [50, 27, TILE.roofPipes],
   [54, 28, TILE.roofHvac],
   [55, 27, TILE.roofVents],
-  [50, 42, TILE.roofPipes],
-  [55, 43, TILE.roofHvac],
-  [52, 42, TILE.loadingDoor],
+  [50, 37, TILE.roofPipes],
+  [55, 38, TILE.roofHvac],
+  [52, 37, TILE.loadingDoor],
 
   [9, 3, TILE.chimney],
   [10, 7, TILE.flowerBox],
   [16, 4, TILE.chimney],
   [14, 7, TILE.flowerBox],
-  [15, 12, TILE.chimney],
-  [14, 16, TILE.flowerBox],
+  [15, 11, TILE.chimney],
+  [14, 15, TILE.flowerBox],
   [5, 24, TILE.chimney],
   [5, 27, TILE.flowerBox],
   [9, 36, TILE.chimney],
   [9, 41, TILE.flowerBox],
-  [16, 38, TILE.chimney],
-  [15, 42, TILE.flowerBox],
   [21, 29, TILE.chimney],
   [39, 30, TILE.chimney],
-  [29, 39, TILE.chimney],
   [48, 13, TILE.chimney],
   [59, 4, TILE.chimney],
   [48, 26, TILE.chimney],
-  [47, 41, TILE.chimney],
-  [58, 39, TILE.antenna],
+  [59, 36, TILE.antenna],
   [3, 28, TILE.flowerBox],
 ] as const) {
   setTile(details, x, y, tile);
 }
-setTile(details, 10, 27, TILE.awningTeal);
-setTile(details, 14, 27, TILE.awningAmber);
+setTile(details, 10, 28, TILE.awningTeal);
+setTile(details, 14, 28, TILE.awningAmber);
 setTile(details, 5, 28, TILE.awningTeal);
-setTile(details, 57, 38, TILE.crane);
-setTile(collision, 57, 38, BLOCKED_TILE);
-setTile(details, 55, 37, TILE.bollards);
-setTile(collision, 55, 37, BLOCKED_TILE);
 
 // A single centered medallion preserves the square's bilateral symmetry.
 setTile(details, 30, 21, TILE.plazaMedallion);
@@ -777,14 +729,14 @@ for (const [x, y, tile] of trees) {
 }
 
 const streetFurniture: Array<[number, number, number]> = [
-  [23, 17, TILE.benchLeft],
-  [24, 17, TILE.benchRight],
-  [36, 17, TILE.benchLeft],
-  [37, 17, TILE.benchRight],
-  [23, 25, TILE.benchLeft],
-  [24, 25, TILE.benchRight],
-  [36, 25, TILE.benchLeft],
-  [37, 25, TILE.benchRight],
+  [23, 17, TILE.flowerBox],
+  [24, 17, TILE.flowerBox],
+  [36, 17, TILE.flowerBox],
+  [37, 17, TILE.flowerBox],
+  [23, 25, TILE.flowerBox],
+  [24, 25, TILE.flowerBox],
+  [36, 25, TILE.flowerBox],
+  [37, 25, TILE.flowerBox],
   [22, 15, TILE.lamp],
   [38, 15, TILE.lamp],
   [22, 27, TILE.lamp],
@@ -792,7 +744,6 @@ const streetFurniture: Array<[number, number, number]> = [
   [2, 17, TILE.postBox],
   [58, 21, TILE.hydrant],
   [46, 38, TILE.crate],
-  [58, 38, TILE.barrel],
 ];
 for (const [x, y, tile] of streetFurniture) {
   setTile(details, x, y, tile);
