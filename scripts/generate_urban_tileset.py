@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Add Trade Town-specific modular tiles to Kenney's CC0 RPG Urban atlas."""
+"""Add Injective Trade Town-specific modular tiles to Kenney's CC0 RPG Urban atlas."""
 
 from __future__ import annotations
 

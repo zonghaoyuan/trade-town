@@ -1,6 +1,6 @@
 # Market Town A2A Remote Agent
 
-This service exposes selected Trade Town capabilities through the official A2A TypeScript SDK. It
+This service exposes selected Injective Trade Town capabilities through the official A2A TypeScript SDK. It
 lives in this repository but runs as an independent public process and never imports the Injective
 signer.
 

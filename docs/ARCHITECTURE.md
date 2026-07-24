@@ -1,4 +1,4 @@
-# Trade Town architecture
+# Injective Trade Town architecture
 
 ## Design invariants
 

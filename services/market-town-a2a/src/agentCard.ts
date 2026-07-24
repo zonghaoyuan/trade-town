@@ -20,7 +20,7 @@ export function buildAgentCard(config: A2AConfig): AgentCard {
       ['JSONRPC'],
     ),
     provider: {
-      organization: 'Trade Town',
+      organization: 'Injective Trade Town',
       url: config.publicBaseUrl,
     },
     version: '0.1.0',

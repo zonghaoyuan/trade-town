@@ -124,7 +124,7 @@ export class InjectiveClient {
     });
     const response = await this.broadcaster.broadcast({
       msgs: message,
-      memo: `Trade Town ${intent.intentId}`.slice(0, 128),
+      memo: `Injective Trade Town ${intent.intentId}`.slice(0, 128),
     });
     return response.txHash;
   }
