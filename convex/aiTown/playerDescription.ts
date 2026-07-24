@@ -6,6 +6,7 @@ export const serializedPlayerDescription = {
   name: v.string(),
   description: v.string(),
   character: v.string(),
+  textureUrl: v.optional(v.string()),
 };
 export type SerializedPlayerDescription = ObjectType<typeof serializedPlayerDescription>;
 
@@ -14,22 +15,25 @@ export class PlayerDescription {
   name: string;
   description: string;
   character: string;
+  textureUrl?: string;
 
   constructor(serialized: SerializedPlayerDescription) {
-    const { playerId, name, description, character } = serialized;
+    const { playerId, name, description, character, textureUrl } = serialized;
     this.playerId = parseGameId('players', playerId);
     this.name = name;
     this.description = description;
     this.character = character;
+    this.textureUrl = textureUrl;
   }
 
   serialize(): SerializedPlayerDescription {
-    const { playerId, name, description, character } = this;
+    const { playerId, name, description, character, textureUrl } = this;
     return {
       playerId,
       name,
       description,
       character,
+      textureUrl,
     };
   }
 }

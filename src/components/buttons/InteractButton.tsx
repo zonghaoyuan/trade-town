@@ -9,6 +9,7 @@ import { Id } from '../../../convex/_generated/dataModel';
 import { useCallback } from 'react';
 import { waitForInput } from '../../hooks/sendInput';
 import { useServerGame } from '../../hooks/serverGame';
+import { getAnonymousOwnerId } from '../../features/create-me/storage';
 
 export default function InteractButton() {
   // const { isAuthenticated } = useConvexAuth();
@@ -27,7 +28,7 @@ export default function InteractButton() {
     async (worldId: Id<'worlds'>) => {
       let inputId;
       try {
-        inputId = await join({ worldId });
+        inputId = await join({ worldId, ownerId: getAnonymousOwnerId() });
       } catch (e: any) {
         if (e instanceof ConvexError) {
           toast.error(e.data);

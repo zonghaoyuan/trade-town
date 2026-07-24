@@ -33,6 +33,15 @@ function fitViewportToFrame(viewport: Viewport, props: ViewportProps) {
     .clampZoom({ minScale: coverScale, maxScale: Math.max(3, coverScale) });
 }
 
+function hasMeasuredFrame(props: ViewportProps) {
+  return (
+    props.screenWidth > 0 &&
+    props.screenHeight > 0 &&
+    props.worldWidth > 0 &&
+    props.worldHeight > 0
+  );
+}
+
 // https://davidfig.github.io/pixi-viewport/jsdoc/Viewport.html
 export default PixiComponent('Viewport', {
   create(props: ViewportProps) {
@@ -48,7 +57,9 @@ export default PixiComponent('Viewport', {
     }
     // Activate plugins
     viewport.drag().pinch({}).wheel().decelerate().clamp({ direction: 'all', underflow: 'center' });
-    fitViewportToFrame(viewport, props);
+    if (hasMeasuredFrame(props)) {
+      fitViewportToFrame(viewport, props);
+    }
     return viewport;
   },
   applyProps(viewport, oldProps: any, newProps: any) {
@@ -66,7 +77,7 @@ export default PixiComponent('Viewport', {
       }
     });
 
-    if (frameChanged && newProps.screenWidth > 0 && newProps.screenHeight > 0) {
+    if (frameChanged && hasMeasuredFrame(newProps)) {
       fitViewportToFrame(viewport, newProps);
     }
   },

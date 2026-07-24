@@ -111,6 +111,7 @@ export const userStatus = query({
 export const joinWorld = mutation({
   args: {
     worldId: v.id('worlds'),
+    ownerId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     // const identity = await ctx.auth.getUserIdentity();
@@ -119,7 +120,29 @@ export const joinWorld = mutation({
     // }
     // const name =
     //   identity.givenName || identity.nickname || (identity.email && identity.email.split('@')[0]);
-    const name = DEFAULT_NAME;
+    const profile = args.ownerId
+      ? await ctx.db
+          .query('userProfiles')
+          .withIndex('by_owner', (q) => q.eq('ownerId', args.ownerId!))
+          .unique()
+      : null;
+    const profileVersion = profile
+      ? await ctx.db
+          .query('userProfileVersions')
+          .withIndex('by_owner', (q) =>
+            q.eq('ownerId', profile.ownerId).eq('version', profile.activeVersion),
+          )
+          .unique()
+      : null;
+    const characterLook = profile
+      ? await ctx.db
+          .query('characterLooks')
+          .withIndex('by_owner', (q) =>
+            q.eq('ownerId', profile.ownerId).eq('version', profile.activeVersion),
+          )
+          .unique()
+      : null;
+    const name = profile?.displayName ?? DEFAULT_NAME;
 
     // if (!name) {
     //   throw new ConvexError(`Missing name on ${JSON.stringify(identity)}`);
@@ -131,8 +154,14 @@ export const joinWorld = mutation({
     // const { tokenIdentifier } = identity;
     return await insertInput(ctx, world._id, 'join', {
       name,
-      character: characters[Math.floor(Math.random() * characters.length)].name,
-      description: `${DEFAULT_NAME} is a human player`,
+      character:
+        profile?.activeCharacter ??
+        characters[Math.floor(Math.random() * characters.length)].name,
+      description: profileVersion
+        ? `${name} is the user's financial digital twin. ${profileVersion.compiled.decisionStyle}; risk tolerance ${profileVersion.compiled.riskTolerance}/100; cash buffer ${profileVersion.compiled.cashBufferPct}%.`
+        : `${DEFAULT_NAME} is a human player`,
+      textureUrl:
+        characterLook?.source === 'lpc_composed' ? characterLook.textureUrl : undefined,
       // description: `${identity.givenName} is a human player`,
       tokenIdentifier: DEFAULT_NAME,
     });

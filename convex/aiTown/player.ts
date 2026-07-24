@@ -231,6 +231,7 @@ export class Player {
         character,
         description,
         name,
+        textureUrl: undefined,
       }),
     );
     game.descriptionsModified = true;
@@ -269,10 +270,25 @@ export const playerInputs = {
       name: v.string(),
       character: v.string(),
       description: v.string(),
+      textureUrl: v.optional(v.string()),
       tokenIdentifier: v.optional(v.string()),
     },
     handler: (game, now, args) => {
-      Player.join(game, now, args.name, args.character, args.description, args.tokenIdentifier);
+      const playerId = Player.join(
+        game,
+        now,
+        args.name,
+        args.character,
+        args.description,
+        args.tokenIdentifier,
+      );
+      if (args.textureUrl) {
+        const current = game.playerDescriptions.get(playerId)!;
+        game.playerDescriptions.set(
+          playerId,
+          new PlayerDescription({ ...current.serialize(), textureUrl: args.textureUrl }),
+        );
+      }
       return null;
     },
   }),
@@ -285,6 +301,39 @@ export const playerInputs = {
         throw new Error(`Invalid player ID ${playerId}`);
       }
       player.leave(game, now);
+      return null;
+    },
+  }),
+  updatePlayerDescription: inputHandler({
+    args: {
+      playerId,
+      name: v.string(),
+      character: v.string(),
+      description: v.string(),
+      textureUrl: v.optional(v.string()),
+    },
+    handler: (game, now, args) => {
+      const id = parseGameId('players', args.playerId);
+      const player = game.world.players.get(id);
+      const current = game.playerDescriptions.get(id);
+      if (!player || !current) {
+        throw new Error(`Invalid player ID ${id}`);
+      }
+      if (!characters.find((character) => character.name === args.character)) {
+        throw new Error(`Invalid character: ${args.character}`);
+      }
+      game.playerDescriptions.set(
+        id,
+        new PlayerDescription({
+          playerId: id,
+          name: args.name,
+          character: args.character,
+          description: args.description,
+          textureUrl: args.textureUrl,
+        }),
+      );
+      player.lastInput = now;
+      game.descriptionsModified = true;
       return null;
     },
   }),

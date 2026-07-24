@@ -78,6 +78,8 @@ for (const viewport of viewports) {
 
       await expect(shell).toHaveClass(/is-immersive/);
       await expect(hud).toBeVisible();
+      await expect(hud.getByRole('button', { name: /(?:create|edit me)/i })).toHaveCount(0);
+      await expect(hud.getByRole('button', { name: /help/i })).toHaveCount(0);
       await expectNoHorizontalPageOverflow(page);
       await expectVisibleButtonsInsideViewport(page);
       await expectNoOverlap(header, stage);

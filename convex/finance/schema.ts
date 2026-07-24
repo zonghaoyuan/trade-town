@@ -229,4 +229,104 @@ export const financeTables = {
     blockHeight: v.number(),
     updatedAt: v.number(),
   }).index('by_stream', ['stream']),
+
+  characterLooks: defineTable({
+    ownerId: v.string(),
+    version: v.number(),
+    requestId: v.optional(v.string()),
+    presetId: v.string(),
+    character: v.string(),
+    textureUrl: v.string(),
+    source: v.union(v.literal('lpc_curated_preset'), v.literal('lpc_composed')),
+    storageId: v.optional(v.id('_storage')),
+    schemaVersion: v.optional(v.number()),
+    generatorCommit: v.optional(v.string()),
+    appearance: v.optional(
+      v.object({
+        skinTone: v.string(),
+        hairStyle: v.string(),
+        hairColor: v.string(),
+        topStyle: v.string(),
+        topColor: v.string(),
+        bottomStyle: v.string(),
+        bottomColor: v.string(),
+        shoesStyle: v.string(),
+      }),
+    ),
+    licenseManifest: v.optional(v.array(v.string())),
+    createdAt: v.number(),
+  }).index('by_owner', ['ownerId', 'version']),
+
+  userProfiles: defineTable({
+    ownerId: v.string(),
+    displayName: v.string(),
+    activeVersion: v.number(),
+    activePresetId: v.string(),
+    activeCharacter: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index('by_owner', ['ownerId']),
+
+  userProfileVersions: defineTable({
+    ownerId: v.string(),
+    version: v.number(),
+    requestId: v.optional(v.string()),
+    displayName: v.string(),
+    presetId: v.string(),
+    inputs: v.object({
+      investmentGoal: v.union(
+        v.literal('growth'),
+        v.literal('income'),
+        v.literal('preservation'),
+        v.literal('learning'),
+      ),
+      horizon: v.union(v.literal('short'), v.literal('medium'), v.literal('long')),
+      maxDrawdownPct: v.number(),
+      conviction: v.number(),
+      socialInfluence: v.number(),
+      lossAversion: v.number(),
+      scenarios: v.array(
+        v.union(
+          v.literal('market_crash'),
+          v.literal('missed_rally'),
+          v.literal('crowd_fomo'),
+          v.literal('thesis_challenged'),
+          v.literal('unexpected_cash'),
+        ),
+      ),
+      scenarioAnswers: v.optional(
+        v.object({
+          market_crash: v.optional(
+            v.union(v.literal('cautious'), v.literal('measured'), v.literal('aggressive')),
+          ),
+          missed_rally: v.optional(
+            v.union(v.literal('cautious'), v.literal('measured'), v.literal('aggressive')),
+          ),
+          crowd_fomo: v.optional(
+            v.union(v.literal('cautious'), v.literal('measured'), v.literal('aggressive')),
+          ),
+          thesis_challenged: v.optional(
+            v.union(v.literal('cautious'), v.literal('measured'), v.literal('aggressive')),
+          ),
+          unexpected_cash: v.optional(
+            v.union(v.literal('cautious'), v.literal('measured'), v.literal('aggressive')),
+          ),
+        }),
+      ),
+    }),
+    compiled: v.object({
+      riskTolerance: v.number(),
+      holdingPeriodDays: v.number(),
+      cashBufferPct: v.number(),
+      maxPositionPct: v.number(),
+      tradeFrequency: v.union(v.literal('low'), v.literal('medium'), v.literal('high')),
+      socialSignalWeight: v.number(),
+      stopLossDiscipline: v.number(),
+      decisionStyle: v.string(),
+      riskFlags: v.array(v.string()),
+    }),
+    createdAt: v.number(),
+  })
+    .index('by_owner', ['ownerId', 'version'])
+    .index('by_request', ['ownerId', 'requestId']),
 };

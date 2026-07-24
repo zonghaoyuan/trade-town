@@ -9,6 +9,11 @@ import type {
 import PixelCandles from './PixelCandles';
 import PixelAvatar from './PixelAvatar';
 import PixelMarketIcon from './PixelMarketIcon';
+import CreateMeModal, {
+  CreatedMeView,
+  CreateMePayload,
+} from '../create-me/CreateMeModal';
+import { loadCreatedMe } from '../../features/create-me/storage';
 
 type ViewMode = 'overview' | 'immersive';
 type Drawer = 'markets' | 'agents' | 'events';
@@ -35,6 +40,8 @@ export default function TradeTownShell({
   dayViewDashboards,
   town,
   townControls,
+  currentMe,
+  onCreateMe,
 }: {
   dashboard: TradeTownDashboard;
   dayViewDashboard: TradeTownDashboard;
@@ -42,6 +49,8 @@ export default function TradeTownShell({
   town: ReactNode | ((state: TownRenderState) => ReactNode);
   townControls?: ReactNode;
   townMode?: 'live' | 'preview';
+  currentMe?: CreatedMeView | null;
+  onCreateMe?: (payload: CreateMePayload) => Promise<unknown>;
 }) {
   const [selectedSymbol, setSelectedSymbol] = useState(
     dayViewDashboard.markets[0]?.symbol ?? 'ACME',
@@ -50,7 +59,11 @@ export default function TradeTownShell({
   const [viewMode, setViewMode] = useState<ViewMode>('overview');
   const [drawer, setDrawer] = useState<Drawer | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [createMeOpen, setCreateMeOpen] = useState(false);
+  const [localMe, setLocalMe] = useState<CreatedMeView | null>(() => loadCreatedMe());
   const [agentDetailOpen, setAgentDetailOpen] = useState(false);
+  const createMeTriggerRef = useRef<HTMLButtonElement>(null);
+  const createMeWasOpen = useRef(false);
   const [focusRequest, setFocusRequest] = useState<{ name: string; requestId: number } | null>(
     null,
   );
@@ -69,6 +82,7 @@ export default function TradeTownShell({
     activeDashboard.traders.find((candidate) => candidate.name === selectedAgent) ??
     activeDashboard.traders[0];
   const immersive = viewMode === 'immersive';
+  const activeMe = currentMe ?? localMe;
 
   useEffect(() => {
     const symbolExists =
@@ -90,10 +104,19 @@ export default function TradeTownShell({
   }, [immersive]);
 
   useEffect(() => {
+    if (createMeWasOpen.current && !createMeOpen) {
+      createMeTriggerRef.current?.focus();
+    }
+    createMeWasOpen.current = createMeOpen;
+  }, [createMeOpen]);
+
+  useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
       if (agentDetailOpen) {
         setAgentDetailOpen(false);
+      } else if (createMeOpen) {
+        setCreateMeOpen(false);
       } else if (helpOpen) {
         setHelpOpen(false);
       } else if (drawer) {
@@ -106,7 +129,7 @@ export default function TradeTownShell({
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [agentDetailOpen, drawer, focusRequest, helpOpen, immersive]);
+  }, [agentDetailOpen, createMeOpen, drawer, focusRequest, helpOpen, immersive]);
 
   const toggleView = () => {
     setDrawer(null);
@@ -199,6 +222,29 @@ export default function TradeTownShell({
 
         <div className="pixel-header-actions">
           <button
+            ref={createMeTriggerRef}
+            type="button"
+            className="pixel-button pixel-button-small pixel-create-me-trigger"
+            aria-haspopup="dialog"
+            onClick={() => setCreateMeOpen(true)}
+          >
+            {activeMe ? (
+              <>
+                <i
+                  className="pixel-create-me-avatar"
+                  style={{ backgroundImage: `url("${activeMe.textureUrl}")` }}
+                  aria-hidden="true"
+                />
+                <b>{activeMe.draft.displayName}</b>
+                <small>EDIT</small>
+              </>
+            ) : (
+              <>
+                <span>+</span> Create ME
+              </>
+            )}
+          </button>
+          <button
             type="button"
             className="pixel-button pixel-button-small"
             onClick={() => setHelpOpen(true)}
@@ -277,15 +323,29 @@ export default function TradeTownShell({
         <button type="button" onClick={() => setDrawer(drawer === 'events' ? null : 'events')}>
           <span aria-hidden="true">!</span> Intel
         </button>
-        <button
-          type="button"
-          onClick={() => {
-            setDrawer(null);
-            setHelpOpen(true);
-          }}
-        >
-          <span aria-hidden="true">?</span> Help
-        </button>
+        {!immersive && (
+          <>
+            <button
+              type="button"
+              onClick={() => {
+                setDrawer(null);
+                setCreateMeOpen(true);
+              }}
+            >
+              <span aria-hidden="true">{activeMe ? '✎' : '+'}</span>
+              {activeMe ? 'Edit ME' : 'Create'}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setDrawer(null);
+                setHelpOpen(true);
+              }}
+            >
+              <span aria-hidden="true">?</span> Help
+            </button>
+          </>
+        )}
       </nav>
 
       {drawer && (
@@ -423,6 +483,15 @@ export default function TradeTownShell({
             <p className="pixel-help-shortcuts">ESC closes panels · M toggles music</p>
           </section>
         </div>
+      )}
+
+      {createMeOpen && (
+        <CreateMeModal
+          initialMe={activeMe}
+          onClose={() => setCreateMeOpen(false)}
+          onSubmit={onCreateMe}
+          onCreated={setLocalMe}
+        />
       )}
     </main>
   );
