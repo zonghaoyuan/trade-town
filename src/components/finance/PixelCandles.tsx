@@ -6,16 +6,31 @@ import {
   createChart,
 } from 'lightweight-charts';
 import { useEffect, useMemo, useRef } from 'react';
+import type { DashboardCandle } from '../../finance/demoData';
 
 export default function PixelCandles({
   values,
   symbol,
+  periodLabel,
+  sourceLabel,
 }: {
-  values: readonly number[];
+  values: readonly DashboardCandle[];
   symbol: string;
+  periodLabel: string;
+  sourceLabel: string;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const candles = useMemo(() => toCandles(values), [values]);
+  const candles = useMemo<CandlestickData<UTCTimestamp>[]>(
+    () =>
+      values.map(({ time, open, high, low, close }) => ({
+        time: time as UTCTimestamp,
+        open,
+        high,
+        low,
+        close,
+      })),
+    [values],
+  );
 
   useEffect(() => {
     const container = containerRef.current;
@@ -75,8 +90,10 @@ export default function PixelCandles({
   return (
     <div className="pixel-candle-wrap">
       <div className="pixel-candle-label">
-        <span>{symbol} · 5M</span>
-        <strong>Town Exchange</strong>
+        <span>
+          {symbol} · {periodLabel}
+        </span>
+        <strong>{sourceLabel}</strong>
       </div>
       <div
         ref={containerRef}
@@ -85,20 +102,4 @@ export default function PixelCandles({
       />
     </div>
   );
-}
-
-function toCandles(values: readonly number[]): CandlestickData<UTCTimestamp>[] {
-  const start = Math.floor(Date.UTC(2026, 6, 23, 1, 0, 0) / 1000);
-
-  return values.map((close, index) => {
-    const open = index === 0 ? close * 0.997 : values[index - 1];
-    const spread = Math.max(close * (0.0035 + (index % 3) * 0.0012), 0.01);
-    return {
-      time: (start + index * 300) as UTCTimestamp,
-      open,
-      high: Math.max(open, close) + spread,
-      low: Math.max(0, Math.min(open, close) - spread),
-      close,
-    };
-  });
 }

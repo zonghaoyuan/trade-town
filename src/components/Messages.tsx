@@ -1,4 +1,3 @@
-import clsx from 'clsx';
 import { Doc, Id } from '../../convex/_generated/dataModel';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
@@ -40,66 +39,92 @@ export function Messages({
     currentlyTyping &&
     descriptions?.playerDescriptions.find((p) => p.playerId === currentlyTyping?.playerId)?.name;
 
-  const scrollView = scrollViewRef.current;
-  const isScrolledToBottom = useRef(false);
+  const isScrolledToBottom = useRef(true);
+  const hasPositionedScroll = useRef(false);
   useEffect(() => {
-    if (!scrollView) return undefined;
+    const scrollView = scrollViewRef.current;
+    if (!scrollView) {
+      return undefined;
+    }
 
     const onScroll = () => {
-      isScrolledToBottom.current = !!(
-        scrollView && scrollView.scrollHeight - scrollView.scrollTop - 50 <= scrollView.clientHeight
-      );
+      isScrolledToBottom.current =
+        scrollView.scrollHeight - scrollView.scrollTop - 50 <= scrollView.clientHeight;
     };
-    scrollView.addEventListener('scroll', onScroll);
+    onScroll();
+    scrollView.addEventListener('scroll', onScroll, { passive: true });
     return () => scrollView.removeEventListener('scroll', onScroll);
-  }, [scrollView]);
+  }, [messages !== undefined, scrollViewRef]);
+
   useEffect(() => {
+    const scrollView = scrollViewRef.current;
+    if (!scrollView) {
+      return;
+    }
+    if (!hasPositionedScroll.current) {
+      scrollView.scrollTop = scrollView.scrollHeight;
+      hasPositionedScroll.current = true;
+      isScrolledToBottom.current = true;
+      return;
+    }
     if (isScrolledToBottom.current) {
-      scrollViewRef.current?.scrollTo({
-        top: scrollViewRef.current.scrollHeight,
+      scrollView.scrollTo({
+        top: scrollView.scrollHeight,
         behavior: 'smooth',
       });
     }
-  }, [messages, currentlyTyping]);
+  }, [messages, currentlyTyping, scrollViewRef]);
 
   if (messages === undefined) {
-    return null;
-  }
-  if (messages.length === 0 && !inConversationWithMe) {
-    return null;
-  }
-  const messageNodes: { time: number; node: React.ReactNode }[] = messages.map((m) => {
-    const node = (
-      <div key={`text-${m._id}`} className="leading-tight mb-6">
-        <div className="flex gap-4">
-          <span className="uppercase flex-grow">{m.authorName}</span>
-          <time dateTime={m._creationTime.toString()}>
-            {new Date(m._creationTime).toLocaleString()}
-          </time>
+    return (
+      <section className="town-chat-shell">
+        <ChatHeading active={conversation.kind === 'active'} />
+        <div className="town-chat-loading">
+          <i aria-hidden="true" />
+          Loading conversation...
         </div>
-        <div className={clsx('bubble', m.author === humanPlayerId && 'bubble-mine')}>
-          <p className="bg-white -mx-3 -my-1">{m.text}</p>
-        </div>
-      </div>
+      </section>
     );
-    return { node, time: m._creationTime };
+  }
+
+  const visibleMessages = messages.filter((message) => message.text.trim().length > 0);
+  const messageNodes: { time: number; node: React.ReactNode }[] = visibleMessages.map((message) => {
+    const mine = message.author === humanPlayerId;
+    const node = (
+      <article
+        key={`text-${message._id}`}
+        className={`town-chat-message ${mine ? 'is-mine' : 'is-theirs'}`}
+      >
+        <header>
+          <span>{mine ? 'You' : message.authorName}</span>
+          <time dateTime={new Date(message._creationTime).toISOString()}>
+            {formatChatTime(message._creationTime)}
+          </time>
+        </header>
+        <div className="town-chat-bubble">
+          <p>{message.text}</p>
+        </div>
+      </article>
+    );
+    return { node, time: message._creationTime };
   });
-  const lastMessageTs = messages.map((m) => m._creationTime).reduce((a, b) => Math.max(a, b), 0);
+  const lastMessageTs = visibleMessages
+    .map((message) => message._creationTime)
+    .reduce((a, b) => Math.max(a, b), 0);
 
   const membershipNodes: typeof messageNodes = [];
   if (conversation.kind === 'active') {
-    for (const [playerId, m] of conversation.doc.participants) {
-      const playerName = descriptions?.playerDescriptions.find((p) => p.playerId === playerId)
-        ?.name;
-      let started;
-      if (m.status.kind === 'participating') {
-        started = m.status.started;
-      }
+    for (const [playerId, membership] of conversation.doc.participants) {
+      const playerName = descriptions?.playerDescriptions.find(
+        (description) => description.playerId === playerId,
+      )?.name;
+      const started =
+        membership.status.kind === 'participating' ? membership.status.started : undefined;
       if (started) {
         membershipNodes.push({
           node: (
-            <div key={`joined-${playerId}`} className="leading-tight mb-6">
-              <p className="text-brown-700 text-center">{playerName} joined the conversation.</p>
+            <div key={`joined-${playerId}`} className="town-chat-system">
+              <span>{playerName ?? 'A citizen'} joined the conversation.</span>
             </div>
           ),
           time: started,
@@ -108,13 +133,14 @@ export function Messages({
     }
   } else {
     for (const playerId of conversation.doc.participants) {
-      const playerName = descriptions?.playerDescriptions.find((p) => p.playerId === playerId)
-        ?.name;
+      const playerName = descriptions?.playerDescriptions.find(
+        (description) => description.playerId === playerId,
+      )?.name;
       const started = conversation.doc.created;
       membershipNodes.push({
         node: (
-          <div key={`joined-${playerId}`} className="leading-tight mb-6">
-            <p className="text-brown-700 text-center">{playerName} joined the conversation.</p>
+          <div key={`joined-${playerId}`} className="town-chat-system">
+            <span>{playerName ?? 'A citizen'} joined the conversation.</span>
           </div>
         ),
         time: started,
@@ -122,46 +148,72 @@ export function Messages({
       const ended = conversation.doc.ended;
       membershipNodes.push({
         node: (
-          <div key={`left-${playerId}`} className="leading-tight mb-6">
-            <p className="text-brown-700 text-center">{playerName} left the conversation.</p>
+          <div key={`left-${playerId}`} className="town-chat-system">
+            <span>{playerName ?? 'A citizen'} left the conversation.</span>
           </div>
         ),
-        // Always sort all "left" messages after the last message.
-        // TODO: We can remove this once we want to support more than two participants per conversation.
+        // Keep archived departures after the final text message.
         time: Math.max(lastMessageTs + 1, ended),
       });
     }
   }
-  const nodes = [...messageNodes, ...membershipNodes];
-  nodes.sort((a, b) => a.time - b.time);
+
+  const nodes = [...messageNodes, ...membershipNodes].sort((a, b) => a.time - b.time);
   return (
-    <div className="chats text-base sm:text-sm">
-      <div className="bg-brown-200 text-black p-2">
-        {nodes.length > 0 && nodes.map((n) => n.node)}
-        {currentlyTyping && currentlyTyping.playerId !== humanPlayerId && (
-          <div key="typing" className="leading-tight mb-6">
-            <div className="flex gap-4">
-              <span className="uppercase flex-grow">{currentlyTypingName}</span>
-              <time dateTime={currentlyTyping.since.toString()}>
-                {new Date(currentlyTyping.since).toLocaleString()}
-              </time>
-            </div>
-            <div className={clsx('bubble')}>
-              <p className="bg-white -mx-3 -my-1">
-                <i>typing...</i>
-              </p>
-            </div>
+    <section className="town-chat-shell">
+      <ChatHeading active={conversation.kind === 'active'} />
+      <div className="town-chat-scroll" ref={scrollViewRef}>
+        {nodes.length > 0 ? (
+          nodes.map((item) => item.node)
+        ) : (
+          <div className="town-chat-empty-log">
+            <span aria-hidden="true">···</span>
+            <p>Conversation started. Say hello.</p>
           </div>
         )}
-        {humanPlayer && inConversationWithMe && conversation.kind === 'active' && (
-          <MessageInput
-            worldId={worldId}
-            engineId={engineId}
-            conversation={conversation.doc}
-            humanPlayer={humanPlayer}
-          />
+        {currentlyTyping && currentlyTyping.playerId !== humanPlayerId && (
+          <article className="town-chat-message is-theirs is-typing">
+            <header>
+              <span>{currentlyTypingName ?? 'Citizen'}</span>
+              <time dateTime={new Date(currentlyTyping.since).toISOString()}>
+                {formatChatTime(currentlyTyping.since)}
+              </time>
+            </header>
+            <div className="town-chat-bubble">
+              <p>
+                Typing<span aria-hidden="true">...</span>
+              </p>
+            </div>
+          </article>
         )}
       </div>
-    </div>
+      {humanPlayer && inConversationWithMe && conversation.kind === 'active' && (
+        <MessageInput
+          worldId={worldId}
+          engineId={engineId}
+          conversation={conversation.doc}
+          humanPlayer={humanPlayer}
+        />
+      )}
+    </section>
   );
+}
+
+function ChatHeading({ active }: { active: boolean }) {
+  return (
+    <header className="town-chat-heading">
+      <span>{active ? 'Live conversation' : 'Previous conversation'}</span>
+      <small className={active ? 'is-live' : undefined}>
+        <i aria-hidden="true" />
+        {active ? 'Live' : 'Archived'}
+      </small>
+    </header>
+  );
+}
+
+function formatChatTime(timestamp: number) {
+  return new Intl.DateTimeFormat('en', {
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(timestamp);
 }
