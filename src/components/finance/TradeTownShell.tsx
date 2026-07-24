@@ -277,6 +277,15 @@ export default function TradeTownShell({
         <button type="button" onClick={() => setDrawer(drawer === 'events' ? null : 'events')}>
           <span aria-hidden="true">!</span> Intel
         </button>
+        <button
+          type="button"
+          onClick={() => {
+            setDrawer(null);
+            setHelpOpen(true);
+          }}
+        >
+          <span aria-hidden="true">?</span> Help
+        </button>
       </nav>
 
       {drawer && (

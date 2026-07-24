@@ -1,0 +1,436 @@
+/*
+ * Responsive layout contract
+ *
+ * Overview is a scrollable information page. Immersive mode is a viewport-sized
+ * application surface. Keep the rules for those two modes separate here so
+ * legacy presentation rules in trade-town.css cannot accidentally mix them.
+ */
+
+.pixel-town-shell {
+  --town-overview-header-height: 78px;
+  --town-overview-dock-height: 0px;
+  --town-immersive-top-inset: 120px;
+  --town-immersive-bottom-inset: 84px;
+  --town-safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Overview: normal document flow, with no floating controls over content. */
+.pixel-town-shell.is-overview {
+  height: auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: visible;
+  grid-template-rows: auto 0 auto;
+}
+
+.pixel-town-shell.is-overview .pixel-town-header {
+  position: sticky;
+  z-index: 60;
+  top: 0;
+  grid-row: 1;
+}
+
+.pixel-town-shell.is-overview .pixel-town-layout {
+  grid-row: 3;
+  height: auto;
+  min-height: 0;
+  align-items: start;
+}
+
+.pixel-town-shell.is-overview .pixel-world-column {
+  container: town-world / inline-size;
+  height: auto;
+  min-height: 0;
+  grid-template-rows: clamp(480px, 62dvh, 620px) auto minmax(220px, auto);
+}
+
+.pixel-town-shell.is-overview .pixel-town-stage-wrap {
+  height: 100%;
+  min-height: 0;
+}
+
+.pixel-town-shell.is-overview .pixel-town-stage {
+  height: calc(100% - 29px);
+  min-height: 0;
+}
+
+.pixel-town-shell.is-overview .pixel-town-summary.is-unified,
+.pixel-town-shell.is-overview .pixel-event-board {
+  height: auto;
+}
+
+.pixel-town-shell.is-overview .pixel-town-summary.is-unified {
+  min-height: 86px;
+}
+
+.pixel-town-shell.is-overview .pixel-event-board {
+  min-height: 220px;
+}
+
+.pixel-town-shell.is-overview .pixel-event-track {
+  height: auto;
+  min-height: 164px;
+  scroll-snap-type: x proximity;
+  overscroll-behavior-inline: contain;
+}
+
+.pixel-town-shell.is-overview .pixel-event {
+  scroll-snap-align: start;
+}
+
+/* Tablet and mobile overview: the dock is an in-flow sticky navigation row. */
+@media (max-width: 1100px) {
+  .pixel-town-shell {
+    --town-overview-dock-height: 62px;
+  }
+
+  .pixel-town-shell.is-overview {
+    grid-template-rows: auto auto auto;
+  }
+
+  .pixel-town-shell.is-overview .pixel-town-header {
+    height: var(--town-overview-header-height);
+    min-height: var(--town-overview-header-height);
+  }
+
+  .pixel-town-shell.is-overview .pixel-hud-dock {
+    position: sticky;
+    z-index: 55;
+    top: var(--town-overview-header-height);
+    right: auto;
+    bottom: auto;
+    left: auto;
+    grid-row: 2;
+    width: 100%;
+    min-height: var(--town-overview-dock-height);
+    padding: 5px max(8px, env(safe-area-inset-right, 0px)) 5px
+      max(8px, env(safe-area-inset-left, 0px));
+    border-width: 0 0 4px;
+    display: flex;
+    justify-content: center;
+    box-shadow: 0 5px 0 rgba(18, 15, 28, 0.62);
+  }
+
+  .pixel-town-shell.is-overview .pixel-hud-dock button {
+    width: min(150px, 24%);
+    min-width: 0;
+  }
+
+  .pixel-town-shell.is-overview .pixel-hud-drawer {
+    top: calc(var(--town-overview-header-height) + var(--town-overview-dock-height) + 8px);
+    right: 8px;
+    bottom: auto;
+    max-height: calc(
+      100dvh - var(--town-overview-header-height) - var(--town-overview-dock-height) - 16px
+    );
+  }
+
+  .pixel-town-shell.is-overview .pixel-world-column {
+    grid-template-rows: clamp(380px, 62dvh, 580px) auto minmax(220px, auto);
+  }
+}
+
+@media (max-width: 640px) {
+  .pixel-town-shell {
+    --town-overview-header-height: 70px;
+    --town-overview-dock-height: 58px;
+  }
+
+  .pixel-town-shell.is-overview .pixel-hud-dock {
+    top: var(--town-overview-header-height);
+    right: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+    gap: 3px;
+  }
+
+  .pixel-town-shell.is-overview .pixel-hud-dock button {
+    width: auto;
+    min-height: 42px;
+    padding: 6px 4px;
+    flex: 1 1 0;
+    font-size: 9px;
+  }
+
+  .pixel-town-shell.is-overview .pixel-town-layout {
+    padding: 7px;
+  }
+
+  .pixel-town-shell.is-overview .pixel-world-column {
+    grid-template-rows: clamp(320px, 52dvh, 500px) auto minmax(220px, auto);
+    gap: 7px;
+  }
+
+  .pixel-town-shell.is-overview .pixel-town-stage-wrap {
+    padding-top: 48px;
+  }
+
+  .pixel-town-shell.is-overview .pixel-town-stage {
+    height: calc(100% - 48px);
+  }
+
+  .pixel-town-shell.is-overview .pixel-stage-ribbon {
+    height: 48px;
+    padding-inline: 7px;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .pixel-town-shell.is-overview .pixel-stage-ribbon > span {
+    min-width: 0;
+    font-size: 9px;
+    line-height: 1.35;
+  }
+
+  .pixel-town-shell.is-overview .pixel-stage-meta {
+    flex: 0 0 auto;
+    gap: 4px;
+  }
+
+  .pixel-town-shell.is-overview .pixel-stage-meta strong {
+    font-size: 8px;
+    text-align: right;
+  }
+
+  .pixel-town-shell.is-overview .pixel-warning-count {
+    padding-inline: 3px;
+    font-size: 8px;
+  }
+
+  .pixel-town-shell.is-overview .pixel-event-board {
+    min-height: 220px;
+  }
+
+  .pixel-town-shell.is-overview .pixel-event-title {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(118px, 44%);
+    gap: 5px;
+  }
+
+  .pixel-town-shell.is-overview .pixel-event-title > strong {
+    display: none;
+  }
+
+  .pixel-town-shell.is-overview .pixel-event-tabs {
+    width: 100%;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .pixel-town-shell.is-overview .pixel-event-tabs button {
+    min-width: 0;
+    padding-inline: 2px;
+  }
+
+  .pixel-town-shell.is-overview .pixel-event-track {
+    grid-auto-columns: calc(100% - 2px);
+  }
+
+  .pixel-town-shell.is-overview .pixel-hud-drawer {
+    top: calc(var(--town-overview-header-height) + var(--town-overview-dock-height) + 6px);
+    right: 8px;
+    bottom: auto;
+    width: calc(100vw - 16px);
+    max-height: calc(
+      100dvh - var(--town-overview-header-height) - var(--town-overview-dock-height) - 14px
+    );
+    padding-bottom: calc(10px + var(--town-safe-bottom));
+  }
+
+  .pixel-modal-backdrop {
+    padding:
+      max(10px, env(safe-area-inset-top, 0px))
+      max(10px, env(safe-area-inset-right, 0px))
+      max(10px, env(safe-area-inset-bottom, 0px))
+      max(10px, env(safe-area-inset-left, 0px));
+  }
+
+  .pixel-help-modal {
+    max-height: calc(
+      100dvh - max(20px, env(safe-area-inset-top, 0px)) -
+        max(20px, env(safe-area-inset-bottom, 0px))
+    );
+    overflow-y: auto;
+  }
+}
+
+/* Component-level reflow follows the actual dashboard column, not the device. */
+@container town-world (max-width: 560px) {
+  .pixel-town-summary.is-unified {
+    min-height: 0;
+    grid-template-columns: 1fr;
+    overflow: visible;
+  }
+
+  .pixel-summary-source {
+    min-height: 0;
+    border-right: 0;
+    border-bottom: 4px solid var(--town-night);
+    grid-template-rows: auto auto;
+  }
+
+  .pixel-summary-source:last-child {
+    border-bottom: 0;
+  }
+
+  .pixel-summary-source > header {
+    min-height: 28px;
+  }
+
+  .pixel-summary-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pixel-summary-metrics > div {
+    min-height: 42px;
+  }
+
+  .pixel-summary-metrics > div:nth-child(2n) {
+    border-right: 0;
+  }
+
+  .pixel-summary-metrics > div:nth-child(-n + 2) {
+    border-bottom: 2px solid var(--town-night);
+  }
+}
+
+/* Compact-height overview for mobile landscape and small embedded windows. */
+@media (max-width: 960px) and (max-height: 500px) {
+  .pixel-town-shell {
+    --town-overview-header-height: 62px;
+    --town-overview-dock-height: 56px;
+  }
+
+  .pixel-town-shell.is-overview .pixel-brand p {
+    display: none;
+  }
+
+  .pixel-town-shell.is-overview .pixel-town-header {
+    padding-block: 6px;
+  }
+
+  .pixel-town-shell.is-overview .pixel-town-layout {
+    padding-top: 6px;
+  }
+
+  .pixel-town-shell.is-overview .pixel-world-column {
+    grid-template-rows:
+      clamp(
+        260px,
+        calc(100dvh - var(--town-overview-header-height) - var(--town-overview-dock-height) - 18px),
+        360px
+      )
+      auto minmax(210px, auto);
+  }
+}
+
+/* Immersive: reserve explicit safe bands for the header and HUD around the map. */
+.pixel-town-shell.is-immersive .pixel-world-column {
+  box-sizing: border-box;
+  padding-block:
+    var(--town-immersive-top-inset)
+    calc(var(--town-immersive-bottom-inset) + var(--town-safe-bottom));
+}
+
+.pixel-town-shell.is-immersive .pixel-town-header {
+  box-sizing: border-box;
+}
+
+.pixel-town-shell.is-immersive .pixel-stage-controls {
+  position: absolute;
+  bottom: 12px;
+}
+
+.pixel-town-shell.is-immersive .pixel-hud-dock {
+  bottom: calc(8px + var(--town-safe-bottom));
+}
+
+.pixel-town-shell.is-immersive .pixel-hud-drawer {
+  bottom: calc(var(--town-immersive-bottom-inset) + var(--town-safe-bottom));
+  max-height: calc(
+    100dvh - var(--town-immersive-top-inset) - var(--town-immersive-bottom-inset) -
+      var(--town-safe-bottom)
+  );
+}
+
+@media (max-width: 1100px), (max-height: 600px) {
+  .pixel-town-shell {
+    --town-immersive-top-inset: 80px;
+    --town-immersive-bottom-inset: 78px;
+  }
+
+  .pixel-town-shell.is-immersive .pixel-town-header {
+    height: 68px;
+    min-height: 68px;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .pixel-town-shell.is-immersive .pixel-data-console {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .pixel-town-shell {
+    --town-immersive-top-inset: 67px;
+    --town-immersive-bottom-inset: 78px;
+  }
+
+  .pixel-town-shell.is-immersive .pixel-town-header {
+    height: 62px;
+    min-height: 62px;
+    max-height: 62px;
+    padding: 5px 7px;
+    border-width: 10px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px;
+    overflow: hidden;
+  }
+
+  .pixel-town-shell.is-immersive .pixel-brand {
+    min-width: 0;
+  }
+
+  .pixel-town-shell.is-immersive .pixel-brand h1 {
+    overflow: hidden;
+    font-size: 27px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .pixel-town-shell.is-immersive .pixel-header-actions {
+    height: 42px;
+  }
+
+  .pixel-town-shell.is-immersive .pixel-view-toggle {
+    width: auto;
+    height: 42px;
+    min-height: 42px;
+    padding: 2px 5px;
+    border-width: 7px;
+    font-size: 9px;
+    white-space: nowrap;
+  }
+
+  .pixel-town-shell.is-immersive .pixel-hud-dock {
+    right: 8px !important;
+    bottom: calc(8px + var(--town-safe-bottom)) !important;
+    left: 8px;
+  }
+
+  .pixel-town-shell.is-immersive .pixel-hud-dock button {
+    min-width: 0;
+    padding-inline: 4px;
+    flex: 1 1 0;
+    font-size: 9px;
+  }
+
+  .pixel-town-shell.is-immersive .pixel-hud-drawer {
+    right: 8px;
+    bottom: calc(var(--town-immersive-bottom-inset) + var(--town-safe-bottom));
+    width: calc(100vw - 16px);
+  }
+}

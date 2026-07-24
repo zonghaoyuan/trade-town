@@ -1,7 +1,6 @@
 import { CSSProperties, useEffect, useRef, useState } from 'react';
 import PixiGame from './PixiGame.tsx';
 
-import { useElementSize } from 'usehooks-ts';
 import { Stage } from '@pixi/react';
 import { ConvexProvider, useConvex, useQuery } from 'convex/react';
 import PlayerDetails from './PlayerDetails.tsx';
@@ -30,7 +29,7 @@ export default function Game({
     x: number;
     y: number;
   } | null>(null);
-  const [gameWrapperRef, { width, height }] = useElementSize();
+  const [gameWrapperRef, { width, height }] = useObservedElementSize<HTMLDivElement>();
 
   const worldStatus = useQuery(api.world.defaultWorldStatus);
   const worldId = worldStatus?.worldId;
@@ -128,6 +127,32 @@ https://github.com/michalochman/react-pixi-fiber/issues/145#issuecomment-5315492
       </div>
     </>
   );
+}
+
+function useObservedElementSize<T extends HTMLElement>() {
+  const [element, setElement] = useState<T | null>(null);
+  const [size, setSize] = useState({ width: 0, height: 0 });
+
+  useEffect(() => {
+    if (!element) return;
+
+    const updateSize = () => {
+      const next = {
+        width: element.offsetWidth,
+        height: element.offsetHeight,
+      };
+      setSize((current) =>
+        current.width === next.width && current.height === next.height ? current : next,
+      );
+    };
+
+    updateSize();
+    const observer = new ResizeObserver(updateSize);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [element]);
+
+  return [setElement, size] as const;
 }
 
 function formatSignedCompact(value: number) {

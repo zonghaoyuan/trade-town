@@ -8,6 +8,8 @@ game/node_modules/
 
 # testing
 /coverage
+/playwright-report
+/test-results
 
 # next.js
 /.next/
@@ -42,3 +44,6 @@ dist
 
 convex-local*
 convex_local*
+
+# local agent workspace
+/.superpowers/

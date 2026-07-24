@@ -6,6 +6,8 @@
     "dev": "npm-run-all --parallel dev:backend dev:frontend",
     "build": "tsc && vite build",
     "lint": "eslint .",
+    "test:responsive": "playwright test",
+    "test:responsive:update": "playwright test --update-snapshots",
     "predev": "convex dev --run init --until-success",
     "dev:backend": "convex dev --tail-logs",
     "dev:frontend": "vite",
@@ -50,6 +52,7 @@
   },
   "devDependencies": {
     "@flydotio/dockerfile": "^0.2.14",
+    "@playwright/test": "^1.61.1",
     "@types/css-font-loading-module": "^0.0.8",
     "@types/express": "^5.0.3",
     "@types/jest": "^29.5.4",
