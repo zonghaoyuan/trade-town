@@ -583,7 +583,6 @@ function AgentBoard({
   return (
     <div className="pixel-board pixel-agent-board">
       <div className="pixel-board-title">
-        <span>{dayViewDashboard.traders.length} active agents</span>
         <h2>Citizens</h2>
       </div>
       <div className="pixel-agent-list">
