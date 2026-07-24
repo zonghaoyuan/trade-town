@@ -13,13 +13,21 @@ npm run gateway:check
 Signing stays disabled unless `GATEWAY_MODE=signing` and a dedicated testnet-only private key is
 provided. See the root `.env.example` for the full configuration. Never use a mainnet wallet.
 
-Preview the exact TokenFactory denoms and spot markets without signing:
+Preview the ACME TokenFactory denom and the single ACME/INJ market without signing:
 
 ```bash
 npm run provision:plan
 ```
 
-Provisioning is split into explicit `tokens`, `markets`, and `funding` stages. Broadcasting
-additionally requires `GATEWAY_MODE=signing`, `INJECTIVE_PRIVATE_KEY`, and
-`TESTNET_PROVISION_CONFIRM=trade-town-testnet`. This guard exists because each instant spot market
-launch pays the chain's configured testnet listing fee.
+Provisioning is split into explicit `tokens`, `markets`, and `funding` stages. The market stage uses
+the Injective exchange v2 launch message and verifies INJ's chain minimum-notional configuration
+before signing. Every town subaccount receives 2,000 ACME and 10 INJ so it can participate on either
+side of the MVP orderbook. Broadcasting additionally requires `GATEWAY_MODE=signing`,
+`INJECTIVE_PRIVATE_KEY`, and `TESTNET_PROVISION_CONFIRM=trade-town-testnet`. This guard exists
+because each instant spot market launch pays the chain's configured testnet listing fee.
+
+Use `--simulate` before `--broadcast`; simulation signs locally but does not submit a transaction:
+
+```bash
+npm run provision:testnet -- --simulate --stage=markets
+```

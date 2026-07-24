@@ -1,91 +1,96 @@
 import {
+  ChainGrpcExchangeApi,
+  IndexerGrpcSpotApi,
   MsgBroadcasterWithPk,
   MsgCreateDenom,
   MsgDeposit,
-  MsgInstantSpotMarketLaunch,
+  MsgInstantSpotMarketLaunchV2,
   MsgMint,
   PrivateKey,
 } from '@injectivelabs/sdk-ts';
-import { Network } from '@injectivelabs/networks';
-import { deriveSubaccountId, TOWN_MARKETS, TOWN_TRADERS } from '../../../shared/finance';
+import { getNetworkEndpoints, Network } from '@injectivelabs/networks';
+import { deriveSubaccountId, TOWN_TRADERS } from '../../../shared/finance';
 import { getEthereumAddress } from '@injectivelabs/sdk-ts';
+import {
+  PROVISION_ALLOCATION,
+  PROVISION_MARKETS,
+  PROVISION_QUOTE_ASSET,
+  PROVISION_TOKENS,
+} from './provisionConfig';
 
 type ProvisionStage = 'tokens' | 'markets' | 'funding';
 
 const args = process.argv.slice(2);
 const shouldBroadcast = args.includes('--broadcast');
+const shouldSimulate = args.includes('--simulate');
 const stage = readStage(args);
 const privateKeyHex = process.env.INJECTIVE_PRIVATE_KEY?.trim();
 const privateKey = privateKeyHex ? PrivateKey.fromHex(privateKeyHex) : undefined;
 const operatorAddress = privateKey?.toBech32() ?? '<operator-address>';
-const tokens = [
-  {
-    symbol: 'TOWNUSD',
-    name: 'Trade Town Dollar',
-    subdenom: 'townusd',
-    decimals: 6,
-    initialSupply: '100000000000000',
-  },
-  ...TOWN_MARKETS.map((market) => ({
-    symbol: market.symbol,
-    name: market.displayName,
-    subdenom: market.baseToken.toLowerCase(),
-    decimals: market.baseDecimals,
-    initialSupply: '10000000000000',
-  })),
-];
 
-if (!shouldBroadcast) {
+if (shouldBroadcast && shouldSimulate) {
+  throw new Error('Choose either --broadcast or --simulate, not both.');
+}
+
+if (!shouldBroadcast && !shouldSimulate) {
   console.log(
     JSON.stringify(
       {
         network: 'injective-888',
         mode: 'plan-only',
         operatorAddress,
-        tokens: tokens.map((token) => ({
+        tokens: PROVISION_TOKENS.map((token) => ({
           ...token,
           denom: `factory/${operatorAddress}/${token.subdenom}`,
         })),
-        markets: TOWN_MARKETS.map((market) => ({
-          ticker: `${market.symbol}/TOWNUSD`,
+        markets: PROVISION_MARKETS.map((market) => ({
+          ticker: `${market.symbol}/${market.quoteToken}`,
           baseDenom: `factory/${operatorAddress}/${market.baseToken.toLowerCase()}`,
-          quoteDenom: `factory/${operatorAddress}/townusd`,
+          quoteDenom: market.quoteDenom,
           minPriceTickSize: market.minPriceTick,
           minQuantityTickSize: market.minQuantityTick,
-          minNotional: '1',
+          minNotional: market.minNotional,
+          baseDecimals: market.baseDecimals,
+          quoteDecimals: market.quoteDecimals,
+          messageVersion: 'v2',
         })),
         funding: {
           subaccounts: TOWN_TRADERS.length,
-          townUsdPerSubaccount: '100000',
-          baseUnitsPerFocusedMarket: '2000',
+          injPerSubaccount: PROVISION_ALLOCATION.injPerSubaccount,
+          acmePerSubaccount: PROVISION_ALLOCATION.baseUnitsPerSubaccount,
         },
-        next: 'Fund a dedicated testnet wallet, then run one explicit stage with --broadcast and the confirmation environment variable.',
+        next: 'Do not rerun tokens for an existing denom. Simulate the ACME/INJ market stage before the explicit broadcast.',
       },
       null,
       2,
     ),
   );
 } else {
-  void broadcastStage().catch((error) => {
+  void executeStage().catch((error) => {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;
   });
 }
 
-async function broadcastStage() {
+async function executeStage() {
   if (!privateKey || !privateKeyHex) {
-    throw new Error('--broadcast requires INJECTIVE_PRIVATE_KEY.');
+    throw new Error('--broadcast and --simulate require INJECTIVE_PRIVATE_KEY.');
   }
   if (process.env.GATEWAY_MODE !== 'signing') {
-    throw new Error('--broadcast requires GATEWAY_MODE=signing.');
+    throw new Error('--broadcast and --simulate require GATEWAY_MODE=signing.');
   }
-  if (process.env.TESTNET_PROVISION_CONFIRM !== 'trade-town-testnet') {
+  if (shouldBroadcast && process.env.TESTNET_PROVISION_CONFIRM !== 'trade-town-testnet') {
     throw new Error(
       '--broadcast requires TESTNET_PROVISION_CONFIRM=trade-town-testnet to acknowledge fees.',
     );
   }
   if (!stage) {
-    throw new Error('--broadcast requires --stage=tokens, --stage=markets, or --stage=funding.');
+    throw new Error(
+      '--broadcast and --simulate require --stage=tokens, --stage=markets, or --stage=funding.',
+    );
+  }
+  if (stage === 'markets') {
+    await preflightMarkets(operatorAddress);
   }
   const broadcaster = new MsgBroadcasterWithPk({
     privateKey,
@@ -94,7 +99,7 @@ async function broadcastStage() {
   });
   const messages = (() => {
     if (stage === 'tokens') {
-      return tokens.flatMap((token) => {
+      return PROVISION_TOKENS.flatMap((token) => {
         const denom = `factory/${operatorAddress}/${token.subdenom}`;
         return [
           MsgCreateDenom.fromJSON({
@@ -112,17 +117,16 @@ async function broadcastStage() {
       });
     }
     if (stage === 'markets') {
-      return TOWN_MARKETS.map((market) =>
-        MsgInstantSpotMarketLaunch.fromJSON({
+      return PROVISION_MARKETS.map((market) =>
+        MsgInstantSpotMarketLaunchV2.fromJSON({
           proposer: operatorAddress,
           market: {
-            sender: operatorAddress,
-            ticker: `${market.symbol}/TOWNUSD`,
+            ticker: `${market.symbol}/${market.quoteToken}`,
             baseDenom: `factory/${operatorAddress}/${market.baseToken.toLowerCase()}`,
-            quoteDenom: `factory/${operatorAddress}/townusd`,
+            quoteDenom: market.quoteDenom,
             minPriceTickSize: market.minPriceTick,
             minQuantityTickSize: market.minQuantityTick,
-            minNotional: '1',
+            minNotional: market.minNotional,
             baseDecimals: market.baseDecimals,
             quoteDecimals: market.quoteDecimals,
           },
@@ -132,36 +136,52 @@ async function broadcastStage() {
     const ethereumAddress = getEthereumAddress(operatorAddress);
     return TOWN_TRADERS.flatMap((trader) => {
       const subaccountId = deriveSubaccountId(ethereumAddress, trader.subaccountNonce);
-      const townUsd = MsgDeposit.fromJSON({
+      const inj = MsgDeposit.fromJSON({
         injectiveAddress: operatorAddress,
         subaccountId,
         amount: {
-          denom: `factory/${operatorAddress}/townusd`,
-          amount: '100000000000',
+          denom: PROVISION_QUOTE_ASSET.denom,
+          amount: PROVISION_ALLOCATION.injChainAmount,
         },
       });
-      const bases = trader.focusSymbols.map((symbol) =>
+      const bases = PROVISION_MARKETS.map((market) =>
         MsgDeposit.fromJSON({
           injectiveAddress: operatorAddress,
           subaccountId,
           amount: {
-            denom: `factory/${operatorAddress}/${symbol.toLowerCase()}`,
-            amount: '2000000000',
+            denom: `factory/${operatorAddress}/${market.baseToken.toLowerCase()}`,
+            amount: PROVISION_ALLOCATION.baseChainAmount,
           },
         }),
       );
-      return [townUsd, ...bases];
+      return [inj, ...bases];
     });
   })();
   const txHashes: string[] = [];
   for (let index = 0; index < messages.length; index += 10) {
-    const response = await broadcaster.broadcast({
-      msgs: messages.slice(index, index + 10),
+    const transaction = {
+      // sdk-ts 1.20.26 can encode v2 messages at runtime, but its
+      // MsgBroadcasterTxOptions union has not yet added the v2 launch class.
+      msgs: messages.slice(index, index + 10) as Parameters<
+        MsgBroadcasterWithPk['broadcast']
+      >[0]['msgs'],
       memo: `Trade Town provision ${stage} ${Math.floor(index / 10) + 1}`,
-    });
-    txHashes.push(response.txHash);
+    };
+    if (shouldSimulate) {
+      const response = await broadcaster.simulate(transaction);
+      console.log(
+        `[simulated:${stage}] batch ${Math.floor(index / 10) + 1} · gas ${response.gasInfo.gasUsed}`,
+      );
+    } else {
+      const response = await broadcaster.broadcast(transaction);
+      txHashes.push(response.txHash);
+    }
   }
-  console.log(`[provisioned:${stage}] ${txHashes.join(',')}`);
+  if (shouldSimulate) {
+    console.log(`[simulation-complete:${stage}] no transaction was broadcast`);
+  } else {
+    console.log(`[provisioned:${stage}] ${txHashes.join(',')}`);
+  }
 }
 
 function readStage(values: string[]): ProvisionStage | undefined {
@@ -173,4 +193,55 @@ function readStage(values: string[]): ProvisionStage | undefined {
     return raw;
   }
   throw new Error('--stage must be tokens, markets, or funding.');
+}
+
+async function preflightMarkets(address: string) {
+  const endpoints = getNetworkEndpoints(Network.Testnet);
+  const exchange = new ChainGrpcExchangeApi(endpoints.grpc);
+  const spot = new IndexerGrpcSpotApi(endpoints.indexer);
+  const quoteMinNotional = await exchange.fetchDenomMinNotional(PROVISION_QUOTE_ASSET.denom);
+
+  if (!/^\d+$/.test(quoteMinNotional) || BigInt(quoteMinNotional) <= BigInt(0)) {
+    throw new Error(
+      `Quote denom ${PROVISION_QUOTE_ASSET.denom} has no Injective minimum notional configuration.`,
+    );
+  }
+
+  const configuredMinNotional = decimalToChainAmount(
+    PROVISION_QUOTE_ASSET.minNotional,
+    PROVISION_QUOTE_ASSET.decimals,
+  );
+  if (BigInt(configuredMinNotional) < BigInt(quoteMinNotional)) {
+    throw new Error(
+      `Configured min notional ${PROVISION_QUOTE_ASSET.minNotional} ${PROVISION_QUOTE_ASSET.symbol} is below the chain minimum.`,
+    );
+  }
+
+  for (const market of PROVISION_MARKETS) {
+    const baseDenom = `factory/${address}/${market.baseToken.toLowerCase()}`;
+    const existing = await spot.fetchMarkets({
+      baseDenom,
+      quoteDenom: market.quoteDenom,
+    });
+    if (existing.length > 0) {
+      throw new Error(
+        `${market.symbol}/${market.quoteToken} already exists as ${existing[0].marketId}. Configure INJECTIVE_MARKET_${market.symbol} instead of launching it again.`,
+      );
+    }
+  }
+
+  console.log(
+    `[preflight:markets] ${PROVISION_QUOTE_ASSET.symbol} quote enabled · minimum ${PROVISION_QUOTE_ASSET.minNotional} ${PROVISION_QUOTE_ASSET.symbol} · no duplicate market`,
+  );
+}
+
+export function decimalToChainAmount(value: string, decimals: number) {
+  if (!/^\d+(?:\.\d+)?$/.test(value)) {
+    throw new Error(`Invalid decimal amount: ${value}`);
+  }
+  const [whole, fraction = ''] = value.split('.');
+  if (fraction.length > decimals) {
+    throw new Error(`${value} has more than ${decimals} decimal places.`);
+  }
+  return `${whole}${fraction.padEnd(decimals, '0')}`.replace(/^0+(?=\d)/, '');
 }
