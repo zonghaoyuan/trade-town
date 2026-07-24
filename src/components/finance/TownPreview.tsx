@@ -1,4 +1,7 @@
 import { previewDashboard } from '../../finance/demoData';
+import { CSSProperties } from 'react';
+import type { FocusedTownCitizen } from './TradeTownShell';
+import PixelAvatar from './PixelAvatar';
 
 const positions = [
   [18, 28],
@@ -13,7 +16,16 @@ const positions = [
   [81, 57],
 ];
 
-export default function TownPreview() {
+export default function TownPreview({
+  focusedCitizen = null,
+}: {
+  focusedCitizen?: FocusedTownCitizen | null;
+}) {
+  const focusedIndex = focusedCitizen
+    ? previewDashboard.traders.findIndex((trader) => trader.name === focusedCitizen.name)
+    : -1;
+  const focusedPosition = focusedIndex >= 0 ? positions[focusedIndex] : undefined;
+
   return (
     <div className="town-preview" aria-label="Trade Town preview">
       <div className="preview-grid" aria-hidden="true" />
@@ -34,6 +46,27 @@ export default function TownPreview() {
           <small>{trader.name}</small>
         </div>
       ))}
+      {focusedCitizen && focusedPosition && (
+        <aside
+          className="pixel-map-agent"
+          aria-live="polite"
+          style={
+            {
+              '--map-agent-x': `${focusedPosition[0]}%`,
+              '--map-agent-y': `${focusedPosition[1]}%`,
+            } as CSSProperties
+          }
+        >
+          <PixelAvatar index={focusedCitizen.avatarIndex} />
+          <span>
+            <strong>{focusedCitizen.name}</strong>
+            <small>{focusedCitizen.role}</small>
+            <em className={focusedCitizen.pnl >= 0 ? 'pixel-up' : 'pixel-down'}>
+              P&amp;L {formatSignedCompact(focusedCitizen.pnl)}
+            </em>
+          </span>
+        </aside>
+      )}
       <div className="preview-conversation">
         <strong>MIRA</strong>
         “75 bps changes ACME's refinancing math.”
@@ -41,4 +74,13 @@ export default function TownPreview() {
       <div className="preview-mode-note">ADD VITE_CONVEX_URL TO LOAD THE LIVE PIXI TOWN</div>
     </div>
   );
+}
+
+function formatSignedCompact(value: number) {
+  const formatted = new Intl.NumberFormat('en-US', {
+    notation: 'compact',
+    maximumFractionDigits: 1,
+    signDisplay: 'always',
+  }).format(value);
+  return `${formatted} TOWNUSD`;
 }

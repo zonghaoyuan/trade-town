@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { CSSProperties, useEffect, useRef, useState } from 'react';
 import PixiGame from './PixiGame.tsx';
 
 import { useElementSize } from 'usehooks-ts';
@@ -11,15 +11,25 @@ import { useHistoricalTime } from '../hooks/useHistoricalTime.ts';
 import { DebugTimeManager } from './DebugTimeManager.tsx';
 import { GameId } from '../../convex/aiTown/ids.ts';
 import { useServerGame } from '../hooks/serverGame.ts';
+import type { FocusedTownCitizen } from './finance/TradeTownShell.tsx';
+import PixelAvatar from './finance/PixelAvatar.tsx';
 
 export const SHOW_DEBUG_UI = !!import.meta.env.VITE_SHOW_DEBUG_UI;
 
-export default function Game() {
+export default function Game({
+  focusedCitizen = null,
+}: {
+  focusedCitizen?: FocusedTownCitizen | null;
+}) {
   const convex = useConvex();
   const [selectedElement, setSelectedElement] = useState<{
     kind: 'player';
     id: GameId<'players'>;
   }>();
+  const [focusedCitizenPosition, setFocusedCitizenPosition] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
   const [gameWrapperRef, { width, height }] = useElementSize();
 
   const worldStatus = useQuery(api.world.defaultWorldStatus);
@@ -35,6 +45,10 @@ export default function Game() {
   const { historicalTime, timeManager } = useHistoricalTime(worldState?.engine);
 
   const scrollViewRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setFocusedCitizenPosition(null);
+  }, [focusedCitizen?.requestId]);
 
   if (!worldId || !engineId || !game) {
     return (
@@ -68,13 +82,33 @@ https://github.com/michalochman/react-pixi-fiber/issues/145#issuecomment-5315492
                     height={height}
                     historicalTime={historicalTime}
                     setSelectedElement={setSelectedElement}
+                    focusedCitizen={focusedCitizen}
+                    onFocusedCitizenPositionChange={setFocusedCitizenPosition}
                   />
                 </ConvexProvider>
               </Stage>
             </div>
           </div>
-          {!selectedElement && (
-            <div className="town-selection-hint">Select a citizen to open their story</div>
+          {focusedCitizen && focusedCitizenPosition && (
+            <aside
+              className="pixel-map-agent"
+              aria-live="polite"
+              style={
+                {
+                  '--map-agent-x': `${focusedCitizenPosition.x}px`,
+                  '--map-agent-y': `${focusedCitizenPosition.y}px`,
+                } as CSSProperties
+              }
+            >
+              <PixelAvatar index={focusedCitizen.avatarIndex} />
+              <span>
+                <strong>{focusedCitizen.name}</strong>
+                <small>{focusedCitizen.role}</small>
+                <em className={focusedCitizen.pnl >= 0 ? 'pixel-up' : 'pixel-down'}>
+                  P&amp;L {formatSignedCompact(focusedCitizen.pnl)}
+                </em>
+              </span>
+            </aside>
           )}
         </div>
         {/* Right column area */}
@@ -96,4 +130,13 @@ https://github.com/michalochman/react-pixi-fiber/issues/145#issuecomment-5315492
       </div>
     </>
   );
+}
+
+function formatSignedCompact(value: number) {
+  const formatted = new Intl.NumberFormat('en-US', {
+    notation: 'compact',
+    maximumFractionDigits: 1,
+    signDisplay: 'always',
+  }).format(value);
+  return `${formatted} TOWNUSD`;
 }
