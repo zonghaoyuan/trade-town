@@ -2,7 +2,11 @@ import { useQuery } from 'convex/react';
 import { api } from '../convex/_generated/api';
 import Game from './components/Game';
 import TradeTownShell from './components/finance/TradeTownShell';
-import { mergeLiveDashboard, pandaDayViewDashboard } from './finance/demoData';
+import {
+  mergeLiveDashboard,
+  pandaDayViewDashboard,
+  pandaDayViewDashboards,
+} from './finance/demoData';
 import { ToastContainer } from 'react-toastify';
 import FreezeButton from './components/FreezeButton';
 import MusicButton from './components/buttons/MusicButton';
@@ -17,6 +21,7 @@ export default function Home() {
       <TradeTownShell
         dashboard={dashboard}
         dayViewDashboard={pandaDayViewDashboard}
+        dayViewDashboards={pandaDayViewDashboards}
         town={({ focusedCitizen }) => <Game focusedCitizen={focusedCitizen} />}
         townMode="live"
         townControls={

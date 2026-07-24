@@ -7,7 +7,7 @@ export function buildAgentCard(config: A2AConfig): AgentCard {
   return {
     name: 'AI Financial Town Research Agent',
     description:
-      '在可复算的金融小镇中执行宏观冲击、谣言传播和用户行为复盘，并返回证据、风险结论与反事实。',
+      '基于 PandaAI 真实历史行情和可复算金融小镇执行市场回放、宏观冲击、传播与行为复盘，并返回数据溯源、证据和风险结论。',
     supportedInterfaces: duplicateInterfacesForLegacy(
       [
         {
@@ -23,7 +23,7 @@ export function buildAgentCard(config: A2AConfig): AgentCard {
       organization: 'Trade Town',
       url: config.publicBaseUrl,
     },
-    version: '0.1.0',
+    version: '0.2.0',
     documentationUrl: `${config.publicBaseUrl}/docs`,
     capabilities: {
       streaming: true,
@@ -49,6 +49,17 @@ export function buildAgentCard(config: A2AConfig): AgentCard {
     defaultInputModes: ['text/plain', 'application/json'],
     defaultOutputModes: ['text/plain', 'application/json'],
     skills: [
+      {
+        id: 'panda-market-replay',
+        name: 'PandaAI 真实历史行情回放',
+        description:
+          '读取 5 只 A 股的 PandaAI 授权真实历史日线及指标，并生成明确标记为模拟的居民观点、风控和组合回放。',
+        tags: ['PandaAI', '真实历史数据', '行情回放', '可解释'],
+        examples: ['分析 PandaAI 数据中 002594.SZ 的历史走势，并总结 8 个居民的分歧。'],
+        inputModes: ['text/plain', 'application/json'],
+        outputModes: ['text/plain', 'application/json'],
+        securityRequirements,
+      },
       {
         id: 'rate-shock-experiment',
         name: '利率冲击实验',

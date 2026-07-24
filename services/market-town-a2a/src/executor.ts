@@ -93,6 +93,7 @@ export class MarketTownAgentExecutor implements AgentExecutor {
             metadata: {
               schema: 'MarketTownReport/1.0',
               isSimulated: report.execution.isSimulated,
+              marketDataIsReal: report.marketData?.isReal ?? false,
             },
             filename: 'market-town-report.json',
             mediaType: 'application/json',
@@ -102,6 +103,7 @@ export class MarketTownAgentExecutor implements AgentExecutor {
           skillId: report.skillId,
           runId: report.runId,
           dataMode: report.execution.dataMode,
+          marketDataSource: report.marketData?.source ?? '',
         },
         extensions: [],
       };

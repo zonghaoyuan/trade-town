@@ -58,6 +58,7 @@ export class DeepSeekReasoner {
             content: JSON.stringify({
               title: result.title,
               taskSummary: result.taskSummary,
+              marketData: result.marketData,
               findings: result.findings,
               riskConclusion: result.riskConclusion,
               evidence: result.evidence,

@@ -1,4 +1,5 @@
 export const SKILL_IDS = [
+  'panda-market-replay',
   'rate-shock-experiment',
   'rumor-propagation-analysis',
   'user-behavior-review',
@@ -37,6 +38,20 @@ export type ModelDisclosure = {
   analysis: string;
 };
 
+export type MarketDataDisclosure = {
+  source: 'PandaAI';
+  method: 'daily_bars';
+  datasetId: string;
+  schemaVersion: string;
+  instrumentType: string;
+  symbol: string;
+  startDate: string;
+  endDate: string;
+  asOf: string;
+  barCount: number;
+  isReal: true;
+};
+
 export type MarketTownReport = {
   schemaVersion: '1.0';
   reportId: string;
@@ -54,6 +69,7 @@ export type MarketTownReport = {
     steps: string[];
   };
   model: ModelDisclosure;
+  marketData: MarketDataDisclosure | null;
   evidence: EvidenceItem[];
   findings: Record<string, unknown>;
   counterfactuals: Counterfactual[];

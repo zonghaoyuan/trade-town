@@ -32,11 +32,13 @@ type TownRenderState = {
 export default function TradeTownShell({
   dashboard,
   dayViewDashboard,
+  dayViewDashboards,
   town,
   townControls,
 }: {
   dashboard: TradeTownDashboard;
   dayViewDashboard: TradeTownDashboard;
+  dayViewDashboards?: Record<string, TradeTownDashboard>;
   town: ReactNode | ((state: TownRenderState) => ReactNode);
   townControls?: ReactNode;
   townMode?: 'live' | 'preview';
@@ -54,11 +56,12 @@ export default function TradeTownShell({
   );
   const focusRequestId = useRef(0);
 
-  const activeDashboard = dayViewDashboard;
-  const selectedMarketDashboard =
-    dayViewDashboard.markets.some((candidate) => candidate.symbol === selectedSymbol)
-      ? dayViewDashboard
-      : dashboard;
+  const activeDashboard = dayViewDashboards?.[selectedSymbol] ?? dayViewDashboard;
+  const selectedMarketDashboard = activeDashboard.markets.some(
+    (candidate) => candidate.symbol === selectedSymbol,
+  )
+    ? activeDashboard
+    : dashboard;
   const market =
     selectedMarketDashboard.markets.find((candidate) => candidate.symbol === selectedSymbol) ??
     selectedMarketDashboard.markets[0];
@@ -72,14 +75,14 @@ export default function TradeTownShell({
       activeDashboard.markets.some((candidate) => candidate.symbol === selectedSymbol) ||
       dashboard.markets.some((candidate) => candidate.symbol === selectedSymbol);
     if (!symbolExists) {
-      setSelectedSymbol(dayViewDashboard.markets[0]?.symbol ?? dashboard.markets[0]?.symbol ?? '');
+      setSelectedSymbol(activeDashboard.markets[0]?.symbol ?? dashboard.markets[0]?.symbol ?? '');
     }
     if (!activeDashboard.traders.some((candidate) => candidate.name === selectedAgent)) {
       setSelectedAgent(activeDashboard.traders[0]?.name ?? '');
     }
     setFocusRequest(null);
     setAgentDetailOpen(false);
-  }, [activeDashboard, dashboard, dayViewDashboard, selectedAgent, selectedSymbol]);
+  }, [activeDashboard, dashboard, selectedAgent, selectedSymbol]);
 
   useEffect(() => {
     document.body.classList.toggle('town-immersive-open', immersive);
@@ -166,7 +169,7 @@ export default function TradeTownShell({
             <div className="pixel-source-legend" aria-label="Data source legend">
               <span className="source-panda">
                 <i aria-hidden="true">◇</i>
-                Panda · historical / sim · {formatMarketDate(dayViewDashboard.asOf)}
+                Panda · historical / sim · {formatMarketDate(activeDashboard.asOf)}
               </span>
               <span className={`source-${dashboard.source}`}>
                 <i aria-hidden="true">{dashboard.source === 'injective' ? '◆' : '◈'}</i>
@@ -201,7 +204,7 @@ export default function TradeTownShell({
         <aside className="pixel-side-panel pixel-market-panel">
           <MarketBoard
             testnetDashboard={dashboard}
-            dayViewDashboard={dayViewDashboard}
+            dayViewDashboard={activeDashboard}
             selectedSymbol={market?.symbol ?? ''}
             onSelect={setSelectedSymbol}
           />
@@ -229,25 +232,17 @@ export default function TradeTownShell({
                 {townControls}
               </div>
             )}
-            <span className="pixel-preview-note">
-              ◇ SIMULATION · ◆ CHAIN VERIFIED
-            </span>
+            <span className="pixel-preview-note">◇ SIMULATION · ◆ CHAIN VERIFIED</span>
           </div>
 
-          <TownSummary
-            testnetDashboard={dashboard}
-            dayViewDashboard={dayViewDashboard}
-          />
-          <ActivityBoard
-            testnetDashboard={dashboard}
-            dayViewDashboard={dayViewDashboard}
-          />
+          <TownSummary testnetDashboard={dashboard} dayViewDashboard={activeDashboard} />
+          <ActivityBoard testnetDashboard={dashboard} dayViewDashboard={activeDashboard} />
         </section>
 
         <aside className="pixel-side-panel pixel-agent-panel" aria-label="Town citizens">
           <AgentBoard
             testnetDashboard={dashboard}
-            dayViewDashboard={dayViewDashboard}
+            dayViewDashboard={activeDashboard}
             selectedAgent={trader?.name ?? ''}
             onSelect={focusCitizen}
             onOpenDetails={() => setAgentDetailOpen(true)}
@@ -280,7 +275,7 @@ export default function TradeTownShell({
           {drawer === 'markets' && (
             <MarketBoard
               testnetDashboard={dashboard}
-              dayViewDashboard={dayViewDashboard}
+              dayViewDashboard={activeDashboard}
               selectedSymbol={market?.symbol ?? ''}
               onSelect={setSelectedSymbol}
             />
@@ -288,7 +283,7 @@ export default function TradeTownShell({
           {drawer === 'agents' && (
             <AgentBoard
               testnetDashboard={dashboard}
-              dayViewDashboard={dayViewDashboard}
+              dayViewDashboard={activeDashboard}
               selectedAgent={trader?.name ?? ''}
               onSelect={focusCitizen}
               onOpenDetails={() => {
@@ -298,11 +293,7 @@ export default function TradeTownShell({
             />
           )}
           {drawer === 'events' && (
-            <ActivityBoard
-              testnetDashboard={dashboard}
-              dayViewDashboard={dayViewDashboard}
-              drawer
-            />
+            <ActivityBoard testnetDashboard={dashboard} dayViewDashboard={activeDashboard} drawer />
           )}
         </section>
       )}
@@ -710,7 +701,9 @@ function AgentBoard({
       <article className="pixel-agent-card">
         <div className="pixel-agent-card-top">
           <span>Selected agent</span>
-          <span>◇ SIM + {testnetDashboard.source === 'injective' ? '◆ VERIFIED' : '◈ PREVIEW'}</span>
+          <span>
+            ◇ SIM + {testnetDashboard.source === 'injective' ? '◆ VERIFIED' : '◈ PREVIEW'}
+          </span>
         </div>
         <div className="pixel-agent-card-identity">
           <PixelAvatar index={traderIndex} />
@@ -736,9 +729,7 @@ function AgentBoard({
             {testnetDashboard.source === 'injective' ? 'verified' : 'preview'}
           </strong>
           <p>{formatTestnetAgentState(testnetTrader, testnetDashboard)}</p>
-          <span>
-            {testnetTrader?.activity ?? 'Awaiting a chain-backed account observation.'}
-          </span>
+          <span>{testnetTrader?.activity ?? 'Awaiting a chain-backed account observation.'}</span>
         </div>
         <button type="button" className="pixel-detail-button" onClick={onOpenDetails}>
           Open full evidence
@@ -866,9 +857,7 @@ function ActivityBoard({
       ? chainEvents.map((record) => ({
           record,
           source:
-            testnetDashboard.source === 'injective'
-              ? ('injective' as const)
-              : ('preview' as const),
+            testnetDashboard.source === 'injective' ? ('injective' as const) : ('preview' as const),
         }))
       : [{ record: testnetStatusEvent, source: 'preview' as const }]),
   ].sort((left, right) => left.record.time.localeCompare(right.record.time));
@@ -881,9 +870,7 @@ function ActivityBoard({
       .map((record) => ({
         record,
         source:
-          testnetDashboard.source === 'injective'
-            ? ('injective' as const)
-            : ('preview' as const),
+          testnetDashboard.source === 'injective' ? ('injective' as const) : ('preview' as const),
       })),
   ];
   const count =
@@ -1071,7 +1058,9 @@ function AgentDetailDrawer({
         <div className="pixel-agent-source-strip">
           <span className="source-panda">◇ Panda · simulated reasoning</span>
           <span className={`source-${testnetDashboard.source}`}>
-            {testnetDashboard.source === 'injective' ? '◆ Injective · verified' : '◈ Injective · preview'}
+            {testnetDashboard.source === 'injective'
+              ? '◆ Injective · verified'
+              : '◈ Injective · preview'}
           </span>
         </div>
         <nav className="pixel-agent-tabs" role="tablist" aria-label="Agent details">
@@ -1124,9 +1113,7 @@ function AgentDetailDrawer({
                 />
               </div>
               <section className={`pixel-detail-section source-${testnetDashboard.source}`}>
-                <span>
-                  {testnetDashboard.source === 'injective' ? '◆' : '◈'} Injective status
-                </span>
+                <span>{testnetDashboard.source === 'injective' ? '◆' : '◈'} Injective status</span>
                 <p>{formatTestnetAgentState(testnetTrader, testnetDashboard)}</p>
               </section>
             </>

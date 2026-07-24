@@ -1,143 +1,31 @@
 import { TOWN_TRADERS } from '../../shared/finance';
-import { pandaHistoricalMarket } from './pandaMarket';
+import type {
+  CausalEvent,
+  DashboardCandle,
+  DashboardError,
+  DashboardExecution,
+  DashboardMarket,
+  DashboardTrader,
+  SocialActivity,
+  TownSummary,
+} from '../../shared/pandaTypes';
+import { pandaHistoricalMarket, pandaHistoricalMarkets } from './pandaMarket';
 import { buildPandaSimulationRun } from './pandaSimulation';
 
 export type DashboardMode = 'panda_dayview' | 'injective_testnet' | 'local_sim';
-export type TradeAction = 'BUY' | 'SELL' | 'HOLD';
-export type Tone = 'positive' | 'negative' | 'neutral';
-
-export type DashboardCandle = {
-  time: number;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-  volume: number;
-};
-
-export type DashboardMarket = {
-  symbol: string;
-  displayName: string;
-  assetClass: 'company' | 'commodity';
-  lastPrice: number;
-  referencePrice: number;
-  changePct: number;
-  volume: number;
-  status: 'planned' | 'launching' | 'active' | 'paused';
-  accent: string;
-  quoteCurrency?: string;
-  priceTick?: number;
-  candles: DashboardCandle[];
-  indicators: Array<{
-    label: string;
-    value: string;
-    tone: Tone;
-  }>;
-  sentiment?: {
-    bulls: number;
-    bears: number;
-    holds?: number;
-    consensus: number;
-    divergence: number;
-    camp: string;
-  };
-};
-
-export type DashboardPosition = {
-  symbol: string;
-  quantity: number;
-  weightPct: number;
-  pnl: number;
-};
-
-export type DashboardTrader = {
-  name: string;
-  kind: 'ai' | 'market_maker';
-  role: string;
-  style: string;
-  riskTolerance: number;
-  subaccountNonce: number;
-  focusSymbols: readonly string[];
-  currency?: string;
-  pnl: number;
-  activity: string;
-  action: TradeAction;
-  confidence: number;
-  beliefBefore: string;
-  beliefAfter: string;
-  thesis: string;
-  evidence: string[];
-  navStart: number;
-  navEnd: number;
-  cash: number;
-  positions: DashboardPosition[];
-  riskRejections: number;
-  orderCount: number;
-  tradeCount: number;
-};
-
-export type CausalEvent = {
-  id: string;
-  time: string;
-  kind:
-    | 'policy'
-    | 'news'
-    | 'belief'
-    | 'conversation'
-    | 'intent'
-    | 'risk'
-    | 'chain'
-    | 'post'
-    | 'interaction'
-    | 'error';
-  actor: string;
-  title: string;
-  detail: string;
-  proof?: string;
-};
-
-export type SocialActivity = {
-  id: string;
-  time: string;
-  actor: string;
-  type: 'post' | 'reply' | 'repost' | 'graph';
-  title: string;
-  detail: string;
-  impact: string;
-};
-
-export type DashboardExecution = {
-  id: string;
-  time: string;
-  agentName: string;
-  symbol: string;
-  type: 'risk_rejected' | 'order' | 'fill';
-  side: 'BUY' | 'SELL';
-  quantity: number;
-  price: number;
-  priceUnit?: string;
-  state: string;
-  isSimulated: boolean;
-  reference?: string;
-  reason?: string;
-};
-
-export type DashboardError = {
-  id: string;
-  time: string;
-  scope: string;
-  message: string;
-  recovered: boolean;
-};
-
-export type TownSummary = {
-  aum: number;
-  totalExposure: number;
-  volume: number;
-  profitableAgents: number;
-  topAgent: string;
-  topReturnPct: number;
-};
+export type {
+  CausalEvent,
+  DashboardCandle,
+  DashboardError,
+  DashboardExecution,
+  DashboardMarket,
+  DashboardPosition,
+  DashboardTrader,
+  SocialActivity,
+  TownSummary,
+  TradeAction,
+  Tone,
+} from '../../shared/pandaTypes';
 
 export type TradeTownDashboard = {
   dataMode: DashboardMode;
@@ -175,13 +63,16 @@ function makeCandles(closes: number[], start = DAY_START, interval = 30 * 60): D
   });
 }
 
-const pandaSimulationRun = buildPandaSimulationRun(pandaHistoricalMarket.market);
-const pandaMarkets: DashboardMarket[] = [
-  {
-    ...pandaHistoricalMarket.market,
-    sentiment: pandaSimulationRun.sentiment,
-  },
-];
+const pandaSimulationRuns = new Map(
+  pandaHistoricalMarkets.map((dataset) => [
+    dataset.market.symbol,
+    buildPandaSimulationRun(dataset.market),
+  ]),
+);
+const pandaMarkets: DashboardMarket[] = pandaHistoricalMarkets.map((dataset) => ({
+  ...dataset.market,
+  sentiment: pandaSimulationRuns.get(dataset.market.symbol)!.sentiment,
+}));
 
 const injectivePreviewMarket: DashboardMarket = {
   symbol: 'ACME',
@@ -245,22 +136,32 @@ const injectivePreviewTraders: DashboardTrader[] = TOWN_TRADERS.slice(0, 8).map(
   tradeCount: 0,
 }));
 
-export const pandaDayViewDashboard: TradeTownDashboard = {
-  dataMode: 'panda_dayview',
-  source: 'panda',
-  sourceLabel: 'PANDA DAILY · GENERATED REPLAY',
-  runId: pandaSimulationRun.runId,
-  asOf: pandaHistoricalMarket.asOf,
-  gatewayStatus: 'read_only',
-  markets: pandaMarkets,
-  traders: pandaSimulationRun.traders,
-  marketMakers: [],
-  events: pandaSimulationRun.events,
-  social: pandaSimulationRun.social,
-  executions: pandaSimulationRun.executions,
-  summary: pandaSimulationRun.summary,
-  errors: pandaSimulationRun.errors,
-};
+export const pandaDayViewDashboards = Object.fromEntries(
+  pandaHistoricalMarkets.map((dataset) => {
+    const run = pandaSimulationRuns.get(dataset.market.symbol)!;
+    return [
+      dataset.market.symbol,
+      {
+        dataMode: 'panda_dayview',
+        source: 'panda',
+        sourceLabel: 'PANDA DAILY · GENERATED REPLAY',
+        runId: run.runId,
+        asOf: dataset.asOf,
+        gatewayStatus: 'read_only',
+        markets: pandaMarkets,
+        traders: run.traders,
+        marketMakers: [],
+        events: run.events,
+        social: run.social,
+        executions: run.executions,
+        summary: run.summary,
+        errors: run.errors,
+      } satisfies TradeTownDashboard,
+    ];
+  }),
+) as Record<string, TradeTownDashboard>;
+
+export const pandaDayViewDashboard = pandaDayViewDashboards[pandaHistoricalMarket.market.symbol];
 
 export const injectivePreviewDashboard: TradeTownDashboard = {
   dataMode: 'injective_testnet',

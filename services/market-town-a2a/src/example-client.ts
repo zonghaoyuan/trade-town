@@ -4,6 +4,7 @@ import { Role, Task, TaskState } from '@a2a-js/sdk';
 import { ClientFactory, ClientFactoryOptions, JsonRpcTransportFactory } from '@a2a-js/sdk/client';
 
 const prompts = [
+  '分析 PandaAI 数据中 002594.SZ 的历史走势，并总结 8 个居民的分歧。',
   '运行加息 100bp 实验，seed=20260722，并总结 8 个居民的分歧。',
   '分析 ACME 谣言的传播路径，并比较权威更正前后的居民决策。',
   '复盘一个保守型用户单笔使用 18% NAV 的行为，并给出两个反事实。',

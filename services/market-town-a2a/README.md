@@ -11,14 +11,18 @@ signer.
 - A2A 1.0 with the official SDK's v0.3 compatibility layer
 - blocking, polling, and streaming task flows
 - `Task` persistence in Convex when configured, with an in-memory local fallback
-- three whitelisted skills:
+- four whitelisted skills:
+  - `panda-market-replay`
   - `rate-shock-experiment`
   - `rumor-propagation-analysis`
   - `user-behavior-review`
 
-The current skill engine is a deterministic simulation. Every report sets `isSimulated: true`,
-returns no chain proof, and includes a risk warning. Requests for `live` or `verified-replay` are
-rejected until a verifiable Convex Run is connected.
+`panda-market-replay` reads the authorized PandaAI daily-bar datasets for `002594.SZ`, `300750.SZ`,
+`600519.SH`, `601318.SH`, and `688981.SH` (`2024-10-08`–`2025-12-31`) through the shared market
+adapter. Its market-data disclosure sets `isReal: true`, while resident decisions, orders, fills,
+PnL, and counterfactuals remain deterministic simulation. The report therefore keeps
+`execution.isSimulated: true`, returns no chain proof, and includes a risk warning. `live` is
+rejected because these are historical datasets, not a real-time feed.
 
 ## Run locally
 
@@ -50,11 +54,10 @@ Structured messages may use:
 
 ```json
 {
-  "skillId": "rate-shock-experiment",
+  "skillId": "panda-market-replay",
   "input": {
-    "shockBps": 100,
-    "seed": 20260722,
-    "dataMode": "simulated"
+    "symbol": "002594.SZ",
+    "dataMode": "verified-replay"
   }
 }
 ```
@@ -93,6 +96,6 @@ npm run a2a:test
 npm run build
 ```
 
-Before submission, deploy the public HTTPS process, run the three example tasks against that URL,
-and verify it with PandaAI's test environment. Connecting `verified-replay` and `live` modes to real
-Convex Runs remains the next integration step.
+Before submission, deploy the public HTTPS process, run the example tasks against that URL, and
+verify it with PandaAI's test environment. If a real-time PandaAI feed is added later, implement it
+as a separate `live` data provider rather than relabeling this historical replay.

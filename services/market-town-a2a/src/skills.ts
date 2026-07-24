@@ -2,6 +2,8 @@ import { createHash } from 'node:crypto';
 import { Message } from '@a2a-js/sdk';
 import { formFinancialIntention } from '../../../convex/finance/decision';
 import { TOWN_MARKETS, TOWN_TRADERS } from '../../../shared/finance';
+import { pandaHistoricalMarket, pandaHistoricalMarkets } from '../../../shared/pandaMarket';
+import { buildPandaSimulationRun } from '../../../shared/pandaSimulation';
 import { DataMode, EvidenceItem, SKILL_IDS, SkillId, SkillRequest, SkillResult } from './types';
 
 const RISK_WARNING = '本报告用于黑客松金融仿真与研究演示，不构成现实投资建议、收益承诺或买卖指令。';
@@ -30,12 +32,23 @@ export function parseSkillRequest(message: Message, maxPromptChars: number): Ski
   const skillId = explicitSkill ? assertSkillId(explicitSkill) : detectSkill(prompt);
   const input = isRecord(structured.input) ? structured.input : structured;
   const seed = normalizeSeed(readNumber(input.seed) ?? readSeedFromText(prompt) ?? 20260722);
-  const dataMode = readDataMode(readString(input.dataMode) ?? readString(structured.dataMode));
+  const dataMode = readDataMode(
+    readString(input.dataMode) ?? readString(structured.dataMode),
+    skillId === 'panda-market-replay' ? 'verified-replay' : 'simulated',
+  );
 
   return { skillId, prompt, input, seed, dataMode };
 }
 
 export function runSkill(request: SkillRequest, executionMode: 'local-demo' | 'competition') {
+  if (request.skillId === 'panda-market-replay') {
+    if (request.dataMode !== 'verified-replay') {
+      throw new Error(
+        `panda-market-replay 只支持 verified-replay；当前数据是 PandaAI 真实历史行情，不是实时行情。`,
+      );
+    }
+    return runPandaMarketReplay(request, executionMode);
+  }
   if (request.dataMode !== 'simulated') {
     throw new Error(
       `${request.dataMode} 暂未接通可验证 Run；为避免把模拟数据伪装成真实结果，本版本拒绝执行。`,
@@ -49,6 +62,125 @@ export function runSkill(request: SkillRequest, executionMode: 'local-demo' | 'c
     case 'user-behavior-review':
       return runBehaviorReview(request, executionMode);
   }
+}
+
+function runPandaMarketReplay(
+  request: SkillRequest,
+  executionMode: 'local-demo' | 'competition',
+): SkillResult {
+  const defaultMarket = pandaHistoricalMarket.market;
+  const symbolInput = readString(request.input.symbol);
+  const requestedSymbol =
+    readPandaSymbol(symbolInput ?? request.prompt) ?? symbolInput ?? defaultMarket.symbol;
+  const pandaDataset = pandaHistoricalMarkets.find(
+    ({ market }) => market.symbol === requestedSymbol.toUpperCase(),
+  );
+  if (!pandaDataset) {
+    throw new Error(
+      `当前 PandaAI 历史数据不包含 ${requestedSymbol}；可用标的是 ${pandaHistoricalMarkets
+        .map(({ market }) => market.symbol)
+        .join('、')}。`,
+    );
+  }
+  const { market } = pandaDataset;
+
+  const replay = buildPandaSimulationRun(market);
+  const firstCandle = market.candles[0];
+  const lastCandle = market.candles[market.candles.length - 1];
+  const annualHigh = Math.max(...market.candles.map((candle) => candle.high));
+  const annualLow = Math.min(...market.candles.map((candle) => candle.low));
+  const indicators = Object.fromEntries(
+    market.indicators.map((indicator) => [indicator.label, indicator.value]),
+  );
+  const evidence: EvidenceItem[] = [
+    evidenceItem(
+      'panda-market-input',
+      'market-event',
+      `${market.displayName}（${market.symbol}）${pandaDataset.startDate}—${pandaDataset.endDate} 共 ${pandaDataset.barCount} 条日线，最近收盘 ${market.lastPrice} CNY。`,
+      `PANDA:${pandaDataset.datasetId}:${market.symbol}:${pandaDataset.endDate}`,
+      false,
+    ),
+    evidenceItem(
+      'panda-derived-indicators',
+      'input',
+      `由真实日线复算 MA20=${indicators.MA20}、RSI14=${indicators.RSI14}、VOL20=${indicators.VOL20}。`,
+      `PANDA:${pandaDataset.datasetId}:${market.symbol}:derived`,
+      false,
+    ),
+    ...replay.traders.map((trader, index) =>
+      evidenceItem(
+        `panda-agent-decision-${index + 1}`,
+        'agent-decision',
+        `${trader.name} 形成模拟 ${trader.action} 意图，置信度 ${trader.confidence}；${trader.thesis}`,
+        `run:${replay.runId}:decision:${index + 1}`,
+        true,
+      ),
+    ),
+  ];
+
+  const result = baseResult(
+    request,
+    executionMode,
+    {
+      title: `${market.displayName} PandaAI 历史行情回放`,
+      taskSummary:
+        '读取 PandaAI 授权的真实历史日线，复算技术指标，并让 8 个金融居民生成可解释的模拟观点与风控结果。',
+      marketData: {
+        source: pandaDataset.source,
+        method: pandaDataset.method,
+        datasetId: pandaDataset.datasetId,
+        schemaVersion: pandaDataset.schemaVersion,
+        instrumentType: pandaDataset.instrumentType,
+        symbol: market.symbol,
+        startDate: pandaDataset.startDate,
+        endDate: pandaDataset.endDate,
+        asOf: new Date(pandaDataset.asOf).toISOString(),
+        barCount: pandaDataset.barCount,
+        isReal: true,
+      },
+      evidence,
+      findings: {
+        market: {
+          symbol: market.symbol,
+          displayName: market.displayName,
+          currency: market.quoteCurrency,
+          firstClose: firstCandle.close,
+          latestClose: lastCandle.close,
+          previousClose: market.referencePrice,
+          latestChangePct: round(market.changePct, 4),
+          annualHigh,
+          annualLow,
+          latestVolume: market.volume,
+          indicators,
+        },
+        sentiment: replay.sentiment,
+        decisions: replay.traders.map((trader) => ({
+          agentName: trader.name,
+          action: trader.action,
+          confidence: trader.confidence,
+          pnl: trader.pnl,
+          riskRejections: trader.riskRejections,
+          thesis: trader.thesis,
+        })),
+        executions: replay.executions,
+        summary: replay.summary,
+      },
+      counterfactuals: [],
+      riskConclusion:
+        '行情数据来自 PandaAI 真实历史日线；居民观点、订单、成交和组合收益均为确定性回放，不代表真实交易或投资建议。',
+    },
+    [
+      '读取并校验 PandaAI 授权历史日线',
+      '复算 MA20、RSI14 与 VOL20',
+      '运行 8 个居民的确定性决策规则',
+      '执行现金、订单规模和集中度风控',
+      '生成真实数据溯源与模拟执行披露',
+    ],
+  );
+  return {
+    ...result,
+    runId: replay.runId,
+  };
 }
 
 function runRateShock(
@@ -360,7 +492,15 @@ function baseResult(
   fields: Pick<
     SkillResult,
     'title' | 'taskSummary' | 'evidence' | 'findings' | 'counterfactuals' | 'riskConclusion'
-  >,
+  > &
+    Partial<Pick<SkillResult, 'marketData'>>,
+  steps = [
+    '解析并校验白名单 Skill 与输入',
+    '建立固定 Seed 的金融情景',
+    '运行居民决策或行为规则',
+    '执行确定性风险检查',
+    '生成结构化证据与风险披露',
+  ],
 ): SkillResult {
   const stableId = createHash('sha256')
     .update(JSON.stringify([request.skillId, request.seed, request.input, request.prompt]))
@@ -372,30 +512,34 @@ function baseResult(
     runId: `a2a-${request.skillId}-${request.seed}-${stableId.slice(0, 8)}`,
     skillId: request.skillId,
     ...fields,
+    marketData: fields.marketData ?? null,
     execution: {
       mode: executionMode,
       dataMode: request.dataMode,
       isSimulated: true,
       seed: request.seed,
       durationMs: 0,
-      steps: [
-        '解析并校验白名单 Skill 与输入',
-        '建立固定 Seed 的金融情景',
-        '运行居民决策或行为规则',
-        '执行确定性风险检查',
-        '生成结构化证据与风险披露',
-      ],
+      steps,
     },
     chainProofs: [],
     warnings: [
       RISK_WARNING,
-      '当前输出明确标记为 simulated；没有 Tx Hash、Order Hash 或真实成交，不提供 Explorer 链接。',
+      request.dataMode === 'verified-replay'
+        ? 'PandaAI 行情为真实历史数据；居民观点、订单和成交仍明确标记为 simulated。'
+        : '当前输出明确标记为 simulated。',
+      '没有真实 Tx Hash、Order Hash 或成交凭证，不提供 Explorer 链接。',
     ],
   };
 }
 
 function detectSkill(prompt: string): SkillId {
   const normalized = prompt.toLowerCase();
+  if (
+    readPandaSymbol(prompt) ||
+    /panda|真实行情|历史行情|历史数据|行情回放|market replay|historical market/.test(normalized)
+  ) {
+    return 'panda-market-replay';
+  }
   if (/谣言|传言|传播|更正|rumou?r|propagation|correction/.test(normalized)) {
     return 'rumor-propagation-analysis';
   }
@@ -415,9 +559,12 @@ function assertSkillId(value: string): SkillId {
   throw new Error(`未声明的 Skill：${value}。`);
 }
 
-function readDataMode(value: string | undefined): DataMode {
-  if (!value || value === 'simulated') {
-    return 'simulated';
+function readDataMode(value: string | undefined, fallback: DataMode): DataMode {
+  if (!value) {
+    return fallback;
+  }
+  if (value === 'simulated') {
+    return value;
   }
   if (value === 'verified-replay' || value === 'live') {
     return value;
@@ -425,13 +572,19 @@ function readDataMode(value: string | undefined): DataMode {
   throw new Error('dataMode 必须是 simulated、verified-replay 或 live。');
 }
 
-function evidenceItem(id: string, kind: EvidenceItem['kind'], summary: string): EvidenceItem {
+function evidenceItem(
+  id: string,
+  kind: EvidenceItem['kind'],
+  summary: string,
+  source = 'market-town-deterministic-engine',
+  isSimulated = true,
+): EvidenceItem {
   return {
     id,
     kind,
     summary,
-    source: 'market-town-deterministic-engine',
-    isSimulated: true,
+    source,
+    isSimulated,
   };
 }
 
@@ -474,6 +627,19 @@ function readSeedFromText(text: string) {
 function readSymbol(text: string) {
   return TOWN_MARKETS.find((market) => new RegExp(`\\b${market.symbol}\\b`, 'i').test(text))
     ?.symbol;
+}
+
+function readPandaSymbol(text: string | undefined) {
+  if (!text) return undefined;
+  const normalized = text.toUpperCase();
+  return pandaHistoricalMarkets.find(({ market }) => {
+    const bareSymbol = market.symbol.slice(0, 6);
+    return (
+      normalized.includes(market.symbol) ||
+      new RegExp(`\\b${bareSymbol}\\b`).test(normalized) ||
+      text.includes(market.displayName)
+    );
+  })?.market.symbol;
 }
 
 function inferRiskTolerance(text: string) {

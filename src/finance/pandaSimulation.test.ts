@@ -6,18 +6,18 @@ describe('Panda agent replay', () => {
 
   it('is deterministic for the same historical market snapshot', () => {
     expect(buildPandaSimulationRun(pandaHistoricalMarket.market)).toEqual(run);
-    expect(run.runId).toContain('000001-SZ-20241230');
+    expect(run.runId).toContain('002594-SZ-20251231');
   });
 
-  it('generates all eight agent views and portfolios from 000001.SZ', () => {
+  it('generates all eight agent views and portfolios from 002594.SZ', () => {
     expect(run.traders).toHaveLength(8);
     expect(run.traders.every((trader) => trader.currency === 'CNY')).toBe(true);
     expect(
       run.traders.every(
         (trader) =>
           trader.focusSymbols.length === 1 &&
-          trader.focusSymbols[0] === '000001.SZ' &&
-          trader.positions.every((position) => position.symbol === '000001.SZ'),
+          trader.focusSymbols[0] === '002594.SZ' &&
+          trader.positions.every((position) => position.symbol === '002594.SZ'),
       ),
     ).toBe(true);
 
@@ -37,7 +37,7 @@ describe('Panda agent replay', () => {
     expect(
       run.executions.every(
         (execution) =>
-          execution.symbol === '000001.SZ' &&
+          execution.symbol === '002594.SZ' &&
           execution.priceUnit === 'CNY' &&
           execution.isSimulated,
       ),

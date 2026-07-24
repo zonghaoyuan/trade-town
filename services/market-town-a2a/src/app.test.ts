@@ -46,7 +46,7 @@ describe('Market Town A2A server', () => {
     expect(v1Card.supportedInterfaces.map((item) => item.protocolVersion)).toEqual(
       expect.arrayContaining(['1.0', '0.3']),
     );
-    expect(v1Card.skills).toHaveLength(3);
+    expect(v1Card.skills).toHaveLength(4);
 
     const legacy = await fetch(`${baseUrl}/.well-known/agent-card.json`);
     expect(legacy.status).toBe(200);
@@ -56,6 +56,7 @@ describe('Market Town A2A server', () => {
   });
 
   test.each([
+    ['分析 PandaAI 数据中 002594.SZ 的历史走势和居民分歧', 'panda-market-replay'],
     ['运行加息 100bp 实验，seed=20260722', 'rate-shock-experiment'],
     ['分析 ACME 谣言传播以及权威更正效果', 'rumor-propagation-analysis'],
     ['复盘保守用户的仓位行为并给出两个反事实', 'user-behavior-review'],
@@ -101,6 +102,23 @@ describe('Market Town A2A server', () => {
         execution: { isSimulated: true },
         chainProofs: [],
       });
+      if (expectedSkill === 'panda-market-replay') {
+        expect(dataPart.content.value).toMatchObject({
+          execution: { dataMode: 'verified-replay' },
+          marketData: {
+            source: 'PandaAI',
+            method: 'daily_bars',
+            datasetId: 'panda-cn-a-2025-v1',
+            symbol: '002594.SZ',
+            barCount: 304,
+            isReal: true,
+          },
+        });
+        expect(dataPart.metadata).toMatchObject({
+          isSimulated: true,
+          marketDataIsReal: true,
+        });
+      }
     }
 
     const stored = await client.getTask({ tenant: '', id: task.id, historyLength: 10 });

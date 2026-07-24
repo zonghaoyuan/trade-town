@@ -46,8 +46,8 @@ export function createA2AApp(config: A2AConfig) {
       })),
       disclosure:
         config.executionMode === 'competition'
-          ? 'Competition mode requires DeepSeek and Convex persistence.'
-          : 'Local demo results are simulated and do not contain chain proofs.',
+          ? 'Competition mode requires DeepSeek and Convex persistence. PandaAI historical bars are real inputs; replay decisions remain simulated.'
+          : 'PandaAI historical bars are real inputs; resident decisions and orders remain simulated and contain no chain proofs.',
     });
   });
   app.use(
