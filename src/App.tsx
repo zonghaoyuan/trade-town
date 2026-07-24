@@ -7,16 +7,19 @@ import { ToastContainer } from 'react-toastify';
 import FreezeButton from './components/FreezeButton';
 import MusicButton from './components/buttons/MusicButton';
 import InteractButton from './components/buttons/InteractButton';
+import { useTownActivityFeed } from './hooks/useTownActivityFeed';
 
 export default function Home() {
   const financeState = useQuery((api as any).finance.dashboard);
   const dashboard = mergeLiveDashboard(financeState);
+  const activityFeed = useTownActivityFeed();
 
   return (
     <>
       <TradeTownShell
         dashboard={dashboard}
         dayViewDashboard={pandaDayViewDashboard}
+        activityFeed={activityFeed}
         town={({ focusedCitizen }) => <Game focusedCitizen={focusedCitizen} />}
         townMode="live"
         townControls={

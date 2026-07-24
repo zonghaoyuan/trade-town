@@ -7,6 +7,8 @@ import {
   TOWN_MARKETS,
   TOWN_TRADERS,
 } from '../shared/finance';
+import type { TownFinanceActivityFeed } from '../shared/activity';
+import { buildEventFeed, buildTransactionFeed } from './finance/activity';
 
 const DEFAULT_CONFIG_KEY = 'default';
 const RETIRED_TRADER_NAMES = new Set(['Delta-7', 'Sigma-2']);
@@ -35,6 +37,31 @@ export const dashboard = query({
       ),
       events,
       intents: intents.sort((a, b) => b.createdAt - a.createdAt),
+    };
+  },
+});
+
+export const activityFeed = query({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args): Promise<TownFinanceActivityFeed> => {
+    const limit = Math.max(1, Math.min(args.limit ?? 30, 80));
+    const config = await ctx.db
+      .query('financeConfig')
+      .withIndex('by_key', (q) => q.eq('key', DEFAULT_CONFIG_KEY))
+      .unique();
+    const [intents, fills, events] = await Promise.all([
+      ctx.db.query('tradeIntents').withIndex('by_updated_at').order('desc').take(limit),
+      ctx.db.query('fills').withIndex('by_executed_at').order('desc').take(limit),
+      ctx.db.query('marketEvents').withIndex('by_time').order('desc').take(limit),
+    ]);
+
+    return {
+      gatewayStatus: config?.gatewayStatus ?? 'unconfigured',
+      blockHeight: config?.lastChainHeight,
+      transactions: buildTransactionFeed(intents, fills, limit),
+      events: buildEventFeed(events),
     };
   },
 });
