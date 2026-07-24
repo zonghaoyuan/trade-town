@@ -160,7 +160,7 @@ export default function TradeTownShell({
       }
     : null;
   const townContent = typeof town === 'function' ? town({ focusedCitizen }) : town;
-  const stageTitle = 'Panda reasoning → risk check → Injective execution';
+  const dataWarningCount = activeDashboard.errors.length + dashboard.errors.length;
 
   return (
     <main
@@ -224,20 +224,19 @@ export default function TradeTownShell({
           <button
             ref={createMeTriggerRef}
             type="button"
-            className="pixel-button pixel-button-small pixel-create-me-trigger"
+            className={`pixel-button pixel-button-small pixel-create-me-trigger ${
+              activeMe ? 'is-avatar-only' : ''
+            }`}
             aria-haspopup="dialog"
+            aria-label={activeMe ? '编辑角色' : '创建角色'}
             onClick={() => setCreateMeOpen(true)}
           >
             {activeMe ? (
-              <>
-                <i
-                  className="pixel-create-me-avatar"
-                  style={{ backgroundImage: `url("${activeMe.textureUrl}")` }}
-                  aria-hidden="true"
-                />
-                <b>{activeMe.draft.displayName}</b>
-                <small>EDIT</small>
-              </>
+              <i
+                className="pixel-create-me-avatar"
+                style={{ backgroundImage: `url("${activeMe.textureUrl}")` }}
+                aria-hidden="true"
+              />
             ) : (
               <>
                 <span>+</span> Create ME
@@ -275,27 +274,22 @@ export default function TradeTownShell({
 
         <section className="pixel-world-column">
           <div className="pixel-town-stage-wrap">
-            <div className="pixel-stage-ribbon">
-              <span>
-                <i className="pixel-unified-dot" />
-                {stageTitle}
-              </span>
-              <div className="pixel-stage-meta">
-                {activeDashboard.errors.length + dashboard.errors.length > 0 && (
-                  <span className="pixel-warning-count">
-                    {activeDashboard.errors.length + dashboard.errors.length} data warnings
-                  </span>
-                )}
-                <strong>{activeDashboard.traders.length} agents online</strong>
-              </div>
-            </div>
             <div className="pixel-town-stage">{townContent}</div>
             {townControls && (
               <div className="pixel-stage-controls" aria-label="Town controls">
                 {townControls}
               </div>
             )}
-            <span className="pixel-preview-note">◇ SIMULATION · ◆ CHAIN VERIFIED</span>
+            <span className="pixel-preview-note">
+              {dataWarningCount > 0 && (
+                <>
+                  <strong className="is-warning">{dataWarningCount}</strong> data warning
+                  {dataWarningCount === 1 ? '' : 's'} ·{' '}
+                </>
+              )}
+              <strong className="is-online">{activeDashboard.traders.length}</strong> agents
+              online
+            </span>
           </div>
 
           <TownSummary testnetDashboard={dashboard} dayViewDashboard={activeDashboard} />
