@@ -2,6 +2,7 @@ import * as PIXI from 'pixi.js';
 import { useApp } from '@pixi/react';
 import { Player, SelectElement } from './Player.tsx';
 import { useEffect, useRef, useState } from 'react';
+import type { MutableRefObject } from 'react';
 import { PixiStaticMap } from './PixiStaticMap.tsx';
 import PixiViewport from './PixiViewport.tsx';
 import { Viewport } from 'pixi-viewport';
@@ -14,6 +15,10 @@ import { DebugPath } from './DebugPath.tsx';
 import { PositionIndicator } from './PositionIndicator.tsx';
 import { SHOW_DEBUG_UI } from './Game.tsx';
 import { ServerGame } from '../hooks/serverGame.ts';
+import type { FocusedTownCitizen } from './finance/TradeTownShell.tsx';
+import type { Player as ServerPlayer } from '../../convex/aiTown/player.ts';
+import { locationFields, playerLocation, type Location } from '../../convex/aiTown/location.ts';
+import { useHistoricalValue } from '../hooks/useHistoricalValue.ts';
 
 export const PixiGame = (props: {
   worldId: Id<'worlds'>;
@@ -23,6 +28,8 @@ export const PixiGame = (props: {
   width: number;
   height: number;
   setSelectedElement: SelectElement;
+  focusedCitizen?: FocusedTownCitizen | null;
+  onFocusedCitizenPositionChange?: (position: { x: number; y: number } | null) => void;
 }) => {
   // PIXI setup.
   const pixiApp = useApp();
@@ -81,6 +88,12 @@ export const PixiGame = (props: {
   };
   const { width, height, tileDim } = props.game.worldMap;
   const players = [...props.game.world.players.values()];
+  const focusedPlayer = props.focusedCitizen
+    ? players.find(
+        (player) =>
+          props.game.playerDescriptions.get(player.id)?.name === props.focusedCitizen?.name,
+      )
+    : undefined;
 
   // Zoom on the user’s avatar when it is created
   useEffect(() => {
@@ -115,6 +128,18 @@ export const PixiGame = (props: {
           ),
       )}
       {lastDestination && <PositionIndicator destination={lastDestination} tileDim={tileDim} />}
+      {focusedPlayer && props.focusedCitizen && props.onFocusedCitizenPositionChange && (
+        <FocusedCitizenCamera
+          player={focusedPlayer}
+          game={props.game}
+          historicalTime={props.historicalTime}
+          tileDim={tileDim}
+          requestId={props.focusedCitizen.requestId}
+          viewportRef={viewportRef}
+          app={pixiApp}
+          onPositionChange={props.onFocusedCitizenPositionChange}
+        />
+      )}
       {players.map((p) => (
         <Player
           key={`player-${p.id}`}
@@ -129,3 +154,80 @@ export const PixiGame = (props: {
   );
 };
 export default PixiGame;
+
+function FocusedCitizenCamera({
+  player,
+  game,
+  historicalTime,
+  tileDim,
+  requestId,
+  viewportRef,
+  app,
+  onPositionChange,
+}: {
+  player: ServerPlayer;
+  game: ServerGame;
+  historicalTime: number | undefined;
+  tileDim: number;
+  requestId: number;
+  viewportRef: MutableRefObject<Viewport | undefined>;
+  app: PIXI.Application;
+  onPositionChange: (position: { x: number; y: number } | null) => void;
+}) {
+  const historicalLocation = useHistoricalValue<Location>(
+    locationFields,
+    historicalTime,
+    playerLocation(player),
+    game.world.historicalLocations?.get(player.id),
+  );
+  const locationRef = useRef(historicalLocation);
+  const lastScreenPosition = useRef<{ x: number; y: number } | null>(null);
+  locationRef.current = historicalLocation;
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    const location = locationRef.current;
+    if (!viewport || !location) return;
+
+    viewport.animate({
+      position: new PIXI.Point(
+        location.x * tileDim + tileDim / 2,
+        location.y * tileDim + tileDim / 2,
+      ),
+      scale: Math.max(1.35, viewport.scale.x),
+      time: 520,
+      ease: 'easeInOutSine',
+    });
+  }, [player.id, requestId, tileDim, viewportRef]);
+
+  useEffect(() => {
+    const updatePosition = () => {
+      const viewport = viewportRef.current;
+      const location = locationRef.current;
+      if (!viewport || !location) return;
+
+      const screenPosition = viewport.toScreen(
+        new PIXI.Point(
+          location.x * tileDim + tileDim / 2,
+          location.y * tileDim + tileDim / 2 - tileDim * 0.55,
+        ),
+      );
+      const next = { x: screenPosition.x, y: screenPosition.y };
+      const previous = lastScreenPosition.current;
+      if (previous && Math.abs(previous.x - next.x) < 0.5 && Math.abs(previous.y - next.y) < 0.5) {
+        return;
+      }
+      lastScreenPosition.current = next;
+      onPositionChange(next);
+    };
+
+    app.ticker.add(updatePosition);
+    updatePosition();
+    return () => {
+      app.ticker.remove(updatePosition);
+      onPositionChange(null);
+    };
+  }, [app, onPositionChange, player.id, tileDim, viewportRef]);
+
+  return null;
+}

@@ -1,11 +1,22 @@
-import { CSSProperties, ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
 import { TradeTownDashboard } from '../../finance/demoData';
 import PixelCandles from './PixelCandles';
+import PixelAvatar from './PixelAvatar';
 
 type ViewMode = 'overview' | 'immersive';
 type Drawer = 'markets' | 'agents' | 'events';
 
-const spriteSlots = [0, 3, 5, 2, 6, 1, 7, 4, 0, 3];
+export type FocusedTownCitizen = {
+  requestId: number;
+  name: string;
+  role: string;
+  pnl: number;
+  avatarIndex: number;
+};
+
+type TownRenderState = {
+  focusedCitizen: FocusedTownCitizen | null;
+};
 
 export default function TradeTownShell({
   dashboard,
@@ -14,7 +25,7 @@ export default function TradeTownShell({
   townMode = 'preview',
 }: {
   dashboard: TradeTownDashboard;
-  town: ReactNode;
+  town: ReactNode | ((state: TownRenderState) => ReactNode);
   townControls?: ReactNode;
   townMode?: 'live' | 'preview';
 }) {
@@ -23,6 +34,10 @@ export default function TradeTownShell({
   const [viewMode, setViewMode] = useState<ViewMode>('overview');
   const [drawer, setDrawer] = useState<Drawer | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [focusRequest, setFocusRequest] = useState<{ name: string; requestId: number } | null>(
+    null,
+  );
+  const focusRequestId = useRef(0);
 
   const market =
     dashboard.markets.find((candidate) => candidate.symbol === selectedSymbol) ??
@@ -49,21 +64,55 @@ export default function TradeTownShell({
         setHelpOpen(false);
       } else if (drawer) {
         setDrawer(null);
+      } else if (focusRequest) {
+        setFocusRequest(null);
       } else if (immersive) {
         setViewMode('overview');
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [drawer, helpOpen, immersive]);
+  }, [drawer, focusRequest, helpOpen, immersive]);
 
   const toggleView = () => {
     setDrawer(null);
     setViewMode((current) => (current === 'overview' ? 'immersive' : 'overview'));
   };
 
+  const focusCitizen = (name: string) => {
+    focusRequestId.current += 1;
+    setSelectedAgent(name);
+    setFocusRequest({ name, requestId: focusRequestId.current });
+    if (drawer === 'agents') setDrawer(null);
+  };
+
+  const focusedTrader = focusRequest
+    ? dashboard.traders.find((candidate) => candidate.name === focusRequest.name)
+    : undefined;
+  const focusedCitizen = focusedTrader
+    ? {
+        requestId: focusRequest!.requestId,
+        name: focusedTrader.name,
+        role: focusedTrader.role,
+        pnl: focusedTrader.pnl,
+        avatarIndex: Math.max(
+          0,
+          dashboard.traders.findIndex((candidate) => candidate.name === focusedTrader.name),
+        ),
+      }
+    : null;
+  const townContent = typeof town === 'function' ? town({ focusedCitizen }) : town;
+
   return (
-    <main className={`pixel-town-shell ${immersive ? 'is-immersive' : 'is-overview'}`}>
+    <main
+      className={`pixel-town-shell ${immersive ? 'is-immersive' : 'is-overview'}`}
+      onPointerDownCapture={(event) => {
+        if (!focusRequest) return;
+        const target = event.target;
+        if (target instanceof Element && target.closest('[data-town-citizen-focus]')) return;
+        setFocusRequest(null);
+      }}
+    >
       <div className="pixel-town-backdrop" aria-hidden="true" />
 
       <header className="pixel-town-header">
@@ -106,15 +155,6 @@ export default function TradeTownShell({
         </div>
       </header>
 
-      <MarketTicker
-        dashboard={dashboard}
-        selectedSymbol={market.symbol}
-        onSelect={(symbol) => {
-          setSelectedSymbol(symbol);
-          if (immersive) setDrawer('markets');
-        }}
-      />
-
       <div className="pixel-town-layout">
         <aside className="pixel-side-panel pixel-market-panel">
           <MarketBoard
@@ -133,7 +173,12 @@ export default function TradeTownShell({
               </span>
               <strong>{dashboard.traders.length} citizens online</strong>
             </div>
-            <div className="pixel-town-stage">{town}</div>
+            <div className="pixel-town-stage">{townContent}</div>
+            {townControls && (
+              <div className="pixel-stage-controls" aria-label="Town controls">
+                {townControls}
+              </div>
+            )}
             {dashboard.source === 'preview' && (
               <span className="pixel-preview-note">
                 {townMode === 'live'
@@ -146,24 +191,9 @@ export default function TradeTownShell({
           <EventBoard dashboard={dashboard} />
         </section>
 
-        <aside className="pixel-citizen-rail" aria-label="Town citizen shortcuts">
-          <CitizenRail
-            dashboard={dashboard}
-            selectedAgent={trader.name}
-            onSelect={(name) => {
-              setSelectedAgent(name);
-              setDrawer('agents');
-            }}
-          />
+        <aside className="pixel-side-panel pixel-agent-panel" aria-label="Town citizens">
+          <AgentBoard dashboard={dashboard} selectedAgent={trader.name} onSelect={focusCitizen} />
         </aside>
-      </div>
-
-      <div className="pixel-town-toolbelt">
-        <div className="pixel-original-controls">{townControls}</div>
-        <div className="pixel-truth-rule">
-          <span>◆</span>
-          Holdings change only after an Injective fill is confirmed
-        </div>
       </div>
 
       <nav className="pixel-hud-dock" aria-label="Town information">
@@ -196,25 +226,10 @@ export default function TradeTownShell({
             />
           )}
           {drawer === 'agents' && (
-            <AgentBoard
-              dashboard={dashboard}
-              selectedAgent={trader.name}
-              onSelect={setSelectedAgent}
-            />
+            <AgentBoard dashboard={dashboard} selectedAgent={trader.name} onSelect={focusCitizen} />
           )}
           {drawer === 'events' && <EventBoard dashboard={dashboard} drawer />}
         </section>
-      )}
-
-      {!immersive && (
-        <footer className="pixel-town-footer">
-          <span>AI Town core</span>
-          <span>TwinMarket minds</span>
-          <span>Convex realtime</span>
-          <span>Injective CLOB</span>
-          <a href="https://www.tradingview.com/">TradingView charts ↗</a>
-          <a href="https://github.com/zonghaoyuan/trade-town">MIT source ↗</a>
-        </footer>
       )}
 
       {helpOpen && (
@@ -263,69 +278,6 @@ export default function TradeTownShell({
   );
 }
 
-function CitizenRail({
-  dashboard,
-  selectedAgent,
-  onSelect,
-}: {
-  dashboard: TradeTownDashboard;
-  selectedAgent: string;
-  onSelect: (name: string) => void;
-}) {
-  return (
-    <>
-      <div className="pixel-citizen-rail-title">
-        <span>Citizens</span>
-        <strong>10</strong>
-      </div>
-      <div className="pixel-citizen-rail-list">
-        {dashboard.traders.map((agent, index) => (
-          <button
-            type="button"
-            key={agent.name}
-            className={agent.name === selectedAgent ? 'is-selected' : ''}
-            title={`${agent.name} · ${agent.role}`}
-            aria-label={`Open ${agent.name}`}
-            onClick={() => onSelect(agent.name)}
-          >
-            <PixelAvatar index={index} />
-            <em>{agent.kind === 'market_maker' ? 'MM' : 'AI'}</em>
-          </button>
-        ))}
-      </div>
-    </>
-  );
-}
-
-function MarketTicker({
-  dashboard,
-  selectedSymbol,
-  onSelect,
-}: {
-  dashboard: TradeTownDashboard;
-  selectedSymbol: string;
-  onSelect: (symbol: string) => void;
-}) {
-  return (
-    <section className="pixel-market-ticker" aria-label="Market ticker">
-      {dashboard.markets.map((market) => (
-        <button
-          type="button"
-          key={market.symbol}
-          className={market.symbol === selectedSymbol ? 'is-selected' : ''}
-          onClick={() => onSelect(market.symbol)}
-        >
-          <strong>{market.symbol}</strong>
-          <span>{formatPrice(market.lastPrice)}</span>
-          <small className={market.change24h >= 0 ? 'pixel-up' : 'pixel-down'}>
-            {market.change24h >= 0 ? '▲' : '▼'} {Math.abs(market.change24h).toFixed(2)}%
-          </small>
-        </button>
-      ))}
-    </section>
-  );
-}
-
 function MarketBoard({
   dashboard,
   selectedSymbol,
@@ -343,13 +295,13 @@ function MarketBoard({
     <div className="pixel-board">
       <div className="pixel-board-title">
         <span>Town exchange</span>
-        <h2>Market board</h2>
+        <h2>Markets</h2>
       </div>
       <div className="pixel-market-hero">
         <span>{market.assetClass}</span>
-        <h3>{market.symbol}/TOWNUSD</h3>
+        <h3>{market.symbol} / TOWNUSD</h3>
         <div>
-          <strong>{formatPrice(market.lastPrice)}</strong>
+          <strong>${formatPrice(market.lastPrice)}</strong>
           <small className={market.change24h >= 0 ? 'pixel-up' : 'pixel-down'}>
             {market.change24h >= 0 ? '+' : ''}
             {market.change24h.toFixed(2)}%
@@ -366,14 +318,6 @@ function MarketBoard({
           <dt>Reference</dt>
           <dd>{formatPrice(market.referencePrice)}</dd>
         </div>
-        <div>
-          <dt>Settlement</dt>
-          <dd>Spot</dd>
-        </div>
-        <div>
-          <dt>Matcher</dt>
-          <dd>Injective</dd>
-        </div>
       </dl>
       <div className="pixel-market-list">
         {dashboard.markets.map((item) => (
@@ -386,7 +330,9 @@ function MarketBoard({
             <span className="pixel-market-gem" style={{ backgroundColor: item.accent }} />
             <span>
               <strong>{item.symbol}</strong>
-              <small>{item.displayName}</small>
+              <small>
+                ${formatPrice(item.lastPrice)} · {item.displayName}
+              </small>
             </span>
             <span className={item.change24h >= 0 ? 'pixel-up' : 'pixel-down'}>
               {item.change24h >= 0 ? '+' : ''}
@@ -417,12 +363,16 @@ function AgentBoard({
 }) {
   const trader =
     dashboard.traders.find((candidate) => candidate.name === selectedAgent) ?? dashboard.traders[0];
+  const traderIndex = Math.max(
+    0,
+    dashboard.traders.findIndex((candidate) => candidate.name === trader.name),
+  );
 
   return (
     <div className="pixel-board">
       <div className="pixel-board-title">
-        <span>8 AI · 2 deterministic MM</span>
-        <h2>Town citizens</h2>
+        <span>{dashboard.traders.length} online · AI &amp; market makers</span>
+        <h2>Citizens</h2>
       </div>
       <div className="pixel-agent-list">
         {dashboard.traders.map((agent, index) => (
@@ -430,6 +380,7 @@ function AgentBoard({
             type="button"
             key={agent.name}
             className={agent.name === trader.name ? 'is-selected' : ''}
+            data-town-citizen-focus
             onClick={() => onSelect(agent.name)}
           >
             <PixelAvatar index={index} />
@@ -437,19 +388,31 @@ function AgentBoard({
               <strong>{agent.name}</strong>
               <small>{agent.role}</small>
             </span>
-            <em>{agent.kind === 'market_maker' ? 'MM' : 'AI'}</em>
+            <span className="pixel-agent-state">
+              <strong className={agent.pnl >= 0 ? 'pixel-up' : 'pixel-down'}>
+                {formatSignedCompact(agent.pnl)}
+              </strong>
+              <small>
+                <i /> Active
+              </small>
+            </span>
           </button>
         ))}
       </div>
       <article className="pixel-agent-card">
         <div className="pixel-agent-card-top">
-          <span>Subaccount {String(trader.subaccountNonce).padStart(2, '0')}</span>
+          <span>Selected citizen</span>
           <strong className={trader.pnl >= 0 ? 'pixel-up' : 'pixel-down'}>
-            {trader.pnl >= 0 ? '+' : ''}
-            {trader.pnl.toLocaleString()} TOWNUSD
+            {formatSignedCompact(trader.pnl)}
           </strong>
         </div>
-        <h3>{trader.name}</h3>
+        <div className="pixel-agent-card-identity">
+          <PixelAvatar index={traderIndex} />
+          <div>
+            <h3>{trader.name}</h3>
+            <span>{trader.role}</span>
+          </div>
+        </div>
         <p>{trader.style}</p>
         <div className="pixel-risk">
           <span>Risk tolerance</span>
@@ -468,22 +431,6 @@ function AgentBoard({
         </div>
       </article>
     </div>
-  );
-}
-
-function PixelAvatar({ index }: { index: number }) {
-  const slot = spriteSlots[index % spriteSlots.length];
-  const x = (slot % 4) * 96;
-  const y = Math.floor(slot / 4) * 128;
-  const style = {
-    '--sprite-x': `${-x}px`,
-    '--sprite-y': `${-y}px`,
-  } as CSSProperties;
-
-  return (
-    <span className="pixel-agent-avatar" aria-hidden="true">
-      <i style={style} />
-    </span>
   );
 }
 
@@ -532,4 +479,13 @@ function formatCompact(value: number) {
     notation: 'compact',
     maximumFractionDigits: 1,
   }).format(value);
+}
+
+function formatSignedCompact(value: number) {
+  const formatted = new Intl.NumberFormat('en-US', {
+    notation: 'compact',
+    maximumFractionDigits: 1,
+    signDisplay: 'always',
+  }).format(value);
+  return `${formatted} TOWNUSD`;
 }

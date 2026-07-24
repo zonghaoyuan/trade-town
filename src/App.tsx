@@ -16,7 +16,7 @@ export default function Home() {
     <>
       <TradeTownShell
         dashboard={dashboard}
-        town={<Game />}
+        town={({ focusedCitizen }) => <Game focusedCitizen={focusedCitizen} />}
         townMode="live"
         townControls={
           <>
