@@ -113,10 +113,7 @@ https://github.com/michalochman/react-pixi-fiber/issues/145#issuecomment-5315492
         </div>
         {/* Right column area */}
         {selectedElement && (
-          <div
-            className="town-detail-pane flex flex-col overflow-y-auto shrink-0 px-4 py-5 text-brown-100"
-            ref={scrollViewRef}
-          >
+          <div className="town-detail-pane text-brown-100">
             <PlayerDetails
               worldId={worldId}
               engineId={engineId}

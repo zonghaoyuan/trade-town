@@ -6,9 +6,10 @@ import { SelectElement } from './Player';
 import { Messages } from './Messages';
 import { toastOnError } from '../toasts';
 import { useSendInput } from '../hooks/sendInput';
-import { Player } from '../../convex/aiTown/player';
 import { GameId } from '../../convex/aiTown/ids';
 import { ServerGame } from '../hooks/serverGame';
+import { TOWN_TRADERS } from '../../shared/finance';
+import PixelAvatar from './finance/PixelAvatar';
 
 export default function PlayerDetails({
   worldId,
@@ -127,127 +128,127 @@ export default function PlayerDetails({
       }),
     );
   };
-  // const pendingSuffix = (inputName: string) =>
-  //   [...inflightInputs.values()].find((i) => i.name === inputName) ? ' opacity-50' : '';
+  const financeProfile = TOWN_TRADERS.find(
+    (candidate) => candidate.name === playerDescription?.name,
+  );
+  const avatarIndex = Math.max(
+    0,
+    TOWN_TRADERS.findIndex((candidate) => candidate.name === playerDescription?.name),
+  );
+  const status = inConversationWithMe
+    ? { label: 'In conversation', tone: 'is-live' }
+    : haveInvite
+      ? { label: 'Invitation received', tone: 'is-alert' }
+      : waitingForAccept
+        ? { label: 'Waiting for reply', tone: 'is-waiting' }
+        : waitingForNearby
+          ? { label: 'Walking over', tone: 'is-waiting' }
+          : playerConversation
+            ? { label: 'In conversation', tone: 'is-busy' }
+            : canInvite
+              ? { label: 'Available', tone: 'is-live' }
+              : isMe
+                ? { label: 'This is you', tone: 'is-neutral' }
+                : { label: 'Town citizen', tone: 'is-neutral' };
+  const showActiveConversation =
+    !isMe && playerConversation && playerStatus?.kind === 'participating';
+  const profileDescription = isMe
+    ? 'Your character in Convex Town.'
+    : (financeProfile?.style ?? playerDescription?.description);
 
-  const pendingSuffix = (s: string) => '';
   return (
-    <>
-      <div className="flex gap-4">
-        <div className="box w-3/4 sm:w-full mr-auto">
-          <h2 className="bg-brown-700 p-2 font-display text-2xl sm:text-4xl tracking-wider shadow-solid text-center">
-            {playerDescription?.name}
-          </h2>
+    <section className="town-dialog-panel">
+      <header className="town-dialog-header">
+        <PixelAvatar index={avatarIndex} />
+        <div className="town-dialog-identity">
+          <h2>{playerDescription?.name ?? 'Unknown citizen'}</h2>
+          <p>{financeProfile?.role ?? (isMe ? 'Town resident' : 'AI citizen')}</p>
+          <span className={`town-dialog-status ${status.tone}`}>
+            <i aria-hidden="true" />
+            {status.label}
+          </span>
         </div>
-        <a
-          className="button text-white shadow-solid text-2xl cursor-pointer pointer-events-auto"
+        <button
+          type="button"
+          className="town-dialog-close"
+          aria-label="Close citizen details"
           onClick={() => setSelectedElement(undefined)}
         >
-          <h2 className="h-full bg-clay-700">
-            <img className="w-4 h-4 sm:w-5 sm:h-5" src={closeImg} />
-          </h2>
-        </a>
-      </div>
-      {canInvite && (
-        <a
-          className={
-            'mt-6 button text-white shadow-solid text-xl cursor-pointer pointer-events-auto' +
-            pendingSuffix('startConversation')
-          }
-          onClick={onStartConversation}
-        >
-          <div className="h-full bg-clay-700 text-center">
-            <span>Start conversation</span>
-          </div>
-        </a>
-      )}
-      {waitingForAccept && (
-        <a className="mt-6 button text-white shadow-solid text-xl cursor-pointer pointer-events-auto opacity-50">
-          <div className="h-full bg-clay-700 text-center">
-            <span>Waiting for accept...</span>
-          </div>
-        </a>
-      )}
-      {waitingForNearby && (
-        <a className="mt-6 button text-white shadow-solid text-xl cursor-pointer pointer-events-auto opacity-50">
-          <div className="h-full bg-clay-700 text-center">
-            <span>Walking over...</span>
-          </div>
-        </a>
-      )}
-      {inConversationWithMe && (
-        <a
-          className={
-            'mt-6 button text-white shadow-solid text-xl cursor-pointer pointer-events-auto' +
-            pendingSuffix('leaveConversation')
-          }
-          onClick={onLeaveConversation}
-        >
-          <div className="h-full bg-clay-700 text-center">
-            <span>Leave conversation</span>
-          </div>
-        </a>
-      )}
-      {haveInvite && (
-        <>
-          <a
-            className={
-              'mt-6 button text-white shadow-solid text-xl cursor-pointer pointer-events-auto' +
-              pendingSuffix('acceptInvite')
-            }
-            onClick={onAcceptInvite}
-          >
-            <div className="h-full bg-clay-700 text-center">
-              <span>Accept</span>
-            </div>
-          </a>
-          <a
-            className={
-              'mt-6 button text-white shadow-solid text-xl cursor-pointer pointer-events-auto' +
-              pendingSuffix('rejectInvite')
-            }
-            onClick={onRejectInvite}
-          >
-            <div className="h-full bg-clay-700 text-center">
-              <span>Reject</span>
-            </div>
-          </a>
-        </>
-      )}
-      {!playerConversation && player.activity && player.activity.until > Date.now() && (
-        <div className="box flex-grow mt-6">
-          <h2 className="bg-brown-700 text-base sm:text-lg text-center">
-            {player.activity.description}
-          </h2>
+          <img src={closeImg} alt="" />
+        </button>
+      </header>
+
+      <section className="town-dialog-profile" aria-label="Citizen profile">
+        <div className="town-dialog-profile-title">
+          <strong>Profile</strong>
+          {!!financeProfile?.focusSymbols.length && (
+            <span className="town-dialog-tags">
+              {financeProfile.focusSymbols.map((symbol) => (
+                <i key={symbol}>{symbol}</i>
+              ))}
+            </span>
+          )}
         </div>
-      )}
-      <div className="desc my-6">
-        <p className="leading-tight -m-4 bg-brown-700 text-base sm:text-sm">
-          {!isMe && playerDescription?.description}
-          {isMe && <i>This is you!</i>}
-          {!isMe && inConversationWithMe && (
+        <p>{profileDescription}</p>
+        {!playerConversation && player.activity && player.activity.until > Date.now() && (
+          <div className="town-dialog-activity">
+            <i aria-hidden="true" />
+            {player.activity.description}
+          </div>
+        )}
+      </section>
+
+      {(canInvite ||
+        waitingForAccept ||
+        waitingForNearby ||
+        inConversationWithMe ||
+        haveInvite) && (
+        <div className="town-dialog-actions">
+          {canInvite && (
+            <button type="button" className="is-primary" onClick={onStartConversation}>
+              Start conversation
+            </button>
+          )}
+          {waitingForAccept && (
+            <button type="button" disabled>
+              Waiting for reply...
+            </button>
+          )}
+          {waitingForNearby && (
+            <button type="button" disabled>
+              Walking over...
+            </button>
+          )}
+          {inConversationWithMe && (
+            <button type="button" className="is-secondary" onClick={onLeaveConversation}>
+              Leave conversation
+            </button>
+          )}
+          {haveInvite && (
             <>
-              <br />
-              <br />(<i>Conversing with you!</i>)
+              <button type="button" className="is-primary" onClick={onAcceptInvite}>
+                Accept
+              </button>
+              <button type="button" className="is-secondary" onClick={onRejectInvite}>
+                Reject
+              </button>
             </>
           )}
-        </p>
-      </div>
-      {!isMe && playerConversation && playerStatus?.kind === 'participating' && (
-        <Messages
-          worldId={worldId}
-          engineId={engineId}
-          inConversationWithMe={inConversationWithMe ?? false}
-          conversation={{ kind: 'active', doc: playerConversation }}
-          humanPlayer={humanPlayer}
-          scrollViewRef={scrollViewRef}
-        />
+        </div>
       )}
-      {!playerConversation && previousConversation && (
-        <>
-          <div className="box flex-grow">
-            <h2 className="bg-brown-700 text-lg text-center">Previous conversation</h2>
-          </div>
+
+      <div className="town-dialog-content">
+        {showActiveConversation && (
+          <Messages
+            worldId={worldId}
+            engineId={engineId}
+            inConversationWithMe={inConversationWithMe ?? false}
+            conversation={{ kind: 'active', doc: playerConversation }}
+            humanPlayer={humanPlayer}
+            scrollViewRef={scrollViewRef}
+          />
+        )}
+        {!playerConversation && previousConversation && (
           <Messages
             worldId={worldId}
             engineId={engineId}
@@ -256,8 +257,19 @@ export default function PlayerDetails({
             humanPlayer={humanPlayer}
             scrollViewRef={scrollViewRef}
           />
-        </>
-      )}
-    </>
+        )}
+        {!showActiveConversation && !(!playerConversation && previousConversation) && (
+          <div className="town-dialog-empty">
+            <span aria-hidden="true">···</span>
+            <strong>No conversation yet</strong>
+            <p>
+              {canInvite
+                ? 'Start a conversation to hear this citizen’s latest market view.'
+                : 'Conversation history will appear here when it becomes available.'}
+            </p>
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
