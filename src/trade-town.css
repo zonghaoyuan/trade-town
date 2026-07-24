@@ -4826,7 +4826,7 @@ textarea {
   border-bottom: 4px solid var(--town-night);
   background: #262b44;
   display: grid;
-  grid-template-columns: 128px minmax(0, 1fr) auto;
+  grid-template-columns: 128px minmax(0, 1fr);
   align-items: center;
   gap: 8px;
 }
@@ -4938,38 +4938,6 @@ textarea {
   font-size: 8px;
   font-weight: 400;
   text-align: center;
-}
-
-.pixel-activity-status {
-  max-width: 146px;
-  color: var(--town-cream);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 8px;
-  line-height: 1.45;
-  text-transform: uppercase;
-}
-
-.pixel-activity-status > i {
-  width: 9px;
-  height: 9px;
-  flex: 0 0 auto;
-  border: 2px solid var(--town-night);
-  background: var(--town-mist);
-}
-
-.pixel-activity-status.status-talk > i {
-  background: var(--town-blue);
-  animation: pixel-pulse 1.4s steps(2, end) infinite;
-}
-
-.pixel-activity-status.status-trades > i {
-  background: var(--town-green);
-}
-
-.pixel-activity-status.status-events > i {
-  background: var(--town-orange);
 }
 
 .pixel-activity-body {
@@ -5456,10 +5424,6 @@ textarea {
   order: 2;
 }
 
-.pixel-hud-drawer .pixel-activity-status {
-  max-width: none;
-}
-
 .pixel-hud-drawer .pixel-talk-stream {
   grid-template-columns: 1fr;
 }
@@ -5470,7 +5434,7 @@ textarea {
 
 @media (max-width: 1420px) {
   .pixel-activity-header {
-    grid-template-columns: minmax(0, 1fr) 110px;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .pixel-activity-heading {
@@ -5491,9 +5455,6 @@ textarea {
     height: 276px;
   }
 
-  .pixel-activity-header {
-    grid-template-columns: minmax(0, 1fr) 118px;
-  }
 }
 
 @media (max-width: 640px) {
@@ -5510,10 +5471,6 @@ textarea {
   .pixel-activity-header {
     padding: 5px;
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .pixel-activity-status {
-    display: none;
   }
 
   .pixel-activity-tabs button {
@@ -5559,7 +5516,6 @@ textarea {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .pixel-activity-status.status-talk > i,
   .pixel-live-conversations > span > i,
   .pixel-activity-loading > i {
     animation: none;

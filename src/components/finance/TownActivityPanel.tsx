@@ -40,20 +40,6 @@ export default function TownActivityPanel({
     trades: activity.transactions.length,
     events: events.length,
   };
-  const status =
-    tab === 'talk'
-      ? activity.liveConversations.length > 0
-        ? `${activity.liveConversations.length} live conversation${
-            activity.liveConversations.length === 1 ? '' : 's'
-          }`
-        : 'Recent conversations'
-      : tab === 'trades'
-        ? activity.gatewayStatus === 'signing' || activity.gatewayStatus === 'read_only'
-          ? `Injective ${activity.gatewayStatus.replace('_', ' ')}${
-              activity.blockHeight ? ` · #${activity.blockHeight.toLocaleString()}` : ''
-            }`
-          : 'Waiting for verified execution'
-        : 'Newest events first';
 
   return (
     <section className={`pixel-activity-panel ${drawer ? 'is-drawer' : ''}`}>
@@ -82,10 +68,6 @@ export default function TownActivityPanel({
               <b>{counts[item.id]}</b>
             </button>
           ))}
-        </div>
-        <div className={`pixel-activity-status status-${tab}`}>
-          <i aria-hidden="true" />
-          {activity.loading ? 'Connecting live feed…' : status}
         </div>
       </header>
 
