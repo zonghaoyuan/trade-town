@@ -12,8 +12,6 @@ const positions = [
   [23, 67],
   [44, 72],
   [68, 69],
-  [38, 54],
-  [81, 57],
 ];
 
 export default function TownPreview({
@@ -38,7 +36,7 @@ export default function TownPreview({
       <div className="town-building building-fund">FUND</div>
       {previewDashboard.traders.map((trader, index) => (
         <div
-          className={`preview-agent ${trader.kind === 'market_maker' ? 'preview-mm' : ''}`}
+          className="preview-agent"
           style={{ left: `${positions[index][0]}%`, top: `${positions[index][1]}%` }}
           key={trader.name}
         >
@@ -61,10 +59,13 @@ export default function TownPreview({
           <span>
             <strong>{focusedCitizen.name}</strong>
             <small>{focusedCitizen.role}</small>
-            <em className={focusedCitizen.pnl >= 0 ? 'pixel-up' : 'pixel-down'}>
-              {focusedCitizen.pnlSource === 'simulated' ? 'SIM ' : 'VERIFIED '}P&amp;L{' '}
-              {formatSignedCompact(focusedCitizen.pnl)}
-            </em>
+            {focusedCitizen.pnlSource === 'verified' && focusedCitizen.pnl !== undefined ? (
+              <em className={focusedCitizen.pnl >= 0 ? 'pixel-up' : 'pixel-down'}>
+                VERIFIED P&amp;L {formatSignedCompact(focusedCitizen.pnl)}
+              </em>
+            ) : (
+              <em>MARKET PROFILE · NO GENERATED P&amp;L</em>
+            )}
           </span>
         </aside>
       )}

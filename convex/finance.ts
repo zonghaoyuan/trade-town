@@ -1,8 +1,7 @@
 import { ConvexError, v } from 'convex/values';
-import { mutation, query } from './_generated/server';
+import { MutationCtx, mutation, query } from './_generated/server';
 import {
   assessTradeRisk,
-  DEFAULT_MARKET_MAKERS,
   DEFAULT_VISIBLE_AI_AGENTS,
   makeOrderCid,
   TOWN_MARKETS,
@@ -10,6 +9,7 @@ import {
 } from '../shared/finance';
 
 const DEFAULT_CONFIG_KEY = 'default';
+const RETIRED_TRADER_NAMES = new Set(['Delta-7', 'Sigma-2']);
 
 export const dashboard = query({
   handler: async (ctx) => {
@@ -30,7 +30,9 @@ export const dashboard = query({
           : ('preview' as const),
       config,
       markets,
-      traders,
+      traders: traders.filter(
+        (trader) => trader.enabled && !RETIRED_TRADER_NAMES.has(trader.agentName),
+      ),
       events,
       intents: intents.sort((a, b) => b.createdAt - a.createdAt),
     };
@@ -44,6 +46,12 @@ export const bootstrapTown = mutation({
       .withIndex('by_key', (q) => q.eq('key', DEFAULT_CONFIG_KEY))
       .unique();
     if (existing) {
+      await retireLegacyFinancialFixtures(ctx);
+      await ctx.db.patch(existing._id, {
+        visibleAgentCount: DEFAULT_VISIBLE_AI_AGENTS,
+        marketMakerCount: undefined,
+        updatedAt: Date.now(),
+      });
       return existing._id;
     }
 
@@ -58,7 +66,6 @@ export const bootstrapTown = mutation({
       network: 'injective-888',
       gatewayStatus: 'unconfigured',
       visibleAgentCount: DEFAULT_VISIBLE_AI_AGENTS,
-      marketMakerCount: DEFAULT_MARKET_MAKERS,
       updatedAt: now,
     });
 
@@ -93,41 +100,26 @@ export const bootstrapTown = mutation({
         enabled: true,
         updatedAt: now,
       });
-      await ctx.db.insert('portfolioSnapshots', {
-        agentName: trader.name,
-        subaccountNonce: trader.subaccountNonce,
-        townUsdAvailable: 100_000,
-        townUsdTotal: 100_000,
-        netAssetValue: 100_000,
-        pnl: 0,
-        positions: [],
-        observedAt: now,
+    }
+    return configId;
+  },
+});
+
+export const retireLegacyFixtures = mutation({
+  handler: async (ctx) => {
+    const result = await retireLegacyFinancialFixtures(ctx);
+    const config = await ctx.db
+      .query('financeConfig')
+      .withIndex('by_key', (q) => q.eq('key', DEFAULT_CONFIG_KEY))
+      .unique();
+    if (config) {
+      await ctx.db.patch(config._id, {
+        visibleAgentCount: DEFAULT_VISIBLE_AI_AGENTS,
+        marketMakerCount: undefined,
+        updatedAt: Date.now(),
       });
     }
-
-    const policyEventId = `policy-${now}`;
-    await ctx.db.insert('marketEvents', {
-      eventId: policyEventId,
-      kind: 'policy',
-      source: 'Town Central Bank',
-      headline: 'Rate decision scenario is armed',
-      summary:
-        'Preview event only. Start the Gateway and publish a scenario before agents can produce chain-backed orders.',
-      severity: 0.72,
-      symbols: ['ACME', 'NOVA', 'AURUM'],
-      occurredAt: now,
-    });
-    await ctx.db.insert('agentBeliefs', {
-      agentName: 'Mira Chen',
-      symbol: 'ACME',
-      thesis: 'Higher discount rates pressure leveraged industrial expansion plans.',
-      sentiment: -0.58,
-      confidence: 0.73,
-      drivers: ['rate sensitivity', 'debt refinancing', 'infrastructure demand'],
-      sourceEventIds: [policyEventId],
-      updatedAt: now,
-    });
-    return configId;
+    return result;
   },
 });
 
@@ -361,7 +353,6 @@ export const recordFill = mutation({
         marketId: args.marketId,
         status: 'active',
         lastPrice: args.price,
-        change24h: ((args.price - market.referencePrice) / market.referencePrice) * 100,
         volume24h: (market.volume24h ?? 0) + volume,
         updatedAt: Date.now(),
       });
@@ -373,7 +364,7 @@ export const recordFill = mutation({
       headline: `${args.agentName} filled ${args.side.toUpperCase()} ${args.quantity} ${
         args.marketSymbol
       }`,
-      summary: `Confirmed at ${args.price} TOWNUSD on Injective Testnet.`,
+      summary: `Confirmed at ${args.price} INJ on Injective Testnet.`,
       severity: 0.5,
       symbols: [args.marketSymbol],
       txHash: args.txHash,
@@ -418,4 +409,77 @@ function assertGatewaySecret(provided: string) {
   if (!expected || provided !== expected) {
     throw new ConvexError('Gateway authentication failed.');
   }
+}
+
+async function retireLegacyFinancialFixtures(ctx: MutationCtx) {
+  let deletedProfiles = 0;
+  let deletedPortfolios = 0;
+  let deletedBeliefs = 0;
+  let deletedPreviewEvents = 0;
+
+  for (const agentName of RETIRED_TRADER_NAMES) {
+    const profiles = await ctx.db
+      .query('traderProfiles')
+      .withIndex('by_name', (q) => q.eq('agentName', agentName))
+      .collect();
+    for (const profile of profiles) {
+      await ctx.db.delete(profile._id);
+      deletedProfiles += 1;
+    }
+
+    const portfolios = await ctx.db
+      .query('portfolioSnapshots')
+      .withIndex('by_agent', (q) => q.eq('agentName', agentName))
+      .collect();
+    for (const portfolio of portfolios) {
+      await ctx.db.delete(portfolio._id);
+      deletedPortfolios += 1;
+    }
+
+    const beliefs = await ctx.db
+      .query('agentBeliefs')
+      .withIndex('by_agent', (q) => q.eq('agentName', agentName))
+      .collect();
+    for (const belief of beliefs) {
+      await ctx.db.delete(belief._id);
+      deletedBeliefs += 1;
+    }
+  }
+
+  const allPortfolios = await ctx.db.query('portfolioSnapshots').collect();
+  for (const portfolio of allPortfolios) {
+    if (portfolio.blockHeight === undefined && portfolio.subaccountId === undefined) {
+      await ctx.db.delete(portfolio._id);
+      deletedPortfolios += 1;
+    }
+  }
+
+  const previewEvents = await ctx.db
+    .query('marketEvents')
+    .filter((q) => q.eq(q.field('source'), 'Town Central Bank'))
+    .collect();
+  for (const event of previewEvents) {
+    if (event.headline === 'Rate decision scenario is armed' && !event.txHash) {
+      const seededBeliefs = await ctx.db
+        .query('agentBeliefs')
+        .withIndex('by_agent', (q) => q.eq('agentName', 'Mira Chen'))
+        .collect();
+      for (const belief of seededBeliefs) {
+        if (belief.sourceEventIds.includes(event.eventId)) {
+          await ctx.db.delete(belief._id);
+          deletedBeliefs += 1;
+        }
+      }
+      await ctx.db.delete(event._id);
+      deletedPreviewEvents += 1;
+    }
+  }
+
+  return {
+    retiredNames: [...RETIRED_TRADER_NAMES],
+    deletedProfiles,
+    deletedPortfolios,
+    deletedBeliefs,
+    deletedPreviewEvents,
+  };
 }

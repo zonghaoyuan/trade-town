@@ -25,7 +25,9 @@ export const financeTables = {
     ),
     operatorAddress: v.optional(v.string()),
     visibleAgentCount: v.number(),
-    marketMakerCount: v.number(),
+    // Transitional: old deployments may still have this field until the
+    // retirement migration runs. New documents never write it.
+    marketMakerCount: v.optional(v.number()),
     lastChainHeight: v.optional(v.number()),
     lastChainSyncAt: v.optional(v.number()),
     updatedAt: v.number(),
@@ -63,7 +65,9 @@ export const financeTables = {
     agentName: v.string(),
     playerId: v.optional(v.string()),
     agentId: v.optional(v.string()),
-    kind: v.union(v.literal('ai'), v.literal('market_maker')),
+    // Keep string-compatible validation for one migration window so documents
+    // created by older deployments can be deleted before tightening to "ai".
+    kind: v.string(),
     role: v.string(),
     style: v.string(),
     riskTolerance: v.number(),

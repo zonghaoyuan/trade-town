@@ -1543,11 +1543,6 @@ textarea {
   font-size: var(--town-text-micro);
 }
 
-.pixel-town-stage .preview-agent.preview-mm > span {
-  color: white;
-  background: var(--town-clay);
-}
-
 .pixel-town-stage .preview-agent small {
   position: absolute;
   top: 33px;
@@ -2783,37 +2778,6 @@ textarea {
   margin-bottom: 4px;
 }
 
-.pixel-maker-row {
-  min-height: 28px;
-  padding: 4px 7px;
-  border-top: 3px solid var(--town-night);
-  color: var(--town-mist);
-  background: #262b44;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
-  font-size: var(--town-text-micro);
-  text-transform: uppercase;
-}
-
-.pixel-maker-row > span {
-  margin-right: auto;
-}
-
-.pixel-maker-row strong {
-  color: var(--town-cream);
-  font-size: var(--town-text-micro);
-  font-weight: 400;
-}
-
-.pixel-maker-row i {
-  width: 6px;
-  height: 6px;
-  background: var(--town-green);
-  display: inline-block;
-}
-
 .pixel-action {
   padding: 3px 5px;
   border: 2px solid var(--town-night);
@@ -3315,9 +3279,6 @@ textarea {
     min-width: 205px;
   }
 
-  .pixel-maker-row {
-    display: none;
-  }
 }
 
 @media (max-width: 1100px) {
