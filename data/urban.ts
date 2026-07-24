@@ -1,5 +1,5 @@
 /**
- * Trade Town: Financial Harbor.
+ * Injective Trade Town: Financial Harbor.
  *
  * The layout combines compact European harbor blocks, a Paris-like civic
  * axis, Barcelona-inspired pedestrian interiors, and a Copenhagen-style
@@ -78,7 +78,7 @@ export const buildings: UrbanBuilding[] = [
   visualBuilding({
     id: 'injective_exchange',
     name: 'Injective Exchange',
-    mapLabel: 'INJ交易所',
+    mapLabel: 'Injective 交易所',
     district: 'Exchange Square',
     rect: { x: 25, y: 7, width: 11, height: 7 },
     footprint: [

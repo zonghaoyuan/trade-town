@@ -13,7 +13,7 @@ function isBlocked(x: number, y: number) {
   return objmap.some((layer) => layer[Math.floor(x)][Math.floor(y)] !== -1);
 }
 
-describe('urban Trade Town map', () => {
+describe('urban Injective Trade Town map', () => {
   test('all tile layers match the exported dimensions', () => {
     expect(mapwidth).toBe(64);
     expect(mapheight).toBe(48);

@@ -1,9 +1,9 @@
-# Trade Town
+# Injective Trade Town
 
 An autonomous financial town where information spreads through AI conversations, becomes structured
 trading intent, and settles on the Injective Testnet spot orderbook.
 
-Trade Town keeps [AI Town](https://github.com/a16z-infra/ai-town) as the simulation engine and ports
+Injective Trade Town keeps [AI Town](https://github.com/a16z-infra/ai-town) as the simulation engine and ports
 the financial-agent semantics of [TwinMarket](https://github.com/TwinMarketAI/TwinMarket).
 TwinMarket's local matcher is intentionally not used: Injective Testnet is the sole matching and
 settlement authority.
@@ -140,7 +140,7 @@ See [docs/HACKATHON_DEMO.md](docs/HACKATHON_DEMO.md) for the operator runbook.
 
 ## Credits and license
 
-Trade Town is a derivative of a16z's AI Town and retains its original credits and assets. Financial
+Injective Trade Town is a derivative of a16z's AI Town and retains its original credits and assets. Financial
 agent concepts are adapted from TwinMarket without copying its off-chain exchange engine.
 Candlestick rendering uses
 [TradingView Lightweight Charts](https://github.com/tradingview/lightweight-charts) under

@@ -27,7 +27,7 @@ export default function TownPreview({
   const focusedPosition = focusedIndex >= 0 ? positions[focusedIndex] : undefined;
 
   return (
-    <div className="town-preview" aria-label="Trade Town preview">
+    <div className="town-preview" aria-label="Injective Trade Town preview">
       <div className="preview-grid" aria-hidden="true" />
       <div className="exchange-building">
         <span>INJ</span>

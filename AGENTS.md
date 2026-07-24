@@ -1,4 +1,4 @@
-# Trade Town Agent Guide
+# Injective Trade Town Agent Guide
 
 ## 地图与角色资源
 

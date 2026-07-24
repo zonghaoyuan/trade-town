@@ -114,40 +114,77 @@ textarea {
   gap: 13px;
 }
 
+.pixel-brand-copy {
+  min-width: 0;
+}
+
 .pixel-brand-seal {
   width: 48px;
   height: 48px;
   flex: 0 0 auto;
-  border: 4px solid var(--town-shadow);
-  color: var(--town-plum);
-  background: var(--town-gold);
-  display: grid;
-  place-items: center;
-  box-shadow:
-    inset -4px -4px 0 var(--town-orange),
-    4px 4px 0 var(--town-shadow);
-  font-family: 'Upheaval Pro', sans-serif;
-  font-size: 27px;
-  line-height: 1;
+  display: block;
+  object-fit: contain;
+  image-rendering: pixelated;
 }
 
 .pixel-brand h1 {
   margin: 0;
   color: var(--town-gold);
   font-family: 'Upheaval Pro', sans-serif;
-  font-size: clamp(38px, 4vw, 54px);
+  font-size: clamp(30px, 3vw, 42px);
   font-weight: 400;
   line-height: 0.75;
-  letter-spacing: 2px;
+  letter-spacing: 1.2px;
+  white-space: nowrap;
   text-shadow: 0 5px 0 #6e2146;
 }
 
-.pixel-brand p {
-  margin: 9px 0 0;
+.pixel-brand-credit {
+  width: fit-content;
+  margin-top: 8px;
   color: var(--town-cream);
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: var(--town-text-small);
+  line-height: 1;
   letter-spacing: 1.2px;
+  text-decoration: none;
   text-transform: uppercase;
+  transition:
+    color 120ms ease,
+    transform 120ms ease;
+}
+
+.pixel-brand-credit:hover {
+  color: var(--town-gold);
+  transform: translateY(-1px);
+}
+
+.pixel-brand-credit:focus-visible {
+  outline: 3px solid var(--town-blue);
+  outline-offset: 3px;
+}
+
+.pixel-panda-mark {
+  width: 16px;
+  height: 16px;
+  padding: 2px;
+  border: 2px solid var(--town-shadow);
+  background: var(--town-cream);
+  display: grid;
+  place-items: center;
+  box-shadow: 2px 2px 0 var(--town-shadow);
+}
+
+.pixel-panda-mark img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.pixel-brand-credit-compact {
+  display: none;
 }
 
 .pixel-network {
@@ -1364,6 +1401,46 @@ textarea {
   line-height: 1.6;
 }
 
+.pixel-platform-credits {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.pixel-platform-credits > span {
+  margin-right: 2px;
+  color: var(--town-mist);
+  font-size: var(--town-text-micro);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.pixel-platform-credits a {
+  padding: 5px 7px;
+  border: 3px solid var(--town-night);
+  color: var(--town-night);
+  background: var(--town-gold);
+  box-shadow: 3px 3px 0 rgba(18, 15, 28, 0.72);
+  font-size: var(--town-text-caption);
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.pixel-platform-credits a:hover {
+  color: var(--town-paper);
+  background: var(--town-wine);
+  transform: translateY(-1px);
+}
+
+.pixel-platform-credits a:focus-visible {
+  outline: 3px solid var(--town-blue);
+  outline-offset: 2px;
+}
+
 .pixel-help-shortcuts {
   margin-bottom: 0;
   color: var(--town-mist) !important;
@@ -1544,14 +1621,13 @@ textarea {
 .pixel-town-shell.is-immersive .pixel-brand-seal {
   width: 36px;
   height: 36px;
-  font-size: 20px;
 }
 
 .pixel-town-shell.is-immersive .pixel-brand h1 {
-  font-size: 35px;
+  font-size: 29px;
 }
 
-.pixel-town-shell.is-immersive .pixel-brand p {
+.pixel-town-shell.is-immersive .pixel-brand-credit {
   display: none;
 }
 
@@ -1782,16 +1858,34 @@ textarea {
   .pixel-brand-seal {
     width: 38px;
     height: 38px;
-    border-width: 3px;
-    font-size: 20px;
   }
 
   .pixel-brand h1 {
-    font-size: 31px;
+    font-size: 22px;
+    letter-spacing: 0.8px;
   }
 
-  .pixel-brand p {
+  .pixel-brand-credit {
+    margin-top: 4px;
+    gap: 4px;
+    font-size: 9px;
+    letter-spacing: 0.6px;
+  }
+
+  .pixel-panda-mark {
+    width: 12px;
+    height: 12px;
+    padding: 1px;
+    border-width: 1px;
+    box-shadow: 1px 1px 0 var(--town-shadow);
+  }
+
+  .pixel-brand-credit-full {
     display: none;
+  }
+
+  .pixel-brand-credit-compact {
+    display: inline;
   }
 
   .pixel-button-small {
@@ -1908,7 +2002,7 @@ textarea {
   }
 
   .pixel-town-shell.is-immersive .pixel-brand h1 {
-    font-size: 29px;
+    font-size: 22px;
   }
 
   .pixel-town-shell.is-immersive .pixel-market-ticker {
@@ -1937,7 +2031,7 @@ textarea {
   }
 }
 
-/* Trade Town 2.0 — map-first, single-screen dashboard. */
+/* Injective Trade Town 2.0 — map-first, single-screen dashboard. */
 .pixel-town-shell.is-overview {
   height: 100dvh;
   min-height: 720px;
@@ -1955,15 +2049,14 @@ textarea {
 .pixel-town-shell.is-overview .pixel-brand-seal {
   width: 44px;
   height: 44px;
-  font-size: 24px;
 }
 
 .pixel-town-shell.is-overview .pixel-brand h1 {
-  font-size: clamp(34px, 3.1vw, 44px);
+  font-size: clamp(28px, 2.7vw, 38px);
   line-height: 0.8;
 }
 
-.pixel-town-shell.is-overview .pixel-brand p {
+.pixel-town-shell.is-overview .pixel-brand-credit {
   margin-top: 7px;
   font-size: var(--town-text-caption);
 }
@@ -2425,11 +2518,15 @@ textarea {
   .pixel-town-shell.is-overview .pixel-brand-seal {
     width: 38px;
     height: 38px;
-    font-size: 20px;
   }
 
   .pixel-town-shell.is-overview .pixel-brand h1 {
-    font-size: 31px;
+    font-size: 22px;
+  }
+
+  .pixel-town-shell.is-overview .pixel-brand-credit {
+    margin-top: 4px;
+    font-size: 9px;
   }
 
   .pixel-town-shell.is-overview .pixel-town-layout {
@@ -2475,7 +2572,7 @@ textarea {
   }
 }
 
-/* Trade Town DayView UI — mock-data-ready presentation layer. */
+/* Injective Trade Town DayView UI — mock-data-ready presentation layer. */
 .pixel-data-console {
   min-width: 0;
   display: flex;

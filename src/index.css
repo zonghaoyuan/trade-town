@@ -185,7 +185,7 @@ p[contenteditable='true']:empty::before {
   clip-path: polygon(0 0, 100% 0, 0 100%);
 }
 
-/* Trade Town terminal */
+/* Injective Trade Town terminal */
 
 :root {
   --ink-950: #06090e;

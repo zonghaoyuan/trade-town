@@ -165,7 +165,7 @@ async function executeStage() {
       msgs: messages.slice(index, index + 10) as Parameters<
         MsgBroadcasterWithPk['broadcast']
       >[0]['msgs'],
-      memo: `Trade Town provision ${stage} ${Math.floor(index / 10) + 1}`,
+      memo: `Injective Trade Town provision ${stage} ${Math.floor(index / 10) + 1}`,
     };
     if (shouldSimulate) {
       const response = await broadcaster.simulate(transaction);
