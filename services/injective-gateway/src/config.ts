@@ -1,4 +1,5 @@
-import { INJECTIVE_TESTNET, TOWN_MARKETS } from '../../../shared/finance';
+import { INJECTIVE_TESTNET } from '../../../shared/finance';
+import { PROVISION_MARKETS } from './provisionConfig';
 
 export type GatewayMode = 'read-only' | 'signing';
 
@@ -21,7 +22,7 @@ export function loadGatewayConfig(argv = process.argv.slice(2)): GatewayConfig {
   const convexUrl = optionalEnv('CONVEX_URL');
   const gatewaySecret = optionalEnv('GATEWAY_SHARED_SECRET');
   const marketIds = Object.fromEntries(
-    TOWN_MARKETS.flatMap((market) => {
+    PROVISION_MARKETS.flatMap((market) => {
       const marketId = optionalEnv(`INJECTIVE_MARKET_${market.symbol}`);
       return marketId ? [[market.symbol, marketId]] : [];
     }),

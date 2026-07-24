@@ -1,6 +1,8 @@
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import type {
+  CausalEvent,
   DashboardExecution,
+  SocialActivity,
   DashboardTrader,
   TradeTownDashboard,
 } from '../../finance/demoData';
@@ -9,10 +11,10 @@ import PixelAvatar from './PixelAvatar';
 import PixelMarketIcon from './PixelMarketIcon';
 
 type ViewMode = 'overview' | 'immersive';
-type DataMode = 'panda_dayview' | 'injective_testnet';
 type Drawer = 'markets' | 'agents' | 'events';
 type ActivityTab = 'timeline' | 'social' | 'trades';
 type AgentTab = 'belief' | 'portfolio' | 'risk' | 'trades';
+type RecordSource = 'panda' | 'injective' | 'preview';
 
 export type FocusedTownCitizen = {
   requestId: number;
@@ -20,6 +22,7 @@ export type FocusedTownCitizen = {
   role: string;
   pnl: number;
   avatarIndex: number;
+  pnlSource: 'simulated' | 'verified';
 };
 
 type TownRenderState = {
@@ -31,7 +34,6 @@ export default function TradeTownShell({
   dayViewDashboard,
   town,
   townControls,
-  townMode = 'preview',
 }: {
   dashboard: TradeTownDashboard;
   dayViewDashboard: TradeTownDashboard;
@@ -39,7 +41,6 @@ export default function TradeTownShell({
   townControls?: ReactNode;
   townMode?: 'live' | 'preview';
 }) {
-  const [dataMode, setDataMode] = useState<DataMode>('panda_dayview');
   const [selectedSymbol, setSelectedSymbol] = useState(
     dayViewDashboard.markets[0]?.symbol ?? 'ACME',
   );
@@ -53,25 +54,32 @@ export default function TradeTownShell({
   );
   const focusRequestId = useRef(0);
 
-  const activeDashboard = dataMode === 'panda_dayview' ? dayViewDashboard : dashboard;
+  const activeDashboard = dayViewDashboard;
+  const selectedMarketDashboard =
+    dayViewDashboard.markets.some((candidate) => candidate.symbol === selectedSymbol)
+      ? dayViewDashboard
+      : dashboard;
   const market =
-    activeDashboard.markets.find((candidate) => candidate.symbol === selectedSymbol) ??
-    activeDashboard.markets[0];
+    selectedMarketDashboard.markets.find((candidate) => candidate.symbol === selectedSymbol) ??
+    selectedMarketDashboard.markets[0];
   const trader =
     activeDashboard.traders.find((candidate) => candidate.name === selectedAgent) ??
     activeDashboard.traders[0];
   const immersive = viewMode === 'immersive';
 
   useEffect(() => {
-    if (!activeDashboard.markets.some((candidate) => candidate.symbol === selectedSymbol)) {
-      setSelectedSymbol(activeDashboard.markets[0]?.symbol ?? '');
+    const symbolExists =
+      activeDashboard.markets.some((candidate) => candidate.symbol === selectedSymbol) ||
+      dashboard.markets.some((candidate) => candidate.symbol === selectedSymbol);
+    if (!symbolExists) {
+      setSelectedSymbol(dayViewDashboard.markets[0]?.symbol ?? dashboard.markets[0]?.symbol ?? '');
     }
     if (!activeDashboard.traders.some((candidate) => candidate.name === selectedAgent)) {
       setSelectedAgent(activeDashboard.traders[0]?.name ?? '');
     }
     setFocusRequest(null);
     setAgentDetailOpen(false);
-  }, [activeDashboard, selectedAgent, selectedSymbol]);
+  }, [activeDashboard, dashboard, dayViewDashboard, selectedAgent, selectedSymbol]);
 
   useEffect(() => {
     document.body.classList.toggle('town-immersive-open', immersive);
@@ -112,12 +120,13 @@ export default function TradeTownShell({
   const focusedTrader = focusRequest
     ? activeDashboard.traders.find((candidate) => candidate.name === focusRequest.name)
     : undefined;
-  const focusedCitizen = focusedTrader
+  const focusedCitizen: FocusedTownCitizen | null = focusedTrader
     ? {
         requestId: focusRequest!.requestId,
         name: focusedTrader.name,
         role: focusedTrader.role,
         pnl: focusedTrader.pnl,
+        pnlSource: 'simulated',
         avatarIndex: Math.max(
           0,
           activeDashboard.traders.findIndex((candidate) => candidate.name === focusedTrader.name),
@@ -125,13 +134,7 @@ export default function TradeTownShell({
       }
     : null;
   const townContent = typeof town === 'function' ? town({ focusedCitizen }) : town;
-  const modeTitle = dataMode === 'panda_dayview' ? 'Panda DayView' : 'Injective Testnet';
-  const stageTitle =
-    dataMode === 'panda_dayview'
-      ? 'Panda daily market replay'
-      : townMode === 'live'
-        ? 'Convex town live'
-        : 'Town preview';
+  const stageTitle = 'Panda reasoning → risk check → Injective execution';
 
   return (
     <main
@@ -155,35 +158,20 @@ export default function TradeTownShell({
         </div>
 
         <div className="pixel-data-console">
-          <div className="pixel-mode-switch" role="tablist" aria-label="Market data mode">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={dataMode === 'panda_dayview'}
-              className={dataMode === 'panda_dayview' ? 'is-active' : ''}
-              onClick={() => setDataMode('panda_dayview')}
-            >
-              Panda DayView
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={dataMode === 'injective_testnet'}
-              className={dataMode === 'injective_testnet' ? 'is-active' : ''}
-              onClick={() => setDataMode('injective_testnet')}
-            >
-              Testnet
-            </button>
+          <div className="pixel-unified-heading">
+            <strong>Unified market overview</strong>
+            <span>One town · two evidence layers</span>
           </div>
-          <div className="pixel-network">
-            <span className={`pixel-network-light status-${activeDashboard.gatewayStatus}`} />
-            <div>
-              <strong>{modeTitle}</strong>
-              <span>
-                {activeDashboard.sourceLabel}
-                {activeDashboard.blockHeight
-                  ? ` · #${activeDashboard.blockHeight.toLocaleString()}`
-                  : ` · ${formatClock(activeDashboard.asOf)}`}
+          <div className="pixel-network is-unified">
+            <div className="pixel-source-legend" aria-label="Data source legend">
+              <span className="source-panda">
+                <i aria-hidden="true">◇</i>
+                Panda · historical / sim · {formatMarketDate(dayViewDashboard.asOf)}
+              </span>
+              <span className={`source-${dashboard.source}`}>
+                <i aria-hidden="true">{dashboard.source === 'injective' ? '◆' : '◈'}</i>
+                Injective · {dashboard.source === 'injective' ? 'verified' : 'preview'}
+                {dashboard.blockHeight ? ` · #${dashboard.blockHeight.toLocaleString()}` : ''}
               </span>
             </div>
           </div>
@@ -212,7 +200,8 @@ export default function TradeTownShell({
       <div className="pixel-town-layout">
         <aside className="pixel-side-panel pixel-market-panel">
           <MarketBoard
-            dashboard={activeDashboard}
+            testnetDashboard={dashboard}
+            dayViewDashboard={dayViewDashboard}
             selectedSymbol={market?.symbol ?? ''}
             onSelect={setSelectedSymbol}
           />
@@ -222,17 +211,13 @@ export default function TradeTownShell({
           <div className="pixel-town-stage-wrap">
             <div className="pixel-stage-ribbon">
               <span>
-                <i
-                  className={
-                    activeDashboard.source === 'preview' ? 'pixel-preview-dot' : 'pixel-live-dot'
-                  }
-                />
+                <i className="pixel-unified-dot" />
                 {stageTitle}
               </span>
               <div className="pixel-stage-meta">
-                {activeDashboard.errors.length > 0 && (
+                {activeDashboard.errors.length + dashboard.errors.length > 0 && (
                   <span className="pixel-warning-count">
-                    {activeDashboard.errors.length} data warnings
+                    {activeDashboard.errors.length + dashboard.errors.length} data warnings
                   </span>
                 )}
                 <strong>{activeDashboard.traders.length} agents online</strong>
@@ -244,22 +229,25 @@ export default function TradeTownShell({
                 {townControls}
               </div>
             )}
-            {activeDashboard.source !== 'injective' && (
-              <span className="pixel-preview-note">
-                {dataMode === 'panda_dayview'
-                  ? 'Panda DayView mock · adapter-ready'
-                  : 'Testnet preview · no confirmed chain fills'}
-              </span>
-            )}
+            <span className="pixel-preview-note">
+              ◇ SIMULATION · ◆ CHAIN VERIFIED
+            </span>
           </div>
 
-          <TownSummary dashboard={activeDashboard} />
-          <ActivityBoard dashboard={activeDashboard} />
+          <TownSummary
+            testnetDashboard={dashboard}
+            dayViewDashboard={dayViewDashboard}
+          />
+          <ActivityBoard
+            testnetDashboard={dashboard}
+            dayViewDashboard={dayViewDashboard}
+          />
         </section>
 
         <aside className="pixel-side-panel pixel-agent-panel" aria-label="Town citizens">
           <AgentBoard
-            dashboard={activeDashboard}
+            testnetDashboard={dashboard}
+            dayViewDashboard={dayViewDashboard}
             selectedAgent={trader?.name ?? ''}
             onSelect={focusCitizen}
             onOpenDetails={() => setAgentDetailOpen(true)}
@@ -291,14 +279,16 @@ export default function TradeTownShell({
           </button>
           {drawer === 'markets' && (
             <MarketBoard
-              dashboard={activeDashboard}
+              testnetDashboard={dashboard}
+              dayViewDashboard={dayViewDashboard}
               selectedSymbol={market?.symbol ?? ''}
               onSelect={setSelectedSymbol}
             />
           )}
           {drawer === 'agents' && (
             <AgentBoard
-              dashboard={activeDashboard}
+              testnetDashboard={dashboard}
+              dayViewDashboard={dayViewDashboard}
               selectedAgent={trader?.name ?? ''}
               onSelect={focusCitizen}
               onOpenDetails={() => {
@@ -307,7 +297,13 @@ export default function TradeTownShell({
               }}
             />
           )}
-          {drawer === 'events' && <ActivityBoard dashboard={activeDashboard} drawer />}
+          {drawer === 'events' && (
+            <ActivityBoard
+              testnetDashboard={dashboard}
+              dayViewDashboard={dayViewDashboard}
+              drawer
+            />
+          )}
         </section>
       )}
 
@@ -318,7 +314,9 @@ export default function TradeTownShell({
             0,
             activeDashboard.traders.findIndex((candidate) => candidate.name === trader.name),
           )}
-          executions={activeDashboard.executions.filter(
+          testnetTrader={dashboard.traders.find((candidate) => candidate.name === trader.name)}
+          testnetDashboard={dashboard}
+          executions={[...activeDashboard.executions, ...dashboard.executions].filter(
             (execution) => execution.agentName === trader.name,
           )}
           onClose={() => setAgentDetailOpen(false)}
@@ -355,7 +353,7 @@ export default function TradeTownShell({
             <div className="pixel-help-grid">
               <div>
                 <strong>Panda DayView</strong>
-                <span>Compare five markets and inspect why each agent changed its mind.</span>
+                <span>Inspect real historical market bars alongside a generated agent replay.</span>
               </div>
               <div>
                 <strong>Testnet</strong>
@@ -393,34 +391,54 @@ export default function TradeTownShell({
 }
 
 function MarketBoard({
-  dashboard,
+  testnetDashboard,
+  dayViewDashboard,
   selectedSymbol,
   onSelect,
 }: {
-  dashboard: TradeTownDashboard;
+  testnetDashboard: TradeTownDashboard;
+  dayViewDashboard: TradeTownDashboard;
   selectedSymbol: string;
   onSelect: (symbol: string) => void;
 }) {
+  const dashboard = dayViewDashboard.markets.some(
+    (candidate) => candidate.symbol === selectedSymbol,
+  )
+    ? dayViewDashboard
+    : testnetDashboard;
   const market =
     dashboard.markets.find((candidate) => candidate.symbol === selectedSymbol) ??
-    dashboard.markets[0];
+    dayViewDashboard.markets[0] ??
+    testnetDashboard.markets[0];
   if (!market) return null;
 
   const pandaMode = dashboard.dataMode === 'panda_dayview';
+  const latestCandle = market.candles[market.candles.length - 1];
+  const hasSentiment = pandaMode && market.sentiment;
+  const quoteCurrency = market.quoteCurrency ?? (pandaMode ? 'CNY' : 'INJ');
+  const priceTick = market.priceTick ?? (market.lastPrice < 1 ? 0.0001 : 0.04);
 
   return (
-    <div className="pixel-board">
+    <div className="pixel-board pixel-unified-market-board">
       <div className="pixel-board-title pixel-board-title-sourced">
         <div>
-          <span>{pandaMode ? 'Five-market daily view' : 'On-chain spot market'}</span>
+          <span>Historical context + chain execution</span>
           <h2>Markets</h2>
         </div>
-        <SourceBadge dashboard={dashboard} />
+        <div className="pixel-dual-badges" aria-label="Market sources">
+          <SourceBadge dashboard={dayViewDashboard} label="◇ PANDA · SIM" />
+          <SourceBadge
+            dashboard={testnetDashboard}
+            label={testnetDashboard.source === 'injective' ? '◆ VERIFIED' : '◈ PREVIEW'}
+          />
+        </div>
       </div>
-      <div className="pixel-market-hero">
-        <span>{market.assetClass}</span>
+      <div className={`pixel-market-hero source-focus-${pandaMode ? 'panda' : 'injective'}`}>
+        <span>
+          {pandaMode ? '◇ PANDA DAYVIEW · HISTORICAL' : '◆ INJECTIVE TESTNET · EXECUTION'}
+        </span>
         <h3>
-          {market.symbol} {pandaMode ? '' : '/ TOWNUSD'}
+          {market.symbol} {pandaMode ? '' : `/ ${quoteCurrency}`}
         </h3>
         <div>
           <strong>{formatPrice(market.lastPrice)}</strong>
@@ -429,7 +447,9 @@ function MarketBoard({
             {market.changePct.toFixed(2)}%
           </small>
         </div>
-        <small className="pixel-price-unit">{pandaMode ? 'DAY CLOSE' : 'TOWNUSD'}</small>
+        <small className="pixel-price-unit">
+          {pandaMode ? `${quoteCurrency} · DAY CLOSE` : quoteCurrency}
+        </small>
       </div>
       <PixelCandles
         values={market.candles}
@@ -455,78 +475,94 @@ function MarketBoard({
           <dd>{formatPrice(market.referencePrice)}</dd>
         </div>
         <div>
-          <dt>{pandaMode ? 'Consensus' : 'Best bid'}</dt>
+          <dt>{pandaMode ? (hasSentiment ? 'Consensus' : 'Day high') : 'Best bid'}</dt>
           <dd>
             {pandaMode
-              ? `${market.sentiment.consensus}%`
-              : formatPrice(Math.max(0, market.lastPrice - 0.04))}
+              ? hasSentiment
+                ? `${market.sentiment!.consensus}%`
+                : formatPrice(latestCandle?.high ?? market.lastPrice)
+              : formatPrice(Math.max(0, market.lastPrice - priceTick))}
           </dd>
         </div>
         <div>
-          <dt>{pandaMode ? 'Divergence' : 'Best ask'}</dt>
+          <dt>{pandaMode ? (hasSentiment ? 'Divergence' : 'Day low') : 'Best ask'}</dt>
           <dd>
-            {pandaMode ? `${market.sentiment.divergence}%` : formatPrice(market.lastPrice + 0.04)}
+            {pandaMode
+              ? hasSentiment
+                ? `${market.sentiment!.divergence}%`
+                : formatPrice(latestCandle?.low ?? market.lastPrice)
+              : formatPrice(market.lastPrice + priceTick)}
           </dd>
         </div>
       </dl>
-      {pandaMode ? (
+      {hasSentiment ? (
         <div className="pixel-sentiment">
           <div>
-            <span className="pixel-up">▲ {market.sentiment.bulls} bulls</span>
-            <strong>{market.sentiment.camp}</strong>
-            <span className="pixel-down">{market.sentiment.bears} bears ▼</span>
+            <span className="pixel-up">▲ {market.sentiment!.bulls} BUY</span>
+            <strong>
+              {market.sentiment!.holds ? `${market.sentiment!.holds} HOLD · ` : ''}
+              {market.sentiment!.camp}
+            </strong>
+            <span className="pixel-down">{market.sentiment!.bears} SELL ▼</span>
           </div>
           <i>
             <b
               className="pixel-sentiment-bulls"
               style={{
-                width: `${(market.sentiment.bulls / Math.max(1, market.sentiment.bulls + market.sentiment.bears)) * 100}%`,
+                width: `${(market.sentiment!.bulls / Math.max(1, market.sentiment!.bulls + market.sentiment!.bears)) * 100}%`,
               }}
             />
           </i>
         </div>
+      ) : pandaMode ? (
+        <div className="pixel-sentiment">
+          <div>
+            <span>Agent sentiment</span>
+            <strong>NOT AVAILABLE</strong>
+            <span>market data only</span>
+          </div>
+        </div>
       ) : (
         <div className="pixel-orderbook-preview">
-          <span className="pixel-up">BID {formatPrice(market.lastPrice - 0.04)}</span>
-          <strong>SPREAD 0.08</strong>
-          <span className="pixel-down">ASK {formatPrice(market.lastPrice + 0.04)}</span>
+          <span className="pixel-up">BID {formatPrice(market.lastPrice - priceTick)}</span>
+          <strong>SPREAD {formatPrice(priceTick * 2)}</strong>
+          <span className="pixel-down">ASK {formatPrice(market.lastPrice + priceTick)}</span>
         </div>
       )}
-      <div className="pixel-market-list">
-        {dashboard.markets.map((item) => (
-          <button
-            type="button"
-            key={item.symbol}
-            onClick={() => onSelect(item.symbol)}
-            className={item.symbol === market.symbol ? 'is-selected' : ''}
-          >
-            <PixelMarketIcon symbol={item.symbol} accent={item.accent} />
-            <span className="pixel-market-copy">
-              <strong>{item.symbol}</strong>
-              <small>
-                {formatPrice(item.lastPrice)} · {item.displayName}
-              </small>
-            </span>
-            <span className={item.changePct >= 0 ? 'pixel-up' : 'pixel-down'}>
-              {item.changePct >= 0 ? '+' : ''}
-              {item.changePct.toFixed(2)}%
-            </span>
-          </button>
-        ))}
+      <div className="pixel-market-source-groups">
+        <MarketSourceGroup
+          dashboard={dayViewDashboard}
+          kind="panda"
+          selectedSymbol={market.symbol}
+          onSelect={onSelect}
+        />
+        <MarketSourceGroup
+          dashboard={testnetDashboard}
+          kind={testnetDashboard.source === 'injective' ? 'injective' : 'preview'}
+          selectedSymbol={market.symbol}
+          onSelect={onSelect}
+        />
       </div>
-      <div className="pixel-chain-rule">
-        <span>{pandaMode ? '◇' : '◆'}</span>
-        <p>
-          <strong>{pandaMode ? 'Simulation boundary' : 'Chain truth'}</strong>
-          {pandaMode
-            ? 'DayView orders are simulated and never link to Explorer.'
-            : 'Only confirmed Injective fills update official balances.'}
-        </p>
+      <div className="pixel-dual-boundary">
+        <div className="source-panda">
+          <span>◇</span>
+          <p>
+            <strong>Panda · context / simulation</strong>
+            Historical bars are observed; beliefs and replay orders are generated.
+          </p>
+        </div>
+        <div className={`source-${testnetDashboard.source}`}>
+          <span>{testnetDashboard.source === 'injective' ? '◆' : '◈'}</span>
+          <p>
+            <strong>Injective · chain truth</strong>
+            Only confirmed testnet fills update verified balances.
+          </p>
+        </div>
       </div>
-      {dashboard.marketMakers.length > 0 && (
+      {testnetDashboard.marketMakers.length > 0 && (
         <div className="pixel-maker-row" aria-label="Liquidity providers">
           <span>Liquidity</span>
-          {dashboard.marketMakers.map((maker) => (
+          {testnetDashboard.marketMakers.map((maker) => (
             <strong key={maker.name}>
               <i /> {maker.name}
             </strong>
@@ -537,154 +573,327 @@ function MarketBoard({
   );
 }
 
-function AgentBoard({
+function MarketSourceGroup({
   dashboard,
-  selectedAgent,
+  kind,
+  selectedSymbol,
   onSelect,
-  onOpenDetails,
 }: {
   dashboard: TradeTownDashboard;
-  selectedAgent: string;
-  onSelect: (name: string) => void;
-  onOpenDetails: () => void;
+  kind: RecordSource;
+  selectedSymbol: string;
+  onSelect: (symbol: string) => void;
 }) {
-  const trader =
-    dashboard.traders.find((candidate) => candidate.name === selectedAgent) ?? dashboard.traders[0];
-  if (!trader) return null;
-
-  const traderIndex = Math.max(
-    0,
-    dashboard.traders.findIndex((candidate) => candidate.name === trader.name),
-  );
+  const panda = kind === 'panda';
+  const verified = kind === 'injective';
 
   return (
-    <div className="pixel-board">
-      <div className="pixel-board-title pixel-board-title-sourced">
+    <section className={`pixel-market-source-group source-${kind}`}>
+      <header>
+        <span aria-hidden="true">{panda ? '◇' : verified ? '◆' : '◈'}</span>
         <div>
-          <span>{dashboard.traders.length} agents · beliefs &amp; portfolios</span>
-          <h2>Citizens</h2>
+          <strong>{panda ? 'Panda DayView' : 'Injective Testnet'}</strong>
+          <small>
+            {panda
+              ? `Historical · ${formatMarketDate(dashboard.asOf)}`
+              : verified
+                ? `Verified${dashboard.blockHeight ? ` · #${dashboard.blockHeight.toLocaleString()}` : ''}`
+                : 'Preview · awaiting chain fills'}
+          </small>
         </div>
-        <SourceBadge dashboard={dashboard} />
-      </div>
-      <div className="pixel-agent-list">
-        {dashboard.traders.map((agent, index) => (
+      </header>
+      <div className="pixel-market-list">
+        {dashboard.markets.map((item) => (
           <button
             type="button"
-            key={agent.name}
-            className={agent.name === trader.name ? 'is-selected' : ''}
-            data-town-citizen-focus
-            onClick={() => onSelect(agent.name)}
+            key={`${kind}-${item.symbol}`}
+            onClick={() => onSelect(item.symbol)}
+            className={item.symbol === selectedSymbol ? 'is-selected' : ''}
           >
-            <PixelAvatar index={index} />
-            <span>
-              <strong>{agent.name}</strong>
-              <small>{agent.role}</small>
+            <PixelMarketIcon symbol={item.symbol} accent={item.accent} />
+            <span className="pixel-market-copy">
+              <strong>{item.symbol}</strong>
+              <small>
+                {formatPrice(item.lastPrice)} {item.quoteCurrency ?? (panda ? 'CNY' : 'INJ')} ·{' '}
+                {item.displayName}
+              </small>
             </span>
-            <span className="pixel-agent-state">
-              <em className={`pixel-action action-${agent.action.toLowerCase()}`}>
-                {agent.action}
-              </em>
-              <strong className={agent.pnl >= 0 ? 'pixel-up' : 'pixel-down'}>
-                {formatSignedCompact(agent.pnl)}
-              </strong>
+            <span className={item.changePct >= 0 ? 'pixel-up' : 'pixel-down'}>
+              {item.changePct >= 0 ? '+' : ''}
+              {item.changePct.toFixed(2)}%
             </span>
           </button>
         ))}
       </div>
+    </section>
+  );
+}
+
+function AgentBoard({
+  testnetDashboard,
+  dayViewDashboard,
+  selectedAgent,
+  onSelect,
+  onOpenDetails,
+}: {
+  testnetDashboard: TradeTownDashboard;
+  dayViewDashboard: TradeTownDashboard;
+  selectedAgent: string;
+  onSelect: (name: string) => void;
+  onOpenDetails: () => void;
+}) {
+  const pandaTrader =
+    dayViewDashboard.traders.find((candidate) => candidate.name === selectedAgent) ??
+    dayViewDashboard.traders[0];
+  if (!pandaTrader) return null;
+  const testnetTrader =
+    testnetDashboard.traders.find((candidate) => candidate.name === pandaTrader.name) ??
+    testnetDashboard.traders[0];
+
+  const traderIndex = Math.max(
+    0,
+    dayViewDashboard.traders.findIndex((candidate) => candidate.name === pandaTrader.name),
+  );
+
+  return (
+    <div className="pixel-board pixel-unified-agent-board">
+      <div className="pixel-board-title pixel-board-title-sourced">
+        <div>
+          <span>{dayViewDashboard.traders.length} agents · dual-source state</span>
+          <h2>Citizens</h2>
+        </div>
+        <div className="pixel-dual-badges" aria-label="Citizen state sources">
+          <SourceBadge dashboard={dayViewDashboard} label="◇ SIM" />
+          <SourceBadge
+            dashboard={testnetDashboard}
+            label={testnetDashboard.source === 'injective' ? '◆ CHAIN' : '◈ PREVIEW'}
+          />
+        </div>
+      </div>
+      <div className="pixel-agent-list">
+        {dayViewDashboard.traders.map((agent, index) => {
+          const chainAgent = testnetDashboard.traders.find(
+            (candidate) => candidate.name === agent.name,
+          );
+          return (
+            <button
+              type="button"
+              key={agent.name}
+              className={agent.name === pandaTrader.name ? 'is-selected' : ''}
+              data-town-citizen-focus
+              onClick={() => onSelect(agent.name)}
+            >
+              <PixelAvatar index={index} />
+              <span className="pixel-agent-identity">
+                <strong>{agent.name}</strong>
+                <small>{agent.role}</small>
+              </span>
+              <span className="pixel-agent-dual-state">
+                <span className="source-panda">
+                  <small>◇ Panda · sim</small>
+                  <strong>
+                    {agent.action} · {formatSignedCompact(agent.pnl)} {agent.currency ?? 'CNY'}
+                  </strong>
+                </span>
+                <span className={`source-${testnetDashboard.source}`}>
+                  <small>
+                    {testnetDashboard.source === 'injective' ? '◆' : '◈'} Testnet ·{' '}
+                    {testnetDashboard.source === 'injective' ? 'verified' : 'preview'}
+                  </small>
+                  <strong>{formatTestnetAgentState(chainAgent, testnetDashboard)}</strong>
+                </span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
       <article className="pixel-agent-card">
         <div className="pixel-agent-card-top">
           <span>Selected agent</span>
-          <strong className={trader.pnl >= 0 ? 'pixel-up' : 'pixel-down'}>
-            {formatSignedCompact(trader.pnl)}
-          </strong>
+          <span>◇ SIM + {testnetDashboard.source === 'injective' ? '◆ VERIFIED' : '◈ PREVIEW'}</span>
         </div>
         <div className="pixel-agent-card-identity">
           <PixelAvatar index={traderIndex} />
           <div>
-            <h3>{trader.name}</h3>
-            <span>{trader.role}</span>
+            <h3>{pandaTrader.name}</h3>
+            <span>{pandaTrader.role}</span>
           </div>
-          <em className={`pixel-action action-${trader.action.toLowerCase()}`}>{trader.action}</em>
+          <em className={`pixel-action action-${pandaTrader.action.toLowerCase()}`}>
+            {pandaTrader.action}
+          </em>
         </div>
-        <p>{trader.beliefAfter}</p>
-        <div className="pixel-confidence">
-          <span>Confidence</span>
-          <i>
-            <b style={{ width: `${trader.confidence * 100}%` }} />
-          </i>
-          <strong>{Math.round(trader.confidence * 100)}%</strong>
+        <div className="pixel-selected-source-state source-panda">
+          <strong>◇ Panda thesis · simulated</strong>
+          <p>{pandaTrader.beliefAfter}</p>
+          <span>
+            {pandaTrader.action} · {Math.round(pandaTrader.confidence * 100)}% confidence ·{' '}
+            {formatSignedCompact(pandaTrader.pnl)} {pandaTrader.currency ?? 'CNY'}
+          </span>
         </div>
-        <div className="pixel-agent-activity">
-          <i /> {trader.activity}
+        <div className={`pixel-selected-source-state source-${testnetDashboard.source}`}>
+          <strong>
+            {testnetDashboard.source === 'injective' ? '◆' : '◈'} Injective ·{' '}
+            {testnetDashboard.source === 'injective' ? 'verified' : 'preview'}
+          </strong>
+          <p>{formatTestnetAgentState(testnetTrader, testnetDashboard)}</p>
+          <span>
+            {testnetTrader?.activity ?? 'Awaiting a chain-backed account observation.'}
+          </span>
         </div>
         <button type="button" className="pixel-detail-button" onClick={onOpenDetails}>
-          Open belief &amp; portfolio
+          Open full evidence
         </button>
       </article>
     </div>
   );
 }
 
-function TownSummary({ dashboard }: { dashboard: TradeTownDashboard }) {
-  const items = [
-    ['Town AUM', formatCompact(dashboard.summary.aum)],
-    ['Exposure', formatCompact(dashboard.summary.totalExposure)],
-    [
-      dashboard.dataMode === 'panda_dayview' ? 'Day volume' : 'Run volume',
-      formatCompact(dashboard.summary.volume),
-    ],
-    ['Profitable', `${dashboard.summary.profitableAgents}/${dashboard.traders.length}`],
-    ['Top agent', dashboard.summary.topAgent],
-    ['Data issues', String(dashboard.errors.length)],
+function formatTestnetAgentState(
+  trader: DashboardTrader | undefined,
+  dashboard: TradeTownDashboard,
+) {
+  if (!trader || dashboard.source !== 'injective' || trader.tradeCount === 0) {
+    return 'No confirmed fill';
+  }
+  const currency = trader.currency ?? dashboard.markets[0]?.quoteCurrency ?? 'INJ';
+  return `${trader.positions.length} position${trader.positions.length === 1 ? '' : 's'} · ${formatSignedCompact(trader.pnl)} ${currency}`;
+}
+
+function TownSummary({
+  testnetDashboard,
+  dayViewDashboard,
+}: {
+  testnetDashboard: TradeTownDashboard;
+  dayViewDashboard: TradeTownDashboard;
+}) {
+  const pandaCurrency = dayViewDashboard.markets[0]?.quoteCurrency ?? 'CNY';
+  const testnetCurrency = testnetDashboard.markets[0]?.quoteCurrency ?? 'INJ';
+  const groups = [
+    {
+      source: 'panda',
+      label: '◇ Simulated · Panda',
+      status: `${formatMarketDate(dayViewDashboard.asOf)} · generated replay`,
+      items: [
+        ['Sim AUM', formatMoney(dayViewDashboard.summary.aum, pandaCurrency)],
+        ['Sim exposure', formatMoney(dayViewDashboard.summary.totalExposure, pandaCurrency)],
+        ['Day volume', formatCompact(dayViewDashboard.summary.volume)],
+        ['Top agent', dayViewDashboard.summary.topAgent],
+      ],
+    },
+    {
+      source: testnetDashboard.source,
+      label:
+        testnetDashboard.source === 'injective'
+          ? '◆ Verified · Injective'
+          : '◈ Preview · Injective',
+      status:
+        testnetDashboard.source === 'injective'
+          ? `chain truth${testnetDashboard.blockHeight ? ` · #${testnetDashboard.blockHeight.toLocaleString()}` : ''}`
+          : 'awaiting confirmed fills',
+      items: [
+        ['Chain AUM', formatMoney(testnetDashboard.summary.aum, testnetCurrency)],
+        ['Real exposure', formatMoney(testnetDashboard.summary.totalExposure, testnetCurrency)],
+        ['Run volume', formatCompact(testnetDashboard.summary.volume)],
+        ['Data issues', String(testnetDashboard.errors.length)],
+      ],
+    },
   ];
 
   return (
-    <section className="pixel-town-summary" aria-label="Town summary">
-      {items.map(([label, value]) => (
-        <div
-          key={label}
-          className={
-            label === 'Data issues' && dashboard.errors.length > 0 ? 'has-warning' : undefined
-          }
-          title={
-            label === 'Data issues'
-              ? dashboard.errors.map((error) => error.message).join('\n')
-              : undefined
-          }
-        >
-          <span>{label}</span>
-          <strong>
-            {value}
-            {label === 'Top agent' && dashboard.summary.topReturnPct > 0
-              ? ` +${dashboard.summary.topReturnPct.toFixed(2)}%`
-              : ''}
-          </strong>
-        </div>
+    <section className="pixel-town-summary is-unified" aria-label="Dual-source town summary">
+      {groups.map((group) => (
+        <section className={`pixel-summary-source source-${group.source}`} key={group.label}>
+          <header>
+            <strong>{group.label}</strong>
+            <span>{group.status}</span>
+          </header>
+          <div className="pixel-summary-metrics">
+            {group.items.map(([label, value]) => (
+              <div
+                key={label}
+                className={
+                  label === 'Data issues' && testnetDashboard.errors.length > 0
+                    ? 'has-warning'
+                    : undefined
+                }
+                title={
+                  label === 'Data issues'
+                    ? testnetDashboard.errors.map((error) => error.message).join('\n')
+                    : undefined
+                }
+              >
+                <span>{label}</span>
+                <strong>{value}</strong>
+              </div>
+            ))}
+          </div>
+        </section>
       ))}
     </section>
   );
 }
 
 function ActivityBoard({
-  dashboard,
+  testnetDashboard,
+  dayViewDashboard,
   drawer = false,
 }: {
-  dashboard: TradeTownDashboard;
+  testnetDashboard: TradeTownDashboard;
+  dayViewDashboard: TradeTownDashboard;
   drawer?: boolean;
 }) {
   const [tab, setTab] = useState<ActivityTab>('timeline');
+  const chainEvents = testnetDashboard.events.filter(
+    (event) => event.kind === 'chain' || Boolean(event.proof),
+  );
+  const testnetStatusEvent: CausalEvent = {
+    id: 'injective-status',
+    time: formatClock(testnetDashboard.asOf),
+    kind: testnetDashboard.source === 'injective' ? 'chain' : 'error',
+    actor: 'Injective Gateway',
+    title:
+      testnetDashboard.source === 'injective'
+        ? 'Connected · no confirmed fill yet'
+        : 'Testnet evidence pending',
+    detail:
+      testnetDashboard.source === 'injective'
+        ? 'The gateway is connected. Explorer proof appears here after a confirmed order or fill.'
+        : 'Preview values stay isolated from Panda simulation and never update verified balances.',
+  };
+  const timeline: Array<{ record: CausalEvent; source: RecordSource }> = [
+    ...dayViewDashboard.events.map((record) => ({ record, source: 'panda' as const })),
+    ...(chainEvents.length > 0
+      ? chainEvents.map((record) => ({
+          record,
+          source:
+            testnetDashboard.source === 'injective'
+              ? ('injective' as const)
+              : ('preview' as const),
+        }))
+      : [{ record: testnetStatusEvent, source: 'preview' as const }]),
+  ].sort((left, right) => left.record.time.localeCompare(right.record.time));
+  const social: Array<{ record: SocialActivity; source: RecordSource }> =
+    dayViewDashboard.social.map((record) => ({ record, source: 'panda' }));
+  const executions: Array<{ record: DashboardExecution; source: RecordSource }> = [
+    ...dayViewDashboard.executions.map((record) => ({ record, source: 'panda' as const })),
+    ...testnetDashboard.executions
+      .filter((record) => !record.isSimulated)
+      .map((record) => ({
+        record,
+        source:
+          testnetDashboard.source === 'injective'
+            ? ('injective' as const)
+            : ('preview' as const),
+      })),
+  ];
   const count =
-    tab === 'timeline'
-      ? dashboard.events.length
-      : tab === 'social'
-        ? dashboard.social.length
-        : dashboard.executions.length;
+    tab === 'timeline' ? timeline.length : tab === 'social' ? social.length : executions.length;
 
   return (
-    <section className={`pixel-event-board ${drawer ? 'is-drawer' : ''}`}>
+    <section className={`pixel-event-board is-unified ${drawer ? 'is-drawer' : ''}`}>
       <div className="pixel-board-title pixel-event-title">
         <div>
-          <span>Cause, influence, and execution</span>
+          <span>Cross-source evidence chain · simulation never counts as chain truth</span>
           <h2>Town intelligence</h2>
         </div>
         <div className="pixel-event-tabs" role="tablist" aria-label="Town intelligence sections">
@@ -706,14 +915,30 @@ function ActivityBoard({
 
       {tab === 'timeline' && (
         <div className="pixel-event-track">
-          {dashboard.events.map((event, index) => (
-            <article key={event.id} className={`pixel-event event-${event.kind}`}>
+          {timeline.map(({ record: event, source }, index) => (
+            <article
+              key={`${source}-${event.id}`}
+              className={`pixel-event event-${event.kind} source-${source}`}
+            >
               <span className="pixel-event-number">{String(index + 1).padStart(2, '0')}</span>
               <time>{event.time}</time>
+              <EventSourceTag source={source} />
               <strong>{event.title}</strong>
               <small>{event.actor}</small>
               <p>{event.detail}</p>
-              {event.proof && <code>{event.proof}</code>}
+              {event.proof &&
+                (source === 'injective' ? (
+                  <a
+                    className="pixel-explorer-link"
+                    href={`https://testnet.explorer.injective.network/transaction/${event.proof}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Explorer ↗ · {formatReference(event.proof)}
+                  </a>
+                ) : (
+                  <code>{formatReference(event.proof)}</code>
+                ))}
             </article>
           ))}
         </div>
@@ -721,10 +946,14 @@ function ActivityBoard({
 
       {tab === 'social' && (
         <div className="pixel-event-track">
-          {dashboard.social.map((item, index) => (
-            <article key={item.id} className="pixel-event event-interaction">
+          {social.map(({ record: item, source }, index) => (
+            <article
+              key={`${source}-${item.id}`}
+              className={`pixel-event event-interaction source-${source}`}
+            >
               <span className="pixel-event-number">{String(index + 1).padStart(2, '0')}</span>
               <time>{item.time}</time>
+              <EventSourceTag source={source} />
               <strong>{item.title}</strong>
               <small>
                 {item.actor} · {item.type}
@@ -738,16 +967,20 @@ function ActivityBoard({
 
       {tab === 'trades' && (
         <div className="pixel-event-track">
-          {dashboard.executions.length === 0 && (
+          {executions.length === 0 && (
             <div className="pixel-empty-state">
-              <strong>No confirmed executions</strong>
-              <span>Connect the gateway or switch to Panda DayView simulation.</span>
+              <strong>No executions</strong>
+              <span>Panda simulation and Injective verification remain separate here.</span>
             </div>
           )}
-          {dashboard.executions.map((execution, index) => (
-            <article key={execution.id} className={`pixel-event event-${execution.type}`}>
+          {executions.map(({ record: execution, source }, index) => (
+            <article
+              key={`${source}-${execution.id}`}
+              className={`pixel-event event-${execution.type} source-${source}`}
+            >
               <span className="pixel-event-number">{String(index + 1).padStart(2, '0')}</span>
               <time>{execution.time}</time>
+              <EventSourceTag source={source} />
               <strong>
                 {execution.side} {execution.quantity} {execution.symbol}
               </strong>
@@ -756,11 +989,27 @@ function ActivityBoard({
               </small>
               <p>
                 {execution.reason ??
-                  `${formatPrice(execution.price)} TOWNUSD · ${
-                    execution.isSimulated ? 'SIMULATED' : 'INJECTIVE'
-                  }`}
+                  `${formatPrice(execution.price)} ${
+                    execution.priceUnit ??
+                    (source === 'panda' ? dayViewDashboard : testnetDashboard).markets.find(
+                      (market) => market.symbol === execution.symbol,
+                    )?.quoteCurrency ??
+                    (source === 'panda' ? 'CNY' : 'INJ')
+                  } · ${execution.isSimulated ? 'SIMULATED' : 'INJECTIVE'}`}
               </p>
-              {execution.reference && <code>{execution.reference}</code>}
+              {execution.reference &&
+                (source === 'injective' ? (
+                  <a
+                    className="pixel-explorer-link"
+                    href={`https://testnet.explorer.injective.network/transaction/${execution.reference}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Explorer ↗ · {formatReference(execution.reference)}
+                  </a>
+                ) : (
+                  <code>{formatReference(execution.reference)}</code>
+                ))}
             </article>
           ))}
         </div>
@@ -769,13 +1018,29 @@ function ActivityBoard({
   );
 }
 
+function EventSourceTag({ source }: { source: RecordSource }) {
+  return (
+    <span className={`pixel-event-source source-${source}`}>
+      {source === 'panda'
+        ? '◇ Panda · sim'
+        : source === 'injective'
+          ? '◆ Injective · verified'
+          : '◈ Injective · preview'}
+    </span>
+  );
+}
+
 function AgentDetailDrawer({
   trader,
+  testnetTrader,
+  testnetDashboard,
   avatarIndex,
   executions,
   onClose,
 }: {
   trader: DashboardTrader;
+  testnetTrader?: DashboardTrader;
+  testnetDashboard: TradeTownDashboard;
   avatarIndex: number;
   executions: DashboardExecution[];
   onClose: () => void;
@@ -803,6 +1068,12 @@ function AgentDetailDrawer({
           </div>
           <em className={`pixel-action action-${trader.action.toLowerCase()}`}>{trader.action}</em>
         </header>
+        <div className="pixel-agent-source-strip">
+          <span className="source-panda">◇ Panda · simulated reasoning</span>
+          <span className={`source-${testnetDashboard.source}`}>
+            {testnetDashboard.source === 'injective' ? '◆ Injective · verified' : '◈ Injective · preview'}
+          </span>
+        </div>
         <nav className="pixel-agent-tabs" role="tablist" aria-label="Agent details">
           {(['belief', 'portfolio', 'risk', 'trades'] as AgentTab[]).map((item) => (
             <button
@@ -852,20 +1123,26 @@ function AgentDetailDrawer({
                   value={`${Math.round(trader.riskTolerance * 100)}`}
                 />
               </div>
+              <section className={`pixel-detail-section source-${testnetDashboard.source}`}>
+                <span>
+                  {testnetDashboard.source === 'injective' ? '◆' : '◈'} Injective status
+                </span>
+                <p>{formatTestnetAgentState(testnetTrader, testnetDashboard)}</p>
+              </section>
             </>
           )}
 
           {tab === 'portfolio' && (
             <>
               <div className="pixel-detail-metrics">
-                <Metric label="Start NAV" value={formatTownUsd(trader.navStart)} />
-                <Metric label="End NAV" value={formatTownUsd(trader.navEnd)} />
+                <Metric label="Start NAV" value={formatMoney(trader.navStart, trader.currency)} />
+                <Metric label="End NAV" value={formatMoney(trader.navEnd, trader.currency)} />
                 <Metric
                   label="PnL"
                   value={formatSignedCompact(trader.pnl)}
                   tone={trader.pnl >= 0 ? 'positive' : 'negative'}
                 />
-                <Metric label="Cash" value={formatTownUsd(trader.cash)} />
+                <Metric label="Cash" value={formatMoney(trader.cash, trader.currency)} />
               </div>
               <section className="pixel-position-list">
                 <div className="pixel-position-head">
@@ -887,6 +1164,25 @@ function AgentDetailDrawer({
                     </span>
                   </div>
                 ))}
+              </section>
+              <section className={`pixel-detail-section source-${testnetDashboard.source}`}>
+                <span>
+                  {testnetDashboard.source === 'injective'
+                    ? '◆ Verified testnet portfolio'
+                    : '◈ Testnet portfolio preview'}
+                </span>
+                {testnetDashboard.source === 'injective' && testnetTrader ? (
+                  <p>
+                    {formatMoney(
+                      testnetTrader.navEnd,
+                      testnetTrader.currency ?? testnetDashboard.markets[0]?.quoteCurrency ?? 'INJ',
+                    )}{' '}
+                    NAV · {testnetTrader.positions.length} open position
+                    {testnetTrader.positions.length === 1 ? '' : 's'}
+                  </p>
+                ) : (
+                  <p>No chain-backed balance is available yet.</p>
+                )}
               </section>
             </>
           )}
@@ -939,7 +1235,7 @@ function AgentDetailDrawer({
                   </strong>
                   <p>
                     {execution.reason ??
-                      `${formatPrice(execution.price)} TOWNUSD · ${execution.state}`}
+                      `${formatPrice(execution.price)} ${execution.priceUnit ?? trader.currency ?? 'INJ'} · ${execution.state}`}
                   </p>
                   {execution.reference && <code>{execution.reference}</code>}
                 </article>
@@ -952,14 +1248,29 @@ function AgentDetailDrawer({
   );
 }
 
-function SourceBadge({ dashboard }: { dashboard: TradeTownDashboard }) {
+function SourceBadge({
+  dashboard,
+  label,
+  source,
+  title,
+}: {
+  dashboard: TradeTownDashboard;
+  label?: string;
+  source?: TradeTownDashboard['source'];
+  title?: string;
+}) {
+  const resolvedSource = source ?? dashboard.source;
   return (
-    <span className={`pixel-source-badge source-${dashboard.source}`} title={dashboard.sourceLabel}>
-      {dashboard.source === 'panda'
-        ? 'PANDA'
-        : dashboard.source === 'injective'
-          ? 'CHAIN'
-          : 'PREVIEW'}
+    <span
+      className={`pixel-source-badge source-${resolvedSource}`}
+      title={title ?? dashboard.sourceLabel}
+    >
+      {label ??
+        (resolvedSource === 'panda'
+          ? 'PANDA'
+          : resolvedSource === 'injective'
+            ? 'CHAIN'
+            : 'PREVIEW')}
     </span>
   );
 }
@@ -984,7 +1295,11 @@ function Metric({
 function formatPrice(price: number) {
   return price >= 1000
     ? price.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
-    : price.toFixed(2);
+    : price >= 1
+      ? price.toFixed(2)
+      : price >= 0.01
+        ? price.toFixed(4)
+        : price.toFixed(6);
 }
 
 function formatCompact(value: number) {
@@ -1002,8 +1317,8 @@ function formatSignedCompact(value: number) {
   }).format(value);
 }
 
-function formatTownUsd(value: number) {
-  return `${formatCompact(value)} TOWNUSD`;
+function formatMoney(value: number, currency = 'TOWNUSD') {
+  return `${formatCompact(value)} ${currency}`;
 }
 
 function formatClock(value: number) {
@@ -1012,4 +1327,12 @@ function formatClock(value: number) {
     minute: '2-digit',
     hour12: false,
   });
+}
+
+function formatMarketDate(value: number) {
+  return new Date(value).toISOString().slice(0, 10);
+}
+
+function formatReference(value: string) {
+  return value.length > 14 ? `${value.slice(0, 8)}…${value.slice(-5)}` : value;
 }

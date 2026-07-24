@@ -19,8 +19,8 @@ settlement authority.
 - A standalone Node Gateway with a serialized signing queue, Injective Indexer streams, idempotent
   fill ingestion, and read-only mode by default.
 - One operator wallet mapped to ten Injective subaccounts by nonce.
-- A TokenFactory and spot-market provisioning plan for `TOWNUSD`, `ACME`, `NOVA`, `AURUM`, and
-  `CRUDE`.
+- A single-market TokenFactory provisioning plan for the `ACME` token and the `ACME/INJ` MVP spot
+  market. `TOWNUSD` remains the local simulation quote currency.
 - An 8-bit exchange terminal wrapped around the live Pixi town, with market state, agent inspection,
   a causal event replay, and responsive candlestick charts.
 - A standalone preview that works without Convex credentials.
@@ -72,8 +72,8 @@ npm run dev
 The existing AI Town LLM adapters still support Ollama and OpenAI-compatible endpoints. The
 financial order path is independent of the chat model. For a chat-only OpenAI-compatible gateway,
 set `LLM_EMBEDDING_MODEL=local-hash`; this deterministic local fallback is suitable for demos but
-does not provide production-grade semantic retrieval. `LLM_API_URL` accepts a host URL, a URL
-ending in `/v1`, or a full URL ending in `/chat/completions`.
+does not provide production-grade semantic retrieval. `LLM_API_URL` accepts a host URL, a URL ending
+in `/v1`, or a full URL ending in `/chat/completions`.
 
 The live simulation calls the configured chat model while agents converse. Use the in-game
 **Freeze** control when you are not actively testing so a metered API quota is not consumed in the
@@ -87,7 +87,7 @@ Check current testnet connectivity without a key:
 npm run gateway:check
 ```
 
-Preview all denoms, spot markets, and subaccount funding without signing:
+Preview the ACME denom, the ACME/INJ spot market, and INJ/ACME subaccount funding without signing:
 
 ```bash
 npm run provision:plan
@@ -104,8 +104,8 @@ The SDK is pinned exactly to `@injectivelabs/sdk-ts@1.20.26`. Do not downgrade t
 
 | Type              | Members                                         |
 | ----------------- | ----------------------------------------------- |
-| Company markets   | `ACME/TOWNUSD`, `NOVA/TOWNUSD`                  |
-| Commodity markets | `AURUM/TOWNUSD`, `CRUDE/TOWNUSD`                |
+| Local simulation  | `ACME/TOWNUSD` (future: NOVA, AURUM, CRUDE)     |
+| Testnet MVP       | `ACME/INJ`                                      |
 | AI agents         | Mira, Theo, Imani, Sora, Omar, Lin, Jules, Neha |
 | Deterministic MMs | Delta-7 for companies, Sigma-2 for commodities  |
 

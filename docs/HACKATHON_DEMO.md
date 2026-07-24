@@ -16,7 +16,8 @@ The town starts in equilibrium. The central bank unexpectedly raises rates by 75
 
 ## What to show
 
-- Click each market in the top ticker and explain that TOWNUSD is the shared quote currency.
+- Switch between Panda DayView and Testnet. Explain that local replay uses TOWNUSD while the live
+  Testnet MVP settles `ACME/INJ`.
 - Click AI and MM agents in the right rail; point out the explicit `AI` and `MM` labels.
 - Select Imani and show her subaccount nonce, focus markets, risk tolerance, and activity.
 - Scroll the causal replay from policy event to chain proof.

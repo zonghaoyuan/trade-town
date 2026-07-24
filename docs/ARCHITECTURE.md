@@ -66,7 +66,7 @@ inclusion remain the authoritative verification layer; the Indexer is never trea
 | Table                | Purpose                                                      |
 | -------------------- | ------------------------------------------------------------ |
 | `financeConfig`      | network, Gateway status, operator, counts, last chain height |
-| `marketCatalog`      | TOWNUSD pairs, denoms, market IDs, ticks, current projection |
+| `marketCatalog`      | local TOWNUSD pairs plus live denoms, market IDs, and ticks  |
 | `traderProfiles`     | AI/MM role, risk, focus, nonce, subaccount                   |
 | `agentBeliefs`       | symbol thesis, sentiment, confidence, evidence links         |
 | `marketEvents`       | policy → news → conversation → intent → fill causal graph    |
@@ -91,10 +91,10 @@ the wallet as operator-controlled.
 
 ## Market lifecycle
 
-1. Create `townusd`, `acme`, `nova`, `aurum`, and `crude` TokenFactory denoms.
-2. Mint the fixed test scenario supply to the operator bank balance.
-3. Launch four native spot markets with TOWNUSD as quote.
-4. Deposit TOWNUSD and each agent's focus assets into its exchange subaccount.
+1. Create and mint the `acme` TokenFactory denom once.
+2. Keep TOWNUSD as the local simulation quote; an existing on-chain TOWNUSD denom is not deleted.
+3. Launch the `ACME/INJ` Testnet spot market with the exchange v2 message.
+4. Deposit 10 INJ and 2,000 ACME into each town exchange subaccount.
 5. Configure the returned market IDs in the Gateway.
 6. Reconcile markets and balances before enabling signing.
 
