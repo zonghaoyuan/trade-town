@@ -72,8 +72,8 @@ npm run dev
 The existing AI Town LLM adapters still support Ollama and OpenAI-compatible endpoints. The
 financial order path is independent of the chat model. For a chat-only OpenAI-compatible gateway,
 set `LLM_EMBEDDING_MODEL=local-hash`; this deterministic local fallback is suitable for demos but
-does not provide production-grade semantic retrieval. `LLM_API_URL` accepts either a host URL or a
-URL ending in `/v1`.
+does not provide production-grade semantic retrieval. `LLM_API_URL` accepts a host URL, a URL
+ending in `/v1`, or a full URL ending in `/chat/completions`.
 
 The live simulation calls the configured chat model while agents converse. Use the in-game
 **Freeze** control when you are not actively testing so a metered API quota is not consumed in the
