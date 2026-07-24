@@ -1,0 +1,69 @@
+export const SKILL_IDS = [
+  'rate-shock-experiment',
+  'rumor-propagation-analysis',
+  'user-behavior-review',
+] as const;
+
+export type SkillId = (typeof SKILL_IDS)[number];
+export type ExecutionMode = 'local-demo' | 'competition';
+export type DataMode = 'simulated' | 'verified-replay' | 'live';
+
+export type SkillRequest = {
+  skillId: SkillId;
+  prompt: string;
+  input: Record<string, unknown>;
+  seed: number;
+  dataMode: DataMode;
+};
+
+export type EvidenceItem = {
+  id: string;
+  kind: 'input' | 'market-event' | 'agent-decision' | 'risk-check' | 'correction';
+  summary: string;
+  source: string;
+  isSimulated: boolean;
+};
+
+export type Counterfactual = {
+  change: string;
+  outcome: string;
+  calculation: string;
+};
+
+export type ModelDisclosure = {
+  requiredModel: 'DeepSeek V4 Pro';
+  configuredModel: string | null;
+  used: boolean;
+  analysis: string;
+};
+
+export type MarketTownReport = {
+  schemaVersion: '1.0';
+  reportId: string;
+  runId: string;
+  skillId: SkillId;
+  title: string;
+  taskSummary: string;
+  createdAt: string;
+  execution: {
+    mode: ExecutionMode;
+    dataMode: DataMode;
+    isSimulated: boolean;
+    seed: number;
+    durationMs: number;
+    steps: string[];
+  };
+  model: ModelDisclosure;
+  evidence: EvidenceItem[];
+  findings: Record<string, unknown>;
+  counterfactuals: Counterfactual[];
+  riskConclusion: string;
+  chainProofs: Array<{
+    kind: 'transaction' | 'order' | 'fill';
+    txHash: string;
+    explorerUrl: string;
+  }>;
+  warnings: string[];
+};
+
+export type SkillResult = Omit<MarketTownReport, 'model' | 'createdAt'>;
