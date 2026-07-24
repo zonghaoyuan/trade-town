@@ -65,7 +65,14 @@ export const agentInputs = {
         Conversation.start(game, now, player, invitee);
         agent.lastInviteAttempt = now;
       }
+      if (!args.destination && !args.activity) {
+        // A pathfinding agent just completed its one social check for this
+        // route. Record it even when no invitee was selected so we do not
+        // schedule the same check again on every one-second engine tick.
+        agent.lastInviteAttempt = now;
+      }
       if (args.destination) {
+        delete player.activity;
         movePlayer(game, now, player, args.destination);
       }
       if (args.activity) {

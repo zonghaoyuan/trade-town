@@ -2,13 +2,17 @@ import { v } from 'convex/values';
 import { api, internal } from './_generated/api';
 import { DatabaseReader, MutationCtx, mutation } from './_generated/server';
 import { Descriptions } from '../data/characters';
-import * as map from '../data/gentle';
+import * as map from '../data/urban';
 import { insertInput } from './aiTown/insertInput';
 import { Id } from './_generated/dataModel';
 import { createEngine } from './aiTown/main';
 import { ENGINE_ACTION_DURATION } from './constants';
 import { detectMismatchedLLMProvider } from './util/llm';
-import { DEFAULT_AGENT_COUNT, MAX_AGENT_COUNT } from '../shared/finance';
+import {
+  DEFAULT_VISIBLE_AI_AGENTS,
+  MAX_AGENT_COUNT,
+  TOWN_TRADERS,
+} from '../shared/finance';
 
 const init = mutation({
   args: {
@@ -17,6 +21,7 @@ const init = mutation({
   handler: async (ctx, args) => {
     detectMismatchedLLMProvider();
     const { worldStatus, engine } = await getOrCreateDefaultWorld(ctx);
+    await removeMarketMakersFromSpatialWorld(ctx, worldStatus.worldId);
     if (worldStatus.status !== 'running') {
       console.warn(
         `Engine ${engine._id} is not active! Run "npx convex run testing:resume" to restart it.`,
@@ -29,8 +34,12 @@ const init = mutation({
       worldStatus.engineId,
     );
     if (shouldCreate) {
-      const requested = args.numAgents !== undefined ? args.numAgents : DEFAULT_AGENT_COUNT;
-      const toCreate = Math.max(1, Math.min(Math.floor(requested), MAX_AGENT_COUNT));
+      const requested =
+        args.numAgents !== undefined ? args.numAgents : DEFAULT_VISIBLE_AI_AGENTS;
+      const toCreate = Math.max(
+        1,
+        Math.min(Math.floor(requested), MAX_AGENT_COUNT, Descriptions.length),
+      );
       for (let i = 0; i < toCreate; i++) {
         await insertInput(ctx, worldStatus.worldId, 'createAgent', {
           descriptionIndex: i % Descriptions.length,
@@ -56,9 +65,26 @@ async function getOrCreateDefaultWorld(ctx: MutationCtx) {
       .query('maps')
       .withIndex('worldId', (q) => q.eq('worldId', worldStatus!.worldId))
       .unique();
-    if (existingMap && existingMap.tileSetUrl !== map.tilesetpath) {
-      await ctx.db.patch(existingMap._id, { tileSetUrl: map.tilesetpath });
+    const mapChanged =
+      existingMap &&
+      (existingMap.tileSetUrl !== map.tilesetpath ||
+        existingMap.width !== map.mapwidth ||
+        existingMap.height !== map.mapheight);
+    if (existingMap && mapChanged) {
+      await ctx.db.patch(existingMap._id, {
+        width: map.mapwidth,
+        height: map.mapheight,
+        tileSetUrl: map.tilesetpath,
+        tileSetDimX: map.tilesetpxw,
+        tileSetDimY: map.tilesetpxh,
+        tileDim: map.tiledim,
+        bgTiles: map.bgtiles,
+        objectTiles: map.objmap,
+        animatedSprites: map.animatedsprites,
+      });
+      await moveExistingPlayersToUrbanSpawnPoints(ctx, worldStatus.worldId);
     }
+    await synchronizeTraderCharacters(ctx, worldStatus.worldId);
     return { worldStatus, engine };
   }
 
@@ -96,6 +122,104 @@ async function getOrCreateDefaultWorld(ctx: MutationCtx) {
     maxDuration: ENGINE_ACTION_DURATION,
   });
   return { worldStatus, engine };
+}
+
+async function moveExistingPlayersToUrbanSpawnPoints(ctx: MutationCtx, worldId: Id<'worlds'>) {
+  const world = await ctx.db.get(worldId);
+  if (!world || world.players.length === 0) return;
+
+  const players = world.players.map((player, index) => {
+    const stationaryPlayer = { ...player };
+    delete stationaryPlayer.pathfinding;
+    return {
+      ...stationaryPlayer,
+      position: map.safeSpawnPoints[index % map.safeSpawnPoints.length],
+      facing: { dx: 0, dy: 1 },
+      speed: 0,
+    };
+  });
+  await ctx.db.patch(worldId, { players });
+}
+
+async function synchronizeTraderCharacters(ctx: MutationCtx, worldId: Id<'worlds'>) {
+  const desiredByName = new Map(
+    Descriptions.map((description) => [description.name, description.character]),
+  );
+  const existingDescriptions = await ctx.db
+    .query('playerDescriptions')
+    .withIndex('worldId', (q) => q.eq('worldId', worldId))
+    .collect();
+
+  for (const description of existingDescriptions) {
+    const desiredCharacter = desiredByName.get(description.name);
+    if (desiredCharacter && description.character !== desiredCharacter) {
+      await ctx.db.patch(description._id, { character: desiredCharacter });
+    }
+  }
+}
+
+/**
+ * Delta-7 and Sigma-2 remain deterministic finance profiles, but they are not
+ * autonomous town residents. Older worlds created them as spatial AI agents,
+ * so remove only those named players while preserving all finance tables.
+ */
+async function removeMarketMakersFromSpatialWorld(
+  ctx: MutationCtx,
+  worldId: Id<'worlds'>,
+) {
+  const marketMakerNames = new Set(
+    TOWN_TRADERS.filter((trader) => trader.kind === 'market_maker').map(
+      (trader) => trader.name,
+    ),
+  );
+  const playerDescriptions = await ctx.db
+    .query('playerDescriptions')
+    .withIndex('worldId', (q) => q.eq('worldId', worldId))
+    .collect();
+  const staleDescriptions = playerDescriptions.filter((description) =>
+    marketMakerNames.has(description.name),
+  );
+  if (staleDescriptions.length === 0) return;
+
+  const removedPlayerIds = new Set(
+    staleDescriptions.map((description) => description.playerId),
+  );
+  const world = await ctx.db.get(worldId);
+  if (!world) return;
+
+  const removedAgentIds = new Set(
+    world.agents
+      .filter((agent) => removedPlayerIds.has(agent.playerId))
+      .map((agent) => agent.id),
+  );
+  const conversations = world.conversations.filter((conversation) =>
+    conversation.participants.every(
+      (participant) => !removedPlayerIds.has(participant.playerId),
+    ),
+  );
+  const historicalLocations = world.historicalLocations?.filter(
+    (location) => !removedPlayerIds.has(location.playerId),
+  );
+
+  await ctx.db.patch(worldId, {
+    players: world.players.filter((player) => !removedPlayerIds.has(player.id)),
+    agents: world.agents.filter((agent) => !removedAgentIds.has(agent.id)),
+    conversations,
+    ...(historicalLocations ? { historicalLocations } : {}),
+  });
+
+  for (const description of staleDescriptions) {
+    await ctx.db.delete(description._id);
+  }
+  const agentDescriptions = await ctx.db
+    .query('agentDescriptions')
+    .withIndex('worldId', (q) => q.eq('worldId', worldId))
+    .collect();
+  for (const description of agentDescriptions) {
+    if (removedAgentIds.has(description.agentId)) {
+      await ctx.db.delete(description._id);
+    }
+  }
 }
 
 async function shouldCreateAgents(

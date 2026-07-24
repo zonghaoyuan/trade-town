@@ -69,13 +69,25 @@ export const agentGenerateMessage = internalAction({
       default:
         assertNever(args.type);
     }
-    const text = await completionFn(
-      ctx,
-      args.worldId,
-      args.conversationId as GameId<'conversations'>,
-      args.playerId as GameId<'players'>,
-      args.otherPlayerId as GameId<'players'>,
-    );
+    let generationFailed = false;
+    let text: string;
+    try {
+      text = await completionFn(
+        ctx,
+        args.worldId,
+        args.conversationId as GameId<'conversations'>,
+        args.playerId as GameId<'players'>,
+        args.otherPlayerId as GameId<'players'>,
+      );
+    } catch (error) {
+      generationFailed = true;
+      console.warn(
+        `Conversation generation failed; releasing agents to keep the town moving: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+      text = 'I need to return to the market floor. Let us reconnect after the next update.';
+    }
 
     await ctx.runMutation(internal.aiTown.agent.agentSendMessage, {
       worldId: args.worldId,
@@ -84,7 +96,7 @@ export const agentGenerateMessage = internalAction({
       playerId: args.playerId,
       text,
       messageUuid: args.messageUuid,
-      leaveConversation: args.type === 'leave',
+      leaveConversation: args.type === 'leave' || generationFailed,
       operationId: args.operationId,
     });
   },
@@ -110,9 +122,10 @@ export const agentDoSomething = internalAction({
     const recentlyAttemptedInvite =
       agent.lastInviteAttempt && now < agent.lastInviteAttempt + CONVERSATION_COOLDOWN;
     const recentActivity = player.activity && now < player.activity.until + ACTIVITY_COOLDOWN;
-    // Decide whether to do an activity or wander somewhere.
+    // Keep the town visibly alive: roaming is the default, while short desk
+    // activities provide occasional pauses rather than 45-second standstills.
     if (!player.pathfinding) {
-      if (recentActivity || justLeftConversation) {
+      if (recentActivity || justLeftConversation || Math.random() < 0.72) {
         await sleep(Math.random() * 1000);
         await ctx.runMutation(api.aiTown.main.sendInput, {
           worldId: args.worldId,
@@ -145,7 +158,7 @@ export const agentDoSomething = internalAction({
       }
     }
     const invitee =
-      justLeftConversation || recentlyAttemptedInvite
+      justLeftConversation || recentlyAttemptedInvite || Math.random() > 0.18
         ? undefined
         : await ctx.runQuery(internal.aiTown.agent.findConversationCandidate, {
             now,
@@ -170,9 +183,18 @@ export const agentDoSomething = internalAction({
 });
 
 function wanderDestination(worldMap: WorldMap) {
-  // Wander someonewhere at least one tile away from the edge.
-  return {
-    x: 1 + Math.floor(Math.random() * (worldMap.width - 2)),
-    y: 1 + Math.floor(Math.random() * (worldMap.height - 2)),
-  };
+  // Pick a walkable tile at least one tile from the edge so an agent does not
+  // waste a full turn trying to pathfind into water or a building.
+  for (let attempt = 0; attempt < 64; attempt++) {
+    const destination = {
+      x: 1 + Math.floor(Math.random() * (worldMap.width - 2)),
+      y: 1 + Math.floor(Math.random() * (worldMap.height - 2)),
+    };
+    const isWalkable = worldMap.objectTiles.every(
+      (layer) => layer[destination.x][destination.y] === -1,
+    );
+    if (isWalkable) return destination;
+  }
+
+  return { x: 1, y: 1 };
 }

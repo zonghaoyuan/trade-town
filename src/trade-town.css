@@ -940,10 +940,22 @@ textarea {
 .pixel-agent-avatar i {
   width: 32px;
   height: 32px;
-  background-image: url('/assets/32x32folk.png');
-  background-position: var(--sprite-x) var(--sprite-y);
+  background-image: url('/assets/trade-town/characters/avatars.png');
+  background-position: var(--sprite-x) 0;
   background-repeat: no-repeat;
   image-rendering: pixelated;
+}
+
+.pixel-asset-credits {
+  padding-top: 10px;
+  border-top: 3px solid rgba(38, 43, 68, 0.28);
+  font-size: var(--town-text-small);
+}
+
+.pixel-asset-credits a {
+  color: var(--town-wine);
+  font-weight: 700;
+  text-underline-offset: 3px;
 }
 
 .pixel-agent-card {
