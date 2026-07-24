@@ -47,6 +47,13 @@ export function normalizeApiBaseUrl(url: string): string {
   return url.replace(/\/+$/, '').replace(/\/v1$/, '');
 }
 
+export function chatCompletionsUrl(url: string): string {
+  const normalizedUrl = url.replace(/\/+$/, '');
+  return normalizedUrl.endsWith('/chat/completions')
+    ? normalizedUrl
+    : normalizeApiBaseUrl(normalizedUrl) + '/v1/chat/completions';
+}
+
 export function getLLMConfig(): LLMConfig {
   const provider = process.env.LLM_PROVIDER;
   if (provider ? provider === 'openai' : process.env.OPENAI_API_KEY) {
@@ -150,7 +157,7 @@ export async function chatCompletion(
     retries,
     ms,
   } = await retryWithBackoff(async () => {
-    const result = await fetch(config.url + '/v1/chat/completions', {
+    const result = await fetch(chatCompletionsUrl(config.url), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
