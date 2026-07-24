@@ -1,11 +1,12 @@
 import TradeTownShell from './components/finance/TradeTownShell';
 import TownPreview from './components/finance/TownPreview';
-import { previewDashboard } from './finance/demoData';
+import { injectivePreviewDashboard, pandaDayViewDashboard } from './finance/demoData';
 
 export default function DemoApp() {
   return (
     <TradeTownShell
-      dashboard={previewDashboard}
+      dashboard={injectivePreviewDashboard}
+      dayViewDashboard={pandaDayViewDashboard}
       town={({ focusedCitizen }) => <TownPreview focusedCitizen={focusedCitizen} />}
       townMode="preview"
     />
