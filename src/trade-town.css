@@ -2017,6 +2017,236 @@ textarea {
   }
 }
 
+/* PandaAI-only terminal refinements. Injective remains the financial record layer. */
+.pixel-town-header,
+.pixel-town-shell.is-overview .pixel-town-header {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.pixel-sentiment-label {
+  margin-bottom: 5px;
+  color: var(--town-orange);
+  display: block;
+  font-size: 8px;
+  letter-spacing: 0.35px;
+  text-transform: uppercase;
+}
+
+.pixel-sentiment-empty {
+  color: var(--town-mist);
+  font-size: var(--town-text-micro);
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.pixel-market-list-single {
+  margin-top: auto;
+  border-top: 3px solid var(--town-night);
+}
+
+.pixel-agent-state.state-simulated small {
+  color: var(--town-orange);
+}
+
+.pixel-agent-state.state-simulated i {
+  background: var(--town-orange);
+}
+
+.pixel-selected-agent-state {
+  margin-top: 7px;
+  padding: 7px;
+  border: 3px solid var(--town-night);
+  background: #262b44;
+}
+
+.pixel-selected-agent-state > strong {
+  color: var(--town-gold);
+  display: block;
+  font-size: var(--town-text-micro);
+  font-weight: 400;
+  text-transform: uppercase;
+}
+
+.pixel-selected-agent-state > p {
+  margin: 5px 0 0;
+  color: var(--town-cream);
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: var(--town-text-caption);
+  line-height: 1.4;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.pixel-selected-agent-state > span {
+  margin-top: 4px;
+  color: var(--town-mist);
+  display: block;
+  overflow: hidden;
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pixel-selected-agent-state.state-verified {
+  box-shadow: inset 4px 0 0 var(--town-green);
+}
+
+.pixel-agent-record-strip {
+  padding: 8px 10px;
+  border-bottom: 4px solid var(--town-night);
+  background: #262b44;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.pixel-agent-record-strip strong,
+.pixel-agent-record-strip span {
+  font-size: var(--town-text-micro);
+  font-weight: 400;
+  text-transform: uppercase;
+}
+
+.pixel-agent-record-strip strong {
+  color: var(--town-gold);
+}
+
+.pixel-agent-record-strip span {
+  color: var(--town-orange);
+  text-align: right;
+}
+
+.pixel-agent-record-strip.state-verified span {
+  color: var(--town-green);
+}
+
+@media (max-width: 1420px) {
+  .pixel-town-header,
+  .pixel-town-shell.is-overview .pixel-town-header {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+}
+
+/* Enlarged desktop market chart trial. */
+@media (min-width: 1101px) {
+  .pixel-town-shell.is-overview .pixel-town-layout {
+    grid-template-columns:
+      minmax(282px, 310px)
+      minmax(460px, 1fr)
+      minmax(250px, 292px);
+  }
+
+  .pixel-town-shell.is-overview .pixel-candle-chart {
+    height: clamp(156px, 21vh, 184px);
+  }
+
+  .pixel-town-shell.is-overview .pixel-market-hero {
+    padding-block: 8px 4px;
+  }
+
+  .pixel-town-shell.is-overview .pixel-indicator-row {
+    margin-bottom: 5px;
+  }
+
+  .pixel-town-shell.is-overview .pixel-quote-grid div {
+    min-height: 44px;
+    padding-block: 6px;
+  }
+
+  .pixel-town-shell.is-overview .pixel-market-list button {
+    min-height: 48px;
+  }
+}
+
+/* Compact selected-agent summary: selection above, details in the drawer. */
+.pixel-agent-panel .pixel-agent-summary-card {
+  padding: 7px;
+}
+
+.pixel-agent-summary-card .pixel-agent-card-top > strong {
+  padding: 3px 5px;
+  border: 2px solid var(--town-night);
+  color: var(--town-orange);
+  background: #262b44;
+  font-size: 8px;
+}
+
+.pixel-agent-summary-card .pixel-agent-card-top > strong.state-verified {
+  color: var(--town-green);
+}
+
+.pixel-agent-summary-card .pixel-agent-card-identity {
+  margin-block: 6px 5px;
+}
+
+.pixel-agent-summary-card .pixel-agent-avatar {
+  width: 38px;
+  height: 38px;
+  flex-basis: 38px;
+}
+
+.pixel-agent-summary-card .pixel-selected-agent-state {
+  margin-top: 0;
+  padding: 6px;
+}
+
+.pixel-agent-summary-card .pixel-selected-agent-state > p {
+  margin-top: 3px;
+  font-size: var(--town-text-micro);
+  line-height: 1.35;
+  -webkit-line-clamp: 2;
+}
+
+.pixel-agent-summary-metrics {
+  margin-top: 5px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 3px;
+}
+
+.pixel-agent-summary-metrics > div {
+  min-width: 0;
+  padding: 4px;
+  border: 2px solid var(--town-night);
+  background: #262b44;
+  display: grid;
+  gap: 2px;
+}
+
+.pixel-agent-summary-metrics span,
+.pixel-agent-summary-metrics strong {
+  overflow: hidden;
+  font-size: 8px;
+  font-weight: 400;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.pixel-agent-summary-metrics span {
+  color: var(--town-mist);
+}
+
+.pixel-agent-summary-metrics strong {
+  color: var(--town-paper);
+}
+
+.pixel-agent-summary-card .pixel-detail-button {
+  margin-top: 5px;
+  padding-block: 5px;
+}
+
+.pixel-town-shell.is-immersive .pixel-town-header {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.pixel-town-shell.is-immersive .pixel-header-actions {
+  grid-column: 2;
+  justify-self: end;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pixel-live-dot,
   .pixel-agent-activity i,
@@ -5505,5 +5735,17 @@ textarea {
   .pixel-live-conversations > span > i,
   .pixel-activity-loading > i {
     animation: none;
+  }
+}
+
+.pixel-town-header,
+.pixel-town-shell.is-overview .pixel-town-header {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+@media (max-width: 1420px) {
+  .pixel-town-header,
+  .pixel-town-shell.is-overview .pixel-town-header {
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 }
