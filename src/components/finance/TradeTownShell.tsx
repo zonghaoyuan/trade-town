@@ -6,6 +6,7 @@ import type {
 } from '../../finance/demoData';
 import PixelCandles from './PixelCandles';
 import PixelAvatar from './PixelAvatar';
+import PixelMarketIcon from './PixelMarketIcon';
 
 type ViewMode = 'overview' | 'immersive';
 type DataMode = 'panda_dayview' | 'injective_testnet';
@@ -477,8 +478,8 @@ function MarketBoard({
             onClick={() => onSelect(item.symbol)}
             className={item.symbol === market.symbol ? 'is-selected' : ''}
           >
-            <span className="pixel-market-gem" style={{ backgroundColor: item.accent }} />
-            <span>
+            <PixelMarketIcon symbol={item.symbol} accent={item.accent} />
+            <span className="pixel-market-copy">
               <strong>{item.symbol}</strong>
               <small>
                 {formatPrice(item.lastPrice)} · {item.displayName}
