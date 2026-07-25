@@ -1,8 +1,8 @@
 import { expect, test } from '@playwright/test';
 
-const localeStorageKey = 'trade-town.locale';
+const localeStorageKey = 'trade-town.locale.v2';
 
-test('uses the browser language when no preference has been saved', async ({ page }) => {
+test('defaults to English even when the browser language is Chinese', async ({ page }) => {
   await page.addInitScript(() => {
     Object.defineProperty(window.navigator, 'language', {
       configurable: true,
@@ -16,9 +16,9 @@ test('uses the browser language when no preference has been saved', async ({ pag
 
   await page.goto('/');
 
-  await expect(page.locator('html')).toHaveAttribute('lang', 'zh-CN');
-  await expect(page.getByRole('heading', { name: '市场', exact: true }).first()).toBeVisible();
-  await expect(page.getByRole('button', { name: '切换至英文' })).toBeVisible();
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  await expect(page.getByRole('heading', { name: 'Markets', exact: true }).first()).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Switch to Chinese' })).toBeVisible();
 });
 
 test('switches locale, persists it across reloads, and stays available on mobile', async ({

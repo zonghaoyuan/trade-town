@@ -1,6 +1,5 @@
 import {
   DEFAULT_LOCALE,
-  detectBrowserLocale,
   intlLocale,
   isSupportedLocale,
   persistLocale,
@@ -10,20 +9,11 @@ import {
 import { en, interpolate, translate, zhCN } from './messages';
 
 describe('product localization', () => {
-  test('detects Chinese browser variants and defaults other languages to English', () => {
-    expect(detectBrowserLocale(['zh-HK', 'en-US'])).toBe('zh-CN');
-    expect(detectBrowserLocale(['fr-FR', 'en-US'])).toBe('en');
-    expect(detectBrowserLocale(undefined)).toBe(DEFAULT_LOCALE);
-  });
-
-  test('a valid stored choice wins and invalid state falls back to browser detection', () => {
-    expect(resolveLocale({ storedLocale: 'en', browserLanguages: ['zh-CN'] })).toBe('en');
-    expect(resolveLocale({ storedLocale: 'zh-CN', browserLanguages: ['en-US'] })).toBe(
-      'zh-CN',
-    );
-    expect(resolveLocale({ storedLocale: 'de', browserLanguages: ['zh-TW'] })).toBe(
-      'zh-CN',
-    );
+  test('defaults to English unless the user has stored a supported choice', () => {
+    expect(resolveLocale({ storedLocale: 'en' })).toBe('en');
+    expect(resolveLocale({ storedLocale: 'zh-CN' })).toBe('zh-CN');
+    expect(resolveLocale({ storedLocale: 'de' })).toBe(DEFAULT_LOCALE);
+    expect(resolveLocale({})).toBe(DEFAULT_LOCALE);
     expect(isSupportedLocale(null)).toBe(false);
   });
 

@@ -2,7 +2,7 @@ export const SUPPORTED_LOCALES = ['en', 'zh-CN'] as const;
 export type Locale = (typeof SUPPORTED_LOCALES)[number];
 
 export const DEFAULT_LOCALE: Locale = 'en';
-export const LOCALE_STORAGE_KEY = 'trade-town.locale';
+export const LOCALE_STORAGE_KEY = 'trade-town.locale.v2';
 
 export type LocaleStorage = Pick<Storage, 'getItem' | 'setItem'>;
 
@@ -10,22 +10,13 @@ export function isSupportedLocale(value: unknown): value is Locale {
   return typeof value === 'string' && SUPPORTED_LOCALES.includes(value as Locale);
 }
 
-export function detectBrowserLocale(languages: readonly string[] | undefined): Locale {
-  for (const language of languages ?? []) {
-    if (language.toLowerCase().startsWith('zh')) return 'zh-CN';
-  }
-  return DEFAULT_LOCALE;
-}
-
 export function resolveLocale({
   storedLocale,
-  browserLanguages,
 }: {
   storedLocale?: unknown;
-  browserLanguages?: readonly string[];
 }): Locale {
   if (isSupportedLocale(storedLocale)) return storedLocale;
-  return detectBrowserLocale(browserLanguages);
+  return DEFAULT_LOCALE;
 }
 
 export function intlLocale(locale: Locale) {

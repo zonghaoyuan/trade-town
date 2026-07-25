@@ -80,7 +80,7 @@ Its tooltip and accessible name state the full destination action.
 - Update the existing locale end-to-end test to select the target-language
   badge.
 - Assert `data-target-locale` before and after a switch.
-- Preserve browser-language detection and reload-persistence coverage.
+- Preserve the English first-visit default and reload-persistence coverage.
 - Run unit tests, TypeScript/build, lint, and the full responsive Playwright
   suite.
 - Capture desktop and mobile screenshots in both locales for visual review.
@@ -98,6 +98,6 @@ Its tooltip and accessible name state the full destination action.
 ## Out of Scope
 
 - Adding more locales.
-- Changing locale detection or persistence.
+- Reintroducing browser-language auto-detection.
 - Translating chat bodies or Agent-generated reasoning.
 - Restyling unrelated header controls.
