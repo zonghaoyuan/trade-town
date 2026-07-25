@@ -108,14 +108,19 @@ export default function TradeTownShell({
     const symbolExists = activeDashboard.markets.some(
       (candidate) => candidate.symbol === selectedSymbol,
     );
+    const agentExists = activeDashboard.traders.some(
+      (candidate) => candidate.name === selectedAgent,
+    );
     if (!symbolExists) {
       setSelectedSymbol(activeDashboard.markets[0]?.symbol ?? '');
     }
-    if (!activeDashboard.traders.some((candidate) => candidate.name === selectedAgent)) {
+    if (!agentExists) {
       setSelectedAgent(activeDashboard.traders[0]?.name ?? '');
     }
-    setFocusRequest(null);
-    setAgentDetailOpen(false);
+    if (!symbolExists || !agentExists) {
+      setFocusRequest(null);
+      setAgentDetailOpen(false);
+    }
   }, [activeDashboard, selectedAgent, selectedSymbol]);
 
   useEffect(() => {
@@ -791,7 +796,7 @@ function AgentBoard({
                 {agent.action}
               </em>
               <strong className={agent.pnl >= 0 ? 'pixel-up' : 'pixel-down'}>
-                {formatCompact(agent.navEnd)} {agent.currency ?? 'CNY'}
+                {formatCompact(agent.navEnd)} {agent.currency ?? 'CNY'} · SIM
               </strong>
               <small className={agent.pnl >= 0 ? 'pixel-up' : 'pixel-down'}>
                 {formatSignedPercent(agent.navStart > 0 ? (agent.pnl / agent.navStart) * 100 : 0)}
@@ -808,7 +813,7 @@ function AgentBoard({
               #{selectedRank} {pandaTrader.name}
             </h3>
             <span>
-              {formatCompact(pandaTrader.navEnd)} {pandaTrader.currency ?? 'CNY'} NAV
+              {formatCompact(pandaTrader.navEnd)} {pandaTrader.currency ?? 'CNY'} · SIM NAV
             </span>
           </div>
           <em className={`pixel-action action-${pandaTrader.action.toLowerCase()}`}>
