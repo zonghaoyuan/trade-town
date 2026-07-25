@@ -20,6 +20,7 @@ import { useTownActivityFeed } from './hooks/useTownActivityFeed';
 export default function Home() {
   const [ownerId] = useState(getAnonymousOwnerId);
   const financeState = useQuery((api as any).finance.dashboard);
+  const replayBundle = useQuery((api as any).townReplay.currentDashboardBundle);
   const storedMe = useQuery(api.createMe.current, { ownerId });
   const createMe = useMutation(api.createMe.create);
   const ensureMeAgent = useMutation(api.createMe.ensureAgent);
@@ -27,6 +28,14 @@ export default function Home() {
   const discardUpload = useMutation(api.createMe.discardUpload);
   const dashboard = mergeLiveDashboard(financeState);
   const activityFeed = useTownActivityFeed();
+  const replayDayViewDashboards = useMemo(() => {
+    if (!replayBundle?.dashboards?.length) return pandaDayViewDashboards;
+    return Object.fromEntries(
+      replayBundle.dashboards.map((item: any) => [item.symbol, item.dashboard]),
+    );
+  }, [replayBundle]);
+  const replayDayViewDashboard =
+    replayDayViewDashboards[replayBundle?.defaultSymbol] ?? pandaDayViewDashboard;
   const ensuredMeVersion = useRef<number | null>(null);
   const currentMe = useMemo(() => {
     if (!storedMe?.look || !storedMe.version) return null;
@@ -87,8 +96,8 @@ export default function Home() {
     <>
       <TradeTownShell
         dashboard={dashboard}
-        dayViewDashboard={pandaDayViewDashboard}
-        dayViewDashboards={pandaDayViewDashboards}
+        dayViewDashboard={replayDayViewDashboard}
+        dayViewDashboards={replayDayViewDashboards}
         activityFeed={activityFeed}
         town={({ focusedCitizen }) => <Game focusedCitizen={focusedCitizen} />}
         townMode="live"

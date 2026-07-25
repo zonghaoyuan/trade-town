@@ -19,8 +19,10 @@ export default defineSchema({
     author: playerId,
     text: v.string(),
     worldId: v.optional(v.id('worlds')),
+    replaySessionId: v.optional(v.string()),
   })
     .index('by_world', ['worldId'])
+    .index('by_replay_session', ['worldId', 'replaySessionId'])
     .index('conversationId', ['worldId', 'conversationId'])
     .index('messageUuid', ['conversationId', 'messageUuid']),
 

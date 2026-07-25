@@ -56,11 +56,19 @@ export const recentTownMessages = query({
       world.conversations.map((conversation) => [conversation.id, conversation]),
     );
 
-    const candidates = await ctx.db
+    const replaySession = await ctx.db
+      .query('townReplaySessions')
+      .withIndex('by_active', (q) => q.eq('active', true))
+      .order('desc')
+      .first();
+    const allCandidates = await ctx.db
       .query('messages')
       .withIndex('by_world', (q) => q.eq('worldId', args.worldId))
       .order('desc')
-      .take(limit * 4);
+      .take(limit * (replaySession ? 12 : 4));
+    const candidates = replaySession
+      ? allCandidates.filter((message) => message.replaySessionId === replaySession.sessionId)
+      : allCandidates;
     const archivedConversations = new Map();
     const missingConversationIds = [
       ...new Set(
@@ -104,7 +112,9 @@ export const recentTownMessages = query({
       limit,
     });
 
-    const liveConversations = world.conversations
+    const liveConversations = replaySession
+      ? []
+      : world.conversations
       .filter(
         (conversation) =>
           conversation.participants.length === 2 &&

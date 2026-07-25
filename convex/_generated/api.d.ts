@@ -44,6 +44,7 @@ import type * as messages from "../messages.js";
 import type * as messagesFeed from "../messagesFeed.js";
 import type * as music from "../music.js";
 import type * as testing from "../testing.js";
+import type * as townReplay from "../townReplay.js";
 import type * as util_FastIntegerCompression from "../util/FastIntegerCompression.js";
 import type * as util_assertNever from "../util/assertNever.js";
 import type * as util_asyncMap from "../util/asyncMap.js";
@@ -101,6 +102,7 @@ declare const fullApi: ApiFromModules<{
   messagesFeed: typeof messagesFeed;
   music: typeof music;
   testing: typeof testing;
+  townReplay: typeof townReplay;
   "util/FastIntegerCompression": typeof util_FastIntegerCompression;
   "util/assertNever": typeof util_assertNever;
   "util/asyncMap": typeof util_asyncMap;

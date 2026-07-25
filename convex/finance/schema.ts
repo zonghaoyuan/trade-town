@@ -13,6 +13,41 @@ const orderState = v.union(
 );
 
 export const financeTables = {
+  townReplaySessions: defineTable({
+    sessionId: v.string(),
+    runId: v.string(),
+    status: v.union(
+      v.literal('replaying'),
+      v.literal('waiting'),
+      v.literal('completed'),
+      v.literal('failed'),
+    ),
+    active: v.boolean(),
+    currentTradeDate: v.optional(v.string()),
+    dayIndex: v.number(),
+    totalDays: v.number(),
+    publishedAt: v.optional(v.number()),
+    detail: v.optional(v.string()),
+    updatedAt: v.number(),
+  })
+    .index('by_session', ['sessionId'])
+    .index('by_active', ['active', 'updatedAt'])
+    .index('by_run', ['runId', 'updatedAt']),
+
+  townReplayDays: defineTable({
+    sessionId: v.string(),
+    runId: v.string(),
+    tradeDate: v.string(),
+    dayIndex: v.number(),
+    totalDays: v.number(),
+    sourceHash: v.string(),
+    snapshotJson: v.string(),
+    publishedAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index('by_session_day', ['sessionId', 'dayIndex'])
+    .index('by_session_date', ['sessionId', 'tradeDate']),
+
   financeConfig: defineTable({
     key: v.string(),
     worldId: v.optional(v.id('worlds')),
