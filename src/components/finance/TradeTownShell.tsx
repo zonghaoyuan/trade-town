@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useRef, useState } from 'react';
+import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import type {
   CausalEvent,
   DashboardExecution,
@@ -19,6 +19,7 @@ import CreateMeModal, {
   CreateMePayload,
 } from '../create-me/CreateMeModal';
 import { loadCreatedMe } from '../../features/create-me/storage';
+import { augmentDashboardWithMe, getMeAgentName } from '../../finance/meSimulation';
 
 type ViewMode = 'overview' | 'immersive';
 type Drawer = 'markets' | 'agents' | 'activity';
@@ -32,6 +33,7 @@ export type FocusedTownCitizen = {
   role: string;
   pnl: number;
   avatarIndex: number;
+  avatarUrl?: string;
   pnlSource: 'simulated' | 'verified';
 };
 
@@ -76,7 +78,17 @@ export default function TradeTownShell({
   );
   const focusRequestId = useRef(0);
 
-  const activeDashboard = dayViewDashboards?.[selectedSymbol] ?? dayViewDashboard;
+  const activeMe =
+    currentMe && localMe
+      ? (localMe.version ?? 0) > (currentMe.version ?? 0)
+        ? localMe
+        : currentMe
+      : (currentMe ?? localMe);
+  const baseActiveDashboard = dayViewDashboards?.[selectedSymbol] ?? dayViewDashboard;
+  const activeDashboard = useMemo(
+    () => augmentDashboardWithMe(baseActiveDashboard, activeMe, selectedSymbol),
+    [activeMe, baseActiveDashboard, selectedSymbol],
+  );
   const selectedMarketDashboard = activeDashboard.markets.some(
     (candidate) => candidate.symbol === selectedSymbol,
   )
@@ -89,7 +101,6 @@ export default function TradeTownShell({
     activeDashboard.traders.find((candidate) => candidate.name === selectedAgent) ??
     activeDashboard.traders[0];
   const immersive = viewMode === 'immersive';
-  const activeMe = currentMe ?? localMe;
 
   useEffect(() => {
     const symbolExists =
@@ -164,6 +175,7 @@ export default function TradeTownShell({
           0,
           activeDashboard.traders.findIndex((candidate) => candidate.name === focusedTrader.name),
         ),
+        avatarUrl: focusedTrader.avatarUrl,
       }
     : null;
   const townContent = typeof town === 'function' ? town({ focusedCitizen }) : town;
@@ -208,22 +220,17 @@ export default function TradeTownShell({
         </div>
 
         <div className="pixel-data-console">
-          <div className="pixel-unified-heading">
-            <strong>Unified market overview</strong>
-            <span>One town · two evidence layers</span>
-          </div>
-          <div className="pixel-network is-unified">
-            <div className="pixel-source-legend" aria-label="Data source legend">
-              <span className="source-panda">
-                <i aria-hidden="true">◇</i>
-                Panda · historical / sim · {formatMarketDate(activeDashboard.asOf)}
-              </span>
-              <span className={`source-${dashboard.source}`}>
-                <i aria-hidden="true">{dashboard.source === 'injective' ? '◆' : '◈'}</i>
-                Injective · {dashboard.source === 'injective' ? 'verified' : 'preview'}
-                {dashboard.blockHeight ? ` · #${dashboard.blockHeight.toLocaleString()}` : ''}
-              </span>
-            </div>
+          <div className="pixel-network pixel-data-status" aria-label="Market data status">
+            <span className="source-panda">
+              Panda replay · {formatMarketDate(activeDashboard.asOf)}
+            </span>
+            <span className="pixel-data-divider" aria-hidden="true">
+              ·
+            </span>
+            <span className={`source-${dashboard.source}`}>
+              Injective · {dashboard.source === 'injective' ? 'verified' : 'preview'}
+              {dashboard.blockHeight ? ` · #${dashboard.blockHeight.toLocaleString()}` : ''}
+            </span>
           </div>
         </div>
 
@@ -498,7 +505,15 @@ export default function TradeTownShell({
           initialMe={activeMe}
           onClose={() => setCreateMeOpen(false)}
           onSubmit={onCreateMe}
-          onCreated={setLocalMe}
+          onCreated={(me) => {
+            setLocalMe(me);
+            setSelectedAgent(
+              getMeAgentName(
+                me.draft.displayName,
+                baseActiveDashboard.traders.map((candidate) => candidate.name),
+              ),
+            );
+          }}
         />
       )}
     </main>
@@ -761,9 +776,9 @@ function AgentBoard({
     dayViewDashboard.traders.find((candidate) => candidate.name === selectedAgent) ??
     dayViewDashboard.traders[0];
   if (!pandaTrader) return null;
-  const testnetTrader =
-    testnetDashboard.traders.find((candidate) => candidate.name === pandaTrader.name) ??
-    testnetDashboard.traders[0];
+  const testnetTrader = testnetDashboard.traders.find(
+    (candidate) => candidate.name === pandaTrader.name,
+  );
 
   const traderIndex = Math.max(
     0,
@@ -798,7 +813,7 @@ function AgentBoard({
               data-town-citizen-focus
               onClick={() => onSelect(agent.name)}
             >
-              <PixelAvatar index={index} />
+              <PixelAvatar index={index} textureUrl={agent.avatarUrl} />
               <span className="pixel-agent-identity">
                 <strong>{agent.name}</strong>
                 <small>{agent.role}</small>
@@ -830,7 +845,7 @@ function AgentBoard({
           </span>
         </div>
         <div className="pixel-agent-card-identity">
-          <PixelAvatar index={traderIndex} />
+          <PixelAvatar index={traderIndex} textureUrl={pandaTrader.avatarUrl} />
           <div>
             <h3>{pandaTrader.name}</h3>
             <span>{pandaTrader.role}</span>
@@ -1171,7 +1186,7 @@ function AgentDetailDrawer({
           ×
         </button>
         <header>
-          <PixelAvatar index={avatarIndex} />
+          <PixelAvatar index={avatarIndex} textureUrl={trader.avatarUrl} />
           <div>
             <span>Agent intelligence</span>
             <h2>{trader.name}</h2>

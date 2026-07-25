@@ -8,6 +8,8 @@ import { point } from '../util/types';
 import { Descriptions } from '../../data/characters';
 import { AgentDescription } from './agentDescription';
 import { Agent } from './agent';
+import { PlayerDescription } from './playerDescription';
+import { characters } from '../../data/characters';
 
 export const agentInputs = {
   finishRememberConversation: inputHandler({
@@ -154,6 +156,76 @@ export const agentInputs = {
         }),
       );
       return { agentId };
+    },
+  }),
+  upsertUserAgent: inputHandler({
+    args: {
+      tokenIdentifier: v.string(),
+      name: v.string(),
+      character: v.string(),
+      description: v.string(),
+      textureUrl: v.optional(v.string()),
+      identity: v.string(),
+      plan: v.string(),
+    },
+    handler: (game, now, args) => {
+      if (!characters.find((character) => character.name === args.character)) {
+        throw new Error(`Invalid character: ${args.character}`);
+      }
+
+      let player = [...game.world.players.values()].find(
+        (candidate) => candidate.human === args.tokenIdentifier,
+      );
+      if (!player) {
+        const playerId = Player.join(
+          game,
+          now,
+          args.name,
+          args.character,
+          args.description,
+          args.tokenIdentifier,
+        );
+        player = game.world.players.get(playerId)!;
+      }
+
+      game.playerDescriptions.set(
+        player.id,
+        new PlayerDescription({
+          playerId: player.id,
+          name: args.name,
+          character: args.character,
+          description: args.description,
+          textureUrl: args.textureUrl,
+        }),
+      );
+      player.lastInput = now;
+
+      let agent = [...game.world.agents.values()].find(
+        (candidate) => candidate.playerId === player!.id,
+      );
+      if (!agent) {
+        const agentId = game.allocId('agents');
+        agent = new Agent({
+          id: agentId,
+          playerId: player.id,
+          inProgressOperation: undefined,
+          lastConversation: undefined,
+          lastInviteAttempt: undefined,
+          toRemember: undefined,
+        });
+        game.world.agents.set(agentId, agent);
+      }
+
+      game.agentDescriptions.set(
+        agent.id,
+        new AgentDescription({
+          agentId: agent.id,
+          identity: args.identity,
+          plan: args.plan,
+        }),
+      );
+      game.descriptionsModified = true;
+      return { playerId: player.id, agentId: agent.id };
     },
   }),
 };

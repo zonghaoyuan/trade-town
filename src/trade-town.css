@@ -5219,69 +5219,27 @@ textarea {
   }
 }
 
-/* Unified market overview: Panda context and Injective proof share one view. */
-.pixel-unified-heading {
-  min-width: 214px;
-  padding: 8px 11px;
-  border: 4px solid var(--town-shadow);
-  background: #262b44;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 4px;
-  box-shadow: var(--town-pixel-shadow);
-}
-
-.pixel-unified-heading strong {
-  color: var(--town-gold);
-  font-size: var(--town-text-small);
-  font-weight: 400;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
-}
-
-.pixel-unified-heading span {
-  color: var(--town-mist);
-  font-size: var(--town-text-micro);
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-}
-
-.pixel-network.is-unified {
-  min-width: 330px;
-  padding: 7px 10px;
-}
-
-.pixel-source-legend {
-  width: 100%;
-  display: grid !important;
-  gap: 5px !important;
-}
-
-.pixel-source-legend > span {
+.pixel-network.pixel-data-status {
   min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  padding: 7px 10px;
+  gap: 8px;
+}
+
+.pixel-data-status > span {
   font-size: var(--town-text-micro);
   letter-spacing: 0.45px;
   text-transform: uppercase;
 }
 
-.pixel-source-legend i {
-  width: 14px;
+.pixel-data-status .pixel-data-divider {
   color: var(--town-gold);
-  font-style: normal;
-  text-align: center;
 }
 
-.pixel-source-legend .source-injective,
-.pixel-source-legend .source-injective i {
+.pixel-data-status .source-injective {
   color: var(--town-green);
 }
 
-.pixel-source-legend .source-preview,
-.pixel-source-legend .source-preview i {
+.pixel-data-status .source-preview {
   color: var(--town-orange);
 }
 
@@ -5705,18 +5663,6 @@ textarea {
 @media (max-width: 1420px) {
   .pixel-town-header {
     grid-template-columns: minmax(250px, 1fr) auto auto;
-  }
-
-  .pixel-unified-heading {
-    min-width: 180px;
-  }
-
-  .pixel-network.is-unified {
-    min-width: 265px;
-  }
-
-  .pixel-source-legend > span {
-    max-width: 250px;
   }
 
   .pixel-unified-agent-board .pixel-agent-list button {

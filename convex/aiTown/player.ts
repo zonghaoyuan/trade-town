@@ -82,7 +82,10 @@ export class Player {
   }
 
   tick(game: Game, now: number) {
-    if (this.human && this.lastInput < now - HUMAN_IDLE_TOO_LONG) {
+    const isAutonomous = [...game.world.agents.values()].some(
+      (agent) => agent.playerId === this.id,
+    );
+    if (this.human && !isAutonomous && this.lastInput < now - HUMAN_IDLE_TOO_LONG) {
       this.leave(game, now);
     }
   }
@@ -246,7 +249,14 @@ export class Player {
     if (conversation) {
       conversation.stop(game, now);
     }
+    for (const agent of game.world.agents.values()) {
+      if (agent.playerId !== this.id) continue;
+      game.world.agents.delete(agent.id);
+      game.agentDescriptions.delete(agent.id);
+    }
     game.world.players.delete(this.id);
+    game.playerDescriptions.delete(this.id);
+    game.descriptionsModified = true;
   }
 
   serialize(): SerializedPlayer {

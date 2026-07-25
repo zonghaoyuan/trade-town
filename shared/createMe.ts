@@ -106,6 +106,12 @@ export type CompiledMeProfile = {
   riskFlags: string[];
 };
 
+export type MeAgentNarrative = {
+  description: string;
+  identity: string;
+  plan: string;
+};
+
 export const LPC_GENERATOR_COMMIT = 'ea7aa428afe2c8f4c6230377bd99473c146005b0';
 const LPC_RAW_ROOT =
   `https://raw.githubusercontent.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator/${LPC_GENERATOR_COMMIT}/spritesheets`;
@@ -407,6 +413,30 @@ export function compileMeProfile(draft: CreateMeDraft): CompiledMeProfile {
     stopLossDiscipline,
     decisionStyle,
     riskFlags,
+  };
+}
+
+export function buildMeAgentNarrative(
+  displayName: string,
+  compiled: CompiledMeProfile,
+): MeAgentNarrative {
+  const name = displayName.trim().slice(0, 20) || CREATE_ME_DEFAULT_DRAFT.displayName;
+  const frequency =
+    compiled.tradeFrequency === 'high'
+      ? 'frequent'
+      : compiled.tradeFrequency === 'low'
+        ? 'selective'
+        : 'moderate-frequency';
+  const riskNotes = compiled.riskFlags.filter((flag) => flag !== '暂无突出行为偏差');
+  const biasReminder =
+    riskNotes.length > 0
+      ? `Watch for these behavioral risks: ${riskNotes.join('; ')}.`
+      : 'No dominant behavioral bias was detected, but continue to challenge assumptions.';
+
+  return {
+    description: `${name} is the user's autonomous financial digital twin. ${compiled.decisionStyle}; risk tolerance ${compiled.riskTolerance}/100; cash buffer ${compiled.cashBufferPct}%.`,
+    identity: `${name} is a user-created autonomous financial Agent. The Agent follows a ${compiled.decisionStyle} decision style, targets a ${compiled.holdingPeriodDays}-day holding period, and gives social signals ${compiled.socialSignalWeight}/100 weight. It must clearly distinguish sourced market facts, simulated decisions, and confirmed chain state.`,
+    plan: `Observe market evidence and town conversations, then make ${frequency} simulated portfolio decisions. Keep about ${compiled.cashBufferPct}% cash, cap a single position near ${compiled.maxPositionPct}%, respect stop-loss discipline ${compiled.stopLossDiscipline}/100, and never describe a simulated order as a confirmed fill. ${biasReminder}`,
   };
 }
 

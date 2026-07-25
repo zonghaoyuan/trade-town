@@ -48,6 +48,8 @@ export type DashboardPosition = {
 export type DashboardTrader = {
   name: string;
   kind: 'ai' | 'market_maker';
+  isUser?: boolean;
+  avatarUrl?: string;
   role: string;
   style: string;
   riskTolerance: number;

@@ -6,6 +6,7 @@ import {
   CREATE_ME_PRESETS,
   LPC_GENERATOR_COMMIT,
   CreateMeDraft,
+  buildMeAgentNarrative,
   compileMeProfile,
   getCreateMePreset,
   getLpcWalkLayers,
@@ -71,6 +72,41 @@ export const current = query({
   },
 });
 
+export const ensureAgent = mutation({
+  args: { ownerId: v.string() },
+  handler: async (ctx, args) => {
+    const profile = await ctx.db
+      .query('userProfiles')
+      .withIndex('by_owner', (q) => q.eq('ownerId', args.ownerId))
+      .unique();
+    if (!profile) return null;
+    const [version, look] = await Promise.all([
+      ctx.db
+        .query('userProfileVersions')
+        .withIndex('by_owner', (q) =>
+          q.eq('ownerId', profile.ownerId).eq('version', profile.activeVersion),
+        )
+        .unique(),
+      ctx.db
+        .query('characterLooks')
+        .withIndex('by_owner', (q) =>
+          q.eq('ownerId', profile.ownerId).eq('version', profile.activeVersion),
+        )
+        .unique(),
+    ]);
+    if (!version) return null;
+    const narrative = buildMeAgentNarrative(profile.displayName, version.compiled);
+    return await queueUserAgent(ctx, {
+      name: profile.displayName,
+      character: look?.character ?? profile.activeCharacter,
+      description: narrative.description,
+      textureUrl: look?.source === 'lpc_composed' ? look.textureUrl : undefined,
+      identity: narrative.identity,
+      plan: narrative.plan,
+    });
+  },
+});
+
 export const create = mutation({
   args: {
     ownerId: v.string(),
@@ -131,11 +167,24 @@ export const create = mutation({
       const previousPreset =
         CREATE_ME_PRESETS.find((preset) => preset.id === existingRequest.presetId) ??
         CREATE_ME_PRESETS[0];
+      const textureUrl = look?.textureUrl ?? previousPreset.textureUrl;
+      const narrative = buildMeAgentNarrative(
+        existingRequest.displayName,
+        existingRequest.compiled,
+      );
+      const inputId = await queueUserAgent(ctx, {
+        name: existingRequest.displayName,
+        character: look?.character ?? previousPreset.character,
+        description: narrative.description,
+        textureUrl: look?.source === 'lpc_composed' ? textureUrl : undefined,
+        identity: narrative.identity,
+        plan: narrative.plan,
+      });
       return {
         version: existingRequest.version,
-        inputId: null,
+        inputId,
         compiled: existingRequest.compiled,
-        textureUrl: look?.textureUrl ?? previousPreset.textureUrl,
+        textureUrl,
         duplicate: true,
       };
     }
@@ -277,34 +326,38 @@ export const create = mutation({
       });
     }
 
-    const worldStatus = await ctx.db
-      .query('worldStatus')
-      .filter((q) => q.eq(q.field('isDefault'), true))
-      .first();
-    let inputId = null;
-    if (worldStatus) {
-      const world = await ctx.db.get(worldStatus.worldId);
-      const existingPlayer = world?.players.find((player) => player.human === DEFAULT_NAME);
-      const description = `${displayName} is the user's financial digital twin. ${compiled.decisionStyle}; risk tolerance ${compiled.riskTolerance}/100; cash buffer ${compiled.cashBufferPct}%.`;
-      inputId = existingPlayer
-        ? await insertInput(ctx, worldStatus.worldId, 'updatePlayerDescription', {
-            playerId: existingPlayer.id,
-            name: displayName,
-            character: preset.character,
-            description,
-            textureUrl:
-              args.appearanceMode === 'custom' ? textureUrl : undefined,
-          })
-        : await insertInput(ctx, worldStatus.worldId, 'join', {
-            name: displayName,
-            character: preset.character,
-            description,
-            textureUrl:
-              args.appearanceMode === 'custom' ? textureUrl : undefined,
-            tokenIdentifier: DEFAULT_NAME,
-          });
-    }
+    const narrative = buildMeAgentNarrative(displayName, compiled);
+    const inputId = await queueUserAgent(ctx, {
+      name: displayName,
+      character: preset.character,
+      description: narrative.description,
+      textureUrl: args.appearanceMode === 'custom' ? textureUrl : undefined,
+      identity: narrative.identity,
+      plan: narrative.plan,
+    });
 
     return { version, inputId, compiled, textureUrl, duplicate: false };
   },
 });
+
+async function queueUserAgent(
+  ctx: Parameters<typeof insertInput>[0],
+  agent: {
+    name: string;
+    character: string;
+    description: string;
+    textureUrl?: string;
+    identity: string;
+    plan: string;
+  },
+) {
+  const worldStatus = await ctx.db
+    .query('worldStatus')
+    .filter((q) => q.eq(q.field('isDefault'), true))
+    .first();
+  if (!worldStatus) return null;
+  return await insertInput(ctx, worldStatus.worldId, 'upsertUserAgent', {
+    tokenIdentifier: DEFAULT_NAME,
+    ...agent,
+  });
+}

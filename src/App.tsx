@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '../convex/_generated/api';
 import { Id } from '../convex/_generated/dataModel';
@@ -22,10 +22,12 @@ export default function Home() {
   const financeState = useQuery((api as any).finance.dashboard);
   const storedMe = useQuery(api.createMe.current, { ownerId });
   const createMe = useMutation(api.createMe.create);
+  const ensureMeAgent = useMutation(api.createMe.ensureAgent);
   const generateUploadUrl = useMutation(api.createMe.generateUploadUrl);
   const discardUpload = useMutation(api.createMe.discardUpload);
   const dashboard = mergeLiveDashboard(financeState);
   const activityFeed = useTownActivityFeed();
+  const ensuredMeVersion = useRef<number | null>(null);
   const currentMe = useMemo(() => {
     if (!storedMe?.look || !storedMe.version) return null;
     return {
@@ -40,6 +42,16 @@ export default function Home() {
       }),
     };
   }, [storedMe]);
+
+  useEffect(() => {
+    const version = storedMe?.profile.activeVersion;
+    if (!version || ensuredMeVersion.current === version) return;
+    ensuredMeVersion.current = version;
+    void ensureMeAgent({ ownerId }).catch((error) => {
+      ensuredMeVersion.current = null;
+      console.warn('Failed to activate the saved ME Agent.', error);
+    });
+  }, [ensureMeAgent, ownerId, storedMe?.profile.activeVersion]);
 
   const submitCreateMe = async ({
     composedWalkSheet,

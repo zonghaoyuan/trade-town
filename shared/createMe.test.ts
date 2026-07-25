@@ -1,5 +1,6 @@
 import {
   CREATE_ME_DEFAULT_DRAFT,
+  buildMeAgentNarrative,
   compileMeProfile,
   sanitizeCreateMeDraft,
 } from './createMe';
@@ -76,5 +77,15 @@ describe('Create ME profile compiler', () => {
         market_crash: 'measured',
       },
     });
+  });
+
+  test('turns the compiled profile into an autonomous agent identity and plan', () => {
+    const compiled = compileMeProfile(CREATE_ME_DEFAULT_DRAFT);
+    const narrative = buildMeAgentNarrative(' Veylor ', compiled);
+
+    expect(narrative.description).toContain('autonomous financial digital twin');
+    expect(narrative.identity).toContain('Veylor');
+    expect(narrative.plan).toContain(`${compiled.cashBufferPct}% cash`);
+    expect(narrative.plan).toContain(`${compiled.maxPositionPct}%`);
   });
 });

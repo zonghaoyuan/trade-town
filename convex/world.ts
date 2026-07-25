@@ -11,6 +11,7 @@ import {
 import { playerId } from './aiTown/ids';
 import { kickEngine, startEngine, stopEngine } from './aiTown/main';
 import { engineInsertInput } from './engine/abstractGame';
+import { buildMeAgentNarrative } from '../shared/createMe';
 
 export const defaultWorldStatus = query({
   handler: async (ctx) => {
@@ -152,17 +153,26 @@ export const joinWorld = mutation({
       throw new ConvexError(`Invalid world ID: ${args.worldId}`);
     }
     // const { tokenIdentifier } = identity;
+    const character =
+      profile?.activeCharacter ??
+      characters[Math.floor(Math.random() * characters.length)].name;
+    if (profileVersion) {
+      const narrative = buildMeAgentNarrative(name, profileVersion.compiled);
+      return await insertInput(ctx, world._id, 'upsertUserAgent', {
+        tokenIdentifier: DEFAULT_NAME,
+        name,
+        character,
+        description: narrative.description,
+        textureUrl:
+          characterLook?.source === 'lpc_composed' ? characterLook.textureUrl : undefined,
+        identity: narrative.identity,
+        plan: narrative.plan,
+      });
+    }
     return await insertInput(ctx, world._id, 'join', {
       name,
-      character:
-        profile?.activeCharacter ??
-        characters[Math.floor(Math.random() * characters.length)].name,
-      description: profileVersion
-        ? `${name} is the user's financial digital twin. ${profileVersion.compiled.decisionStyle}; risk tolerance ${profileVersion.compiled.riskTolerance}/100; cash buffer ${profileVersion.compiled.cashBufferPct}%.`
-        : `${DEFAULT_NAME} is a human player`,
-      textureUrl:
-        characterLook?.source === 'lpc_composed' ? characterLook.textureUrl : undefined,
-      // description: `${identity.givenName} is a human player`,
+      character,
+      description: `${DEFAULT_NAME} is a human player`,
       tokenIdentifier: DEFAULT_NAME,
     });
   },

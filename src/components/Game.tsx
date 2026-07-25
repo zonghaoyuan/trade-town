@@ -99,7 +99,10 @@ https://github.com/michalochman/react-pixi-fiber/issues/145#issuecomment-5315492
                 } as CSSProperties
               }
             >
-              <PixelAvatar index={focusedCitizen.avatarIndex} />
+              <PixelAvatar
+                index={focusedCitizen.avatarIndex}
+                textureUrl={focusedCitizen.avatarUrl}
+              />
               <span>
                 <strong>{focusedCitizen.name}</strong>
                 <small>{focusedCitizen.role}</small>
