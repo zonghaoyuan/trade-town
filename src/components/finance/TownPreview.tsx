@@ -62,8 +62,7 @@ export default function TownPreview({
             <strong>{focusedCitizen.name}</strong>
             <small>{focusedCitizen.role}</small>
             <em className={focusedCitizen.pnl >= 0 ? 'pixel-up' : 'pixel-down'}>
-              {focusedCitizen.pnlSource === 'simulated' ? 'SIM ' : 'VERIFIED '}P&amp;L{' '}
-              {formatSignedCompact(focusedCitizen.pnl)}
+              P&amp;L {formatSignedCompact(focusedCitizen.pnl)}
             </em>
           </span>
         </aside>

@@ -45,10 +45,7 @@ export default function TownActivityPanel({
   return (
     <section className={`pixel-activity-panel ${drawer ? 'is-drawer' : ''}`}>
       <header className="pixel-activity-header">
-        <div className="pixel-activity-heading">
-          <h2>Town Activity</h2>
-        </div>
-        <div className="pixel-activity-tabs" role="tablist" aria-label="Town activity sections">
+        <div className="pixel-activity-tabs" role="tablist" aria-label="Activity sections">
           {tabs.map((item) => (
             <button
               type="button"

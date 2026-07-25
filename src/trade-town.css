@@ -977,8 +977,7 @@ textarea {
   z-index: 160;
   inset: 0;
   padding: clamp(12px, 3vw, 32px);
-  background:
-    linear-gradient(rgba(24, 20, 37, 0.84), rgba(24, 20, 37, 0.92)),
+  background: linear-gradient(rgba(24, 20, 37, 0.84), rgba(24, 20, 37, 0.92)),
     repeating-linear-gradient(
       0deg,
       transparent 0,
@@ -1065,8 +1064,7 @@ textarea {
   flex: 0 0 auto;
   padding: 25px 70px 15px 30px;
   border-bottom: 4px solid var(--town-shadow);
-  background:
-    linear-gradient(90deg, rgba(116, 63, 57, 0.72), rgba(63, 40, 50, 0.76)),
+  background: linear-gradient(90deg, rgba(116, 63, 57, 0.72), rgba(63, 40, 50, 0.76)),
     var(--town-plum);
   box-shadow: inset 0 -4px 0 #262b44;
 }
@@ -1563,14 +1561,13 @@ textarea {
   appearance: none;
   border: 3px solid var(--town-shadow);
   border-radius: 0;
-  background:
-    linear-gradient(
-      90deg,
-      var(--town-gold) 0,
-      var(--town-gold) var(--range-value),
-      var(--town-night) var(--range-value),
-      var(--town-night) 100%
-    );
+  background: linear-gradient(
+    90deg,
+    var(--town-gold) 0,
+    var(--town-gold) var(--range-value),
+    var(--town-night) var(--range-value),
+    var(--town-night) 100%
+  );
   cursor: pointer;
 }
 
@@ -1797,9 +1794,7 @@ textarea {
 .create-me-complete {
   min-height: 480px;
   padding: 52px 24px 42px;
-  background:
-    radial-gradient(circle at center, rgba(254, 199, 66, 0.12), transparent 44%),
-    #262b44;
+  background: radial-gradient(circle at center, rgba(254, 199, 66, 0.12), transparent 44%), #262b44;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -3820,7 +3815,7 @@ textarea {
 }
 
 .pixel-town-shell.is-overview .pixel-world-column {
-  grid-template-rows: minmax(0, 1fr) 58px 176px;
+  grid-template-rows: minmax(0, 1fr) 176px;
 }
 
 .pixel-town-summary {
@@ -4250,7 +4245,7 @@ textarea {
   }
 
   .pixel-town-shell.is-overview .pixel-world-column {
-    grid-template-rows: minmax(0, 1fr) 56px 172px;
+    grid-template-rows: minmax(0, 1fr) 172px;
   }
 }
 
@@ -4282,7 +4277,7 @@ textarea {
   }
 
   .pixel-town-shell.is-overview .pixel-world-column {
-    grid-template-rows: minmax(0, 1fr) 50px 150px;
+    grid-template-rows: minmax(0, 1fr) 150px;
   }
 
   .pixel-town-summary {
@@ -4350,7 +4345,7 @@ textarea {
 
 .pixel-town-shell.is-overview .pixel-world-column {
   height: auto;
-  grid-template-rows: 620px 58px 220px;
+  grid-template-rows: 620px 220px;
 }
 
 .pixel-town-shell.is-overview .pixel-town-stage-wrap {
@@ -4368,7 +4363,7 @@ textarea {
 
 @media (max-width: 1100px) {
   .pixel-town-shell.is-overview .pixel-world-column {
-    grid-template-rows: 580px 56px 210px;
+    grid-template-rows: 580px 210px;
   }
 
   .pixel-town-shell.is-overview .pixel-town-stage-wrap {
@@ -4391,7 +4386,7 @@ textarea {
   }
 
   .pixel-town-shell.is-overview .pixel-world-column {
-    grid-template-rows: 520px 50px 190px;
+    grid-template-rows: 520px 190px;
   }
 
   .pixel-town-shell.is-overview .pixel-town-stage-wrap {
@@ -5610,7 +5605,7 @@ textarea {
 }
 
 .pixel-town-shell.is-overview .pixel-world-column {
-  grid-template-rows: 620px 86px 240px;
+  grid-template-rows: 620px 240px;
 }
 
 .pixel-town-shell.is-overview .pixel-event-board {
@@ -5633,7 +5628,7 @@ textarea {
   }
 
   .pixel-town-shell.is-overview .pixel-world-column {
-    grid-template-rows: 580px 82px 230px;
+    grid-template-rows: 580px 230px;
   }
 
   .pixel-town-shell.is-overview .pixel-event-board {
@@ -5643,7 +5638,7 @@ textarea {
 
 @media (max-width: 640px) {
   .pixel-town-shell.is-overview .pixel-world-column {
-    grid-template-rows: 520px 150px 220px;
+    grid-template-rows: 520px 220px;
   }
 
   .pixel-town-summary.is-unified {
@@ -5671,7 +5666,7 @@ textarea {
   }
 }
 
-/* Remote Town Activity panel, integrated without replacing the local shell. */
+/* Remote activity panel, integrated without replacing the local shell. */
 .pixel-activity-panel {
   min-width: 0;
   height: 426px;
@@ -5691,25 +5686,8 @@ textarea {
   border-bottom: 4px solid var(--town-night);
   background: #262b44;
   display: grid;
-  grid-template-columns: max-content minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
-  gap: 8px;
-}
-
-.pixel-activity-heading {
-  min-width: 0;
-  overflow: hidden;
-}
-
-.pixel-activity-heading h2 {
-  margin: 0;
-  color: var(--town-gold);
-  font-family: 'Upheaval Pro', sans-serif;
-  font-size: 23px;
-  font-weight: 400;
-  letter-spacing: 0.8px;
-  line-height: 0.85;
-  white-space: nowrap;
 }
 
 .pixel-activity-tabs {
@@ -6280,4 +6258,151 @@ textarea {
 .pixel-activity-loading > span {
   color: var(--town-cream);
   font-size: var(--town-text-caption);
+}
+
+/* PandaAI-only market presentation. Injective remains a financial record layer. */
+.pixel-town-header,
+.pixel-town-shell.is-overview .pixel-town-header,
+.pixel-town-shell.is-immersive .pixel-town-header {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.pixel-header-actions,
+.pixel-town-shell.is-immersive .pixel-header-actions {
+  grid-column: 2;
+  justify-self: end;
+}
+
+.pixel-sentiment-label {
+  margin-bottom: 5px;
+  color: var(--town-orange);
+  display: block;
+  font-size: 8px;
+  letter-spacing: 0.35px;
+  text-transform: uppercase;
+}
+
+.pixel-sentiment-empty {
+  color: var(--town-mist);
+  font-size: var(--town-text-micro);
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.pixel-market-list-single {
+  margin-top: auto;
+  border-top: 3px solid var(--town-night);
+}
+
+.pixel-selected-agent-state {
+  margin-top: 7px;
+  padding: 7px;
+  border: 3px solid var(--town-night);
+  background: #262b44;
+}
+
+.pixel-selected-agent-state > strong {
+  color: var(--town-gold);
+  display: block;
+  font-size: var(--town-text-micro);
+  font-weight: 400;
+  text-transform: uppercase;
+}
+
+.pixel-selected-agent-state > p {
+  margin: 5px 0 0;
+  color: var(--town-cream);
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: var(--town-text-caption);
+  line-height: 1.4;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.pixel-agent-panel .pixel-agent-summary-card {
+  padding: 7px;
+}
+
+.pixel-agent-summary-card .pixel-agent-card-identity {
+  margin-block: 5px;
+}
+
+.pixel-agent-summary-card .pixel-agent-avatar {
+  width: 38px;
+  height: 38px;
+  flex-basis: 38px;
+}
+
+.pixel-agent-summary-card .pixel-selected-agent-state {
+  margin-top: 0;
+  padding: 6px;
+}
+
+.pixel-agent-summary-card .pixel-selected-agent-state > p {
+  margin-top: 3px;
+  font-size: var(--town-text-micro);
+  line-height: 1.35;
+}
+
+.pixel-agent-summary-metrics {
+  margin-top: 5px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 3px;
+}
+
+.pixel-agent-summary-metrics > div {
+  min-width: 0;
+  padding: 4px;
+  border: 2px solid var(--town-night);
+  background: #262b44;
+  display: grid;
+  gap: 2px;
+}
+
+.pixel-agent-summary-metrics span,
+.pixel-agent-summary-metrics strong {
+  overflow: hidden;
+  font-size: 8px;
+  font-weight: 400;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.pixel-agent-summary-metrics span {
+  color: var(--town-mist);
+}
+
+.pixel-agent-summary-metrics strong {
+  color: var(--town-paper);
+}
+
+.pixel-agent-summary-card .pixel-detail-button {
+  margin-top: 5px;
+  padding-block: 5px;
+}
+
+@media (min-width: 1101px) {
+  .pixel-town-shell.is-overview .pixel-candle-chart {
+    height: clamp(156px, 21vh, 184px);
+  }
+
+  .pixel-town-shell.is-overview .pixel-market-hero {
+    padding-block: 8px 4px;
+  }
+
+  .pixel-town-shell.is-overview .pixel-indicator-row {
+    margin-bottom: 5px;
+  }
+
+  .pixel-town-shell.is-overview .pixel-quote-grid div {
+    min-height: 44px;
+    padding-block: 6px;
+  }
+
+  .pixel-town-shell.is-overview .pixel-market-list button {
+    min-height: 48px;
+  }
 }
