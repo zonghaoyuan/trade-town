@@ -63,17 +63,31 @@ npm run dev:frontend
 Open `http://localhost:5173`. Without `VITE_CONVEX_URL`, the UI runs in clearly labeled scenario
 preview mode.
 
-For a live town, configure Convex and the LLM provider as described in `.env.example`, then run:
+For a live town, first configure a Convex deployment:
+
+```bash
+npx convex dev --once
+```
+
+Then configure the online OpenAI-compatible API used by agent conversations:
+
+```bash
+npx convex env set LLM_API_URL 'https://your-provider.example/v1'
+npx convex env set LLM_API_KEY 'your-api-key'
+npx convex env set LLM_MODEL 'your-model'
+npx convex env set LLM_EMBEDDING_MODEL 'local-hash'
+```
+
+Start the live town:
 
 ```bash
 npm run dev
 ```
 
-The existing AI Town LLM adapters still support Ollama and OpenAI-compatible endpoints. The
-financial order path is independent of the chat model. For a chat-only OpenAI-compatible gateway,
-set `LLM_EMBEDDING_MODEL=local-hash`; this deterministic local fallback is suitable for demos but
-does not provide production-grade semantic retrieval. `LLM_API_URL` accepts a host URL, a URL ending
-in `/v1`, or a full URL ending in `/chat/completions`.
+The project requires an explicitly configured online API and never falls back to a localhost model.
+For a chat-only gateway, `LLM_EMBEDDING_MODEL=local-hash` provides deterministic demo retrieval
+without requiring the provider to expose an embeddings endpoint. `LLM_API_URL` accepts a host URL,
+a URL ending in `/v1`, or a full URL ending in `/chat/completions`.
 
 The live simulation calls the configured chat model while agents converse. Use the in-game
 **Freeze** control when you are not actively testing so a metered API quota is not consumed in the

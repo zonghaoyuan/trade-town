@@ -7,7 +7,7 @@ import { insertInput } from './aiTown/insertInput';
 import { Id } from './_generated/dataModel';
 import { createEngine } from './aiTown/main';
 import { ENGINE_ACTION_DURATION } from './constants';
-import { detectMismatchedLLMProvider } from './util/llm';
+import { validateLLMConfig } from './util/llm';
 import {
   DEFAULT_VISIBLE_AI_AGENTS,
   MAX_AGENT_COUNT,
@@ -19,7 +19,7 @@ const init = mutation({
     numAgents: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    detectMismatchedLLMProvider();
+    validateLLMConfig();
     const { worldStatus, engine } = await getOrCreateDefaultWorld(ctx);
     await removeMarketMakersFromSpatialWorld(ctx, worldStatus.worldId);
     if (worldStatus.status !== 'running') {
