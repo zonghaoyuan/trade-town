@@ -178,14 +178,14 @@ flowchart LR
 
 项目明确区分真实数据、模拟行为和链上记录。
 
-| 内容 | 类型 | 说明 |
-| --- | --- | --- |
-| PandaAI 历史 K 线 | 历史数据 | 来自真实历史市场的数据 |
-| Agent 观点与对话 | 模拟内容 | 由 AI 居民根据实验环境生成 |
-| 交易意图 | 模拟内容 | 表示居民希望采取的操作 |
-| 本地订单与成交 | 模拟内容 | 用于行为实验和投资组合计算 |
-| 投资组合与盈亏 | 模拟结果 | 不代表真实账户资产 |
-| Injective 交易记录 | 可选链上记录 | 仅在显式启用 Gateway 和测试网执行时产生 |
+| 内容               | 类型         | 说明                                          |
+| ------------------ | ------------ | --------------------------------------------- |
+| PandaAI 历史 K 线  | 历史数据     | 来自真实历史市场的数据                        |
+| Agent 观点与对话   | 模拟内容     | 由 AI 居民根据实验环境生成                    |
+| 交易意图           | 模拟内容     | 表示居民希望采取的操作                        |
+| 本地订单与成交     | 模拟内容     | 用于行为实验和投资组合计算                    |
+| 投资组合与盈亏     | 模拟结果     | 不代表真实账户资产                            |
+| Injective 交易记录 | 可选链上记录 | 仅在显式启用 Convex Worker 和测试网签名时产生 |
 
 项目不会将模拟成交描述为真实市场成交，也不会将历史行情中的实验结果描述为未来收益预测。
 
@@ -212,8 +212,8 @@ flowchart TB
 
     A2A["外部 A2A Agent"] <--> Simulation
 
-    Intent -. "可选路径" .-> Gateway["Injective Gateway"]
-    Gateway -.-> Testnet["Injective Testnet"]
+    Intent -. "可选路径" .-> Worker["Convex Injective Worker"]
+    Worker -.-> Testnet["Injective Testnet"]
 ```
 
 系统的主要组成部分包括：
@@ -225,7 +225,7 @@ flowchart TB
 - **OpenAI-compatible API**：居民对话与推理
 - **A2A Remote Agent**：外部 Agent 接入
 - **Cloudflare Worker**：生产环境前端和 A2A 服务
-- **Injective Gateway**：可选的测试网验证执行路径
+- **Convex Node Action**：可选的 Injective 测试网验证执行路径
 
 详细设计参见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。
 
@@ -237,20 +237,19 @@ Injective Trade Town 可以作为 A2A Remote Agent 被其他 Agent 或应用调�
 
 当前提供五项技能：
 
-| Skill ID | 能力 |
-| --- | --- |
-| `town-agent-history` | 查询小镇居民的历史行为和记录 |
-| `panda-market-replay` | 运行 PandaAI 历史市场回放 |
-| `rate-shock-experiment` | 运行利率冲击行为实验 |
-| `rumor-propagation-analysis` | 分析传闻在居民之间的传播 |
-| `user-behavior-review` | 复盘用户 Avatar 的行为和风险倾向 |
+| Skill ID                     | 能力                             |
+| ---------------------------- | -------------------------------- |
+| `town-agent-history`         | 查询小镇居民的历史行为和记录     |
+| `panda-market-replay`        | 运行 PandaAI 历史市场回放        |
+| `rate-shock-experiment`      | 运行利率冲击行为实验             |
+| `rumor-propagation-analysis` | 分析传闻在居民之间的传播         |
+| `user-behavior-review`       | 复盘用户 Avatar 的行为和风险倾向 |
 
 线上入口：
 
 - Agent Card：
   [https://tradetown.net/.well-known/agent-card.json](https://tradetown.net/.well-known/agent-card.json)
-- Health Check：
-  [https://tradetown.net/healthz](https://tradetown.net/healthz)
+- Health Check： [https://tradetown.net/healthz](https://tradetown.net/healthz)
 
 Cloudflare Worker 同时提供静态前端和 A2A 服务。A2A Task 与 Artifact 通过 Convex 持久化。
 
@@ -271,12 +270,13 @@ Injective 目前是项目中的**可选验证执行路径**，不是默认历史
 - 确定性风险检查
 - 模拟订单、成交和投资组合
 
-在显式配置 Injective Gateway 后，项目可以将符合条件的交易意图提交到 Injective Testnet，用于研究可验证执行和链上结算。
+在显式配置 Convex Injective Worker 后，项目可以将符合条件的交易意图提交到 Injective
+Testnet，用于研究可验证执行和链上结算。Worker 由 Convex 定时调度，不再需要单独部署 Gateway 进程。
 
 只读检查：
 
 ```bash
-npm run gateway:check
+npm run injective:check
 ```
 
 预览 TokenFactory 和市场创建计划，不执行签名：
@@ -285,13 +285,17 @@ npm run gateway:check
 npm run provision:plan
 ```
 
-Gateway 默认使用只读模式。仓库不包含钱包或私钥，市场创建和签名操作必须由操作者显式启用。
+Convex
+Worker 默认使用只读模式。仓库不包含钱包或私钥，市场创建和签名操作必须由操作者通过 Convex 部署密钥显式启用。
 
 详细操作参见：
 
 [docs/TESTNET_OPERATIONS.md](docs/TESTNET_OPERATIONS.md)
 
 请勿为本项目使用主网私钥。
+
+生产发布不能只执行 Git push：需要先配置目标云端 Convex，并保持 Worker 为 `read-only`，然后运行
+`npm run cf:deploy`。该命令会依次部署 Convex、注入生产 Convex URL 构建前端，再部署 Cloudflare。
 
 ---
 
@@ -354,7 +358,8 @@ npm run dev
 LLM_EMBEDDING_MODEL=local-hash
 ```
 
-居民会在小镇运行期间调用配置的模型。停止实验时，可以使用界面中的 **Freeze** 控件冻结模拟，避免继续消耗模型额度。
+居民会在小镇运行期间调用配置的模型。停止实验时，可以使用界面中的 **Freeze**
+控件冻结模拟，避免继续消耗模型额度。
 
 ---
 
@@ -368,19 +373,18 @@ npm test -- --runInBand      # 运行自动化测试
 npm run lint                 # 运行 ESLint
 npm run a2a:dev              # 启动本地 A2A 服务
 npm run a2a:examples         # 运行 A2A 示例客户端
-npm run gateway:check        # Injective Testnet 只读检查
-npm run gateway:dev          # 启动 Injective Gateway
+npm run injective:check      # Injective Testnet 只读检查
+npm run injective:sync       # 立即执行一次 Convex Injective 同步
+npm run injective:queue      # 预览或提交一个 Agent 测试网订单
 npm run provision:plan       # 预览测试网配置计划
-npm run cf:deploy            # 部署 Cloudflare Worker
+npm run cf:deploy            # 部署生产 Convex、前端和 Cloudflare Worker
 ```
 
 ---
 
 ## 项目来源与黑客松开发内容
 
-Injective Trade Town 基于
-[a16z AI Town](https://github.com/a16z-infra/ai-town)
-的开源模拟引擎开发。
+Injective Trade Town 基于 [a16z AI Town](https://github.com/a16z-infra/ai-town) 的开源模拟引擎开发。
 
 为了保留清晰、透明的项目来源，AI Town upstream baseline 在当前仓库历史中作为初始提交导入。
 
@@ -399,12 +403,11 @@ Injective Trade Town 基于
 - 行为复盘与纪律建议
 - A2A Remote Agent
 - Cloudflare Worker 部署
-- 可选 Injective Testnet Gateway
+- 可选 Convex Injective Testnet Worker
 - 金融终端、K 线和因果事件回放界面
 
 金融 Agent 的部分概念参考了
-[TwinMarket](https://github.com/TwinMarketAI/TwinMarket)，
-但项目没有复制或使用 TwinMarket 的本地撮合引擎。
+[TwinMarket](https://github.com/TwinMarketAI/TwinMarket)，但项目没有复制或使用 TwinMarket 的本地撮合引擎。
 
 ---
 

@@ -40,6 +40,7 @@ import type * as finance_activity from "../finance/activity.js";
 import type * as finance_decision from "../finance/decision.js";
 import type * as http from "../http.js";
 import type * as init from "../init.js";
+import type * as injectiveNode from "../injectiveNode.js";
 import type * as messages from "../messages.js";
 import type * as messagesFeed from "../messagesFeed.js";
 import type * as music from "../music.js";
@@ -98,6 +99,7 @@ declare const fullApi: ApiFromModules<{
   "finance/decision": typeof finance_decision;
   http: typeof http;
   init: typeof init;
+  injectiveNode: typeof injectiveNode;
   messages: typeof messages;
   messagesFeed: typeof messagesFeed;
   music: typeof music;

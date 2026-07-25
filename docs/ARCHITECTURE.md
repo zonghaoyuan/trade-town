@@ -8,7 +8,8 @@
    computes an authoritative fill.
 3. **Convex is a projection, not a shadow exchange.** It stores proposed intent and reconciled chain
    state so the UI can stay reactive.
-4. **The signer is isolated.** A private key may exist only in the Node Gateway process.
+4. **The signer is isolated.** A private key may exist only as a Convex deployment secret and is
+   read only by the Node Action.
 5. **Portfolio changes require a confirmed fill.** A submitted transaction or booked order is not a
    position.
 6. **Every financial action is explainable.** Belief evidence, rationale, risk result, CID, tx hash,
@@ -26,7 +27,7 @@ The existing operation seam remains the extension point:
 
 ```text
 Agent.tick → startOperation → financial decision → proposeTrade mutation
-           → Gateway queue → Injective transaction → Indexer stream → Convex projection
+           → Convex worker queue → Injective transaction → Indexer query → Convex projection
 ```
 
 The agent can continue walking and talking while a financial intent progresses through its
@@ -45,37 +46,39 @@ asynchronous states.
 It does not port TwinMarket's local order matcher, hidden liquidity, daily batch clearing, or
 off-chain balances.
 
-### Injective Gateway
+### Convex Injective worker
 
-The Gateway has two modes:
+`convex/injectiveNode.ts` is a scheduled Node Action and has two modes:
 
-- `read-only`: health checks and Indexer streams; no key required when the operator address is
-  configured.
-- `signing`: reads queued intents, builds native spot-limit messages, simulates, signs, broadcasts,
-  and writes the result to Convex.
+- `read-only`: health checks and Indexer reconciliation; no key required when the operator address
+  is configured.
+- `signing`: atomically claims queued intents, builds native spot-limit messages, simulates, signs,
+  broadcasts, and writes the result to Convex.
 
-The signing loop is serialized to avoid Cosmos account-sequence races. Each intent has a stable CID
+Convex Cron invokes the worker every 30 seconds. A database lease prevents overlapping runs, while
+the signing loop is serialized to avoid Cosmos account-sequence races. Each intent has a stable CID
 of at most 36 characters, and every fill is deduplicated by the Indexer trade ID.
 
-Indexer streams provide low-latency updates. The cache stores a cursor so a periodic query-based
-reconciler can be added to replay missed data after disconnects. Chain state and transaction
-inclusion remain the authoritative verification layer; the Indexer is never treated as consensus.
+The worker reconciles the market, ten town subaccounts, orders, and fills before claiming work. If a
+run stops after broadcast, the next run first looks for the stable CID on chain before a stale claim
+can return to the queue. Chain state and transaction inclusion remain the authoritative verification
+layer; the Indexer is never treated as consensus. No standalone Gateway service is required.
 
 ## Data model
 
-| Table                | Purpose                                                      |
-| -------------------- | ------------------------------------------------------------ |
-| `financeConfig`      | network, Gateway status, operator, counts, last chain height |
-| `marketCatalog`      | local TOWNUSD pairs plus live denoms, market IDs, and ticks  |
-| `traderProfiles`     | AI/MM role, risk, focus, nonce, subaccount                   |
-| `agentBeliefs`       | symbol thesis, sentiment, confidence, evidence links         |
-| `marketEvents`       | policy → news → conversation → intent → fill causal graph    |
-| `tradeIntents`       | explainable pre-trade workflow and stable CID                |
-| `chainTransactions`  | broadcast/inclusion/failure proof                            |
-| `chainOrders`        | reconciled native order state                                |
-| `fills`              | idempotent confirmed trade records                           |
-| `portfolioSnapshots` | chain-derived balances and positions                         |
-| `chainCursors`       | restart-safe stream/query progress                           |
+| Table                | Purpose                                                           |
+| -------------------- | ----------------------------------------------------------------- |
+| `financeConfig`      | network, worker status/lease, operator, counts, last chain height |
+| `marketCatalog`      | local TOWNUSD pairs plus live denoms, market IDs, and ticks       |
+| `traderProfiles`     | AI/MM role, risk, focus, nonce, subaccount                        |
+| `agentBeliefs`       | symbol thesis, sentiment, confidence, evidence links              |
+| `marketEvents`       | policy → news → conversation → intent → fill causal graph         |
+| `tradeIntents`       | explainable pre-trade workflow and stable CID                     |
+| `chainTransactions`  | broadcast/inclusion/failure proof                                 |
+| `chainOrders`        | reconciled native order state                                     |
+| `fills`              | idempotent confirmed trade records                                |
+| `portfolioSnapshots` | chain-derived balances and positions                              |
+| `chainCursors`       | restart-safe stream/query progress                                |
 
 ## Wallet and subaccounts
 
@@ -95,7 +98,7 @@ the wallet as operator-controlled.
 2. Keep TOWNUSD as the local simulation quote; an existing on-chain TOWNUSD denom is not deleted.
 3. Launch the `ACME/INJ` Testnet spot market with the exchange v2 message.
 4. Deposit 10 INJ and 2,000 ACME into each town exchange subaccount.
-5. Configure the returned market IDs in the Gateway.
+5. Configure the returned market IDs as Convex deployment environment variables.
 6. Reconcile markets and balances before enabling signing.
 
 Provisioning is split into explicit stages because TokenFactory creation and instant market listing
@@ -108,4 +111,4 @@ incur chain-configured fees.
 - **A2A agent adapter:** expose selected trader capabilities as remote agents after a stable public
   endpoint exists.
 - **Scenario engine:** publish policy, earnings, supply, or regulatory shocks into `marketEvents`.
-- **Query reconciler:** backfill fills, orders, transactions, and balances from a stored cursor.
+- **Transaction verifier:** enrich submitted transactions with direct chain inclusion proofs.

@@ -1,5 +1,5 @@
 import { ConvexError, v } from 'convex/values';
-import { MutationCtx, mutation, query } from './_generated/server';
+import { MutationCtx, internalMutation, mutation, query } from './_generated/server';
 import {
   assessTradeRisk,
   DEFAULT_INITIAL_AGENT_NAV,
@@ -160,7 +160,7 @@ export const bootstrapTown = mutation({
       source: 'Town Central Bank',
       headline: 'Rate decision scenario is armed',
       summary:
-        'Preview event only. Start the Gateway and publish a scenario before agents can produce chain-backed orders.',
+        'Preview event only. Enable the Convex Injective worker and publish a scenario before agents can produce chain-backed orders.',
       severity: 0.72,
       symbols: ['ACME', 'NOVA', 'AURUM'],
       occurredAt: now,
@@ -362,6 +362,134 @@ export const pendingIntents = query({
   },
 });
 
+export const acquireInjectiveWorkerLease = internalMutation({
+  args: {
+    leaseId: v.string(),
+    ttlMs: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const config = await ctx.db
+      .query('financeConfig')
+      .withIndex('by_key', (q) => q.eq('key', DEFAULT_CONFIG_KEY))
+      .unique();
+    if (!config) {
+      return false;
+    }
+    const now = Date.now();
+    if (
+      config.workerLeaseId &&
+      config.workerLeaseId !== args.leaseId &&
+      (config.workerLeaseExpiresAt ?? 0) > now
+    ) {
+      return false;
+    }
+    await ctx.db.patch(config._id, {
+      workerLeaseId: args.leaseId,
+      workerLeaseExpiresAt: now + Math.max(30_000, Math.min(args.ttlMs, 10 * 60_000)),
+      lastWorkerRunAt: now,
+      updatedAt: now,
+    });
+    return true;
+  },
+});
+
+export const releaseInjectiveWorkerLease = internalMutation({
+  args: {
+    leaseId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const config = await ctx.db
+      .query('financeConfig')
+      .withIndex('by_key', (q) => q.eq('key', DEFAULT_CONFIG_KEY))
+      .unique();
+    if (!config || config.workerLeaseId !== args.leaseId) {
+      return false;
+    }
+    await ctx.db.patch(config._id, {
+      workerLeaseId: undefined,
+      workerLeaseExpiresAt: undefined,
+      updatedAt: Date.now(),
+    });
+    return true;
+  },
+});
+
+export const recoverStaleInjectiveClaims = internalMutation({
+  args: {
+    staleBefore: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const stale = await ctx.db
+      .query('tradeIntents')
+      .withIndex('by_execution_state', (q) =>
+        q.eq('executionMode', 'injective').eq('state', 'submitting'),
+      )
+      .take(100);
+    let recovered = 0;
+    for (const intent of stale) {
+      if ((intent.claimedAt ?? intent.updatedAt) > args.staleBefore) {
+        continue;
+      }
+      await ctx.db.patch(intent._id, {
+        state: 'queued',
+        claimId: undefined,
+        claimedAt: undefined,
+        error: undefined,
+        updatedAt: Date.now(),
+      });
+      recovered += 1;
+    }
+    return recovered;
+  },
+});
+
+export const claimNextInjectiveIntent = internalMutation({
+  args: {
+    leaseId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const config = await ctx.db
+      .query('financeConfig')
+      .withIndex('by_key', (q) => q.eq('key', DEFAULT_CONFIG_KEY))
+      .unique();
+    if (
+      !config ||
+      config.workerLeaseId !== args.leaseId ||
+      (config.workerLeaseExpiresAt ?? 0) <= Date.now()
+    ) {
+      return null;
+    }
+    const intent = await ctx.db
+      .query('tradeIntents')
+      .withIndex('by_execution_state', (q) =>
+        q.eq('executionMode', 'injective').eq('state', 'queued'),
+      )
+      .order('asc')
+      .first();
+    if (!intent) {
+      return null;
+    }
+    const now = Date.now();
+    await ctx.db.patch(intent._id, {
+      state: 'submitting',
+      claimId: args.leaseId,
+      claimedAt: now,
+      attemptCount: (intent.attemptCount ?? 0) + 1,
+      error: undefined,
+      updatedAt: now,
+    });
+    return {
+      intentId: intent.intentId,
+      cid: intent.cid,
+      symbol: intent.symbol,
+      side: intent.side,
+      quantity: intent.quantity,
+      limitPrice: intent.limitPrice,
+      subaccountNonce: intent.subaccountNonce,
+    };
+  },
+});
+
 export const recordSubmission = mutation({
   args: {
     gatewaySecret: v.string(),
@@ -385,6 +513,8 @@ export const recordSubmission = mutation({
       state: 'submitted',
       txHash: args.txHash,
       orderHash: args.orderHash,
+      claimId: undefined,
+      claimedAt: undefined,
       updatedAt: now,
     });
     const existingTx = await ctx.db
@@ -431,6 +561,8 @@ export const recordFailure = mutation({
     await ctx.db.patch(intent._id, {
       state: 'failed',
       error: args.error.slice(0, 500),
+      claimId: undefined,
+      claimedAt: undefined,
       updatedAt: Date.now(),
     });
   },
@@ -456,7 +588,7 @@ export const updateGatewayStatus = mutation({
       .withIndex('by_key', (q) => q.eq('key', DEFAULT_CONFIG_KEY))
       .unique();
     if (!config) {
-      throw new ConvexError('Run finance.bootstrapTown before starting the Gateway.');
+      throw new ConvexError('Run finance.bootstrapTown before starting the Injective worker.');
     }
     const now = Date.now();
     await ctx.db.patch(config._id, {
@@ -628,6 +760,8 @@ export const recordOrder = mutation({
       await ctx.db.patch(intent._id, {
         state: intentState,
         orderHash: args.orderHash ?? intent.orderHash,
+        claimId: undefined,
+        claimedAt: undefined,
         updatedAt: args.updatedAt,
       });
     }
@@ -698,24 +832,8 @@ export const recordFill = mutation({
       await ctx.db.patch(intent._id, {
         state: 'confirmed',
         orderHash: args.orderHash ?? intent.orderHash,
-        updatedAt: args.executedAt,
-      });
-    }
-    const order = orderHash
-      ? await ctx.db
-          .query('chainOrders')
-          .withIndex('by_order_hash', (q) => q.eq('orderHash', orderHash))
-          .unique()
-      : cid
-        ? await ctx.db
-            .query('chainOrders')
-            .withIndex('by_cid', (q) => q.eq('cid', cid))
-            .unique()
-        : null;
-    if (order) {
-      await ctx.db.patch(order._id, {
-        state: 'filled',
-        filledQuantity: Math.min(order.quantity, (order.filledQuantity ?? 0) + args.quantity),
+        claimId: undefined,
+        claimedAt: undefined,
         updatedAt: args.executedAt,
       });
     }
@@ -767,9 +885,10 @@ export const recordChainCursor = mutation({
 });
 
 function assertGatewaySecret(provided: string) {
-  const expected = process.env.GATEWAY_SHARED_SECRET;
+  const expected =
+    process.env.INJECTIVE_CONTROL_SECRET?.trim() ?? process.env.GATEWAY_SHARED_SECRET?.trim();
   if (!expected || provided !== expected) {
-    throw new ConvexError('Gateway authentication failed.');
+    throw new ConvexError('Injective control authentication failed.');
   }
 }
 

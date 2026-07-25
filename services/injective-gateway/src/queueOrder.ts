@@ -5,7 +5,7 @@ import { api } from '../../../convex/_generated/api';
 import { TOWN_TRADERS, type TradeSide } from '../../../shared/finance';
 import { PROVISION_MARKETS } from './provisionConfig';
 
-dotenv.config({ path: process.env.GATEWAY_ENV_FILE ?? '.env.local' });
+dotenv.config({ path: process.env.INJECTIVE_ENV_FILE ?? '.env.local' });
 
 void main().catch((error) => {
   console.error(error instanceof Error ? error.message : String(error));
@@ -48,14 +48,15 @@ async function main() {
   };
   console.log('[order-plan]', JSON.stringify(order, null, 2));
   if (!submit) {
-    console.log('Dry run only. Add --submit to queue this order for the signing Gateway.');
+    console.log('Dry run only. Add --submit to queue this order for the Convex Injective worker.');
     return;
   }
 
   const convexUrl = optionalEnv('CONVEX_URL') ?? optionalEnv('VITE_CONVEX_URL');
-  const gatewaySecret = optionalEnv('GATEWAY_SHARED_SECRET');
+  const gatewaySecret =
+    optionalEnv('INJECTIVE_CONTROL_SECRET') ?? optionalEnv('GATEWAY_SHARED_SECRET');
   if (!convexUrl || !gatewaySecret) {
-    throw new Error('CONVEX_URL (or VITE_CONVEX_URL) and GATEWAY_SHARED_SECRET are required.');
+    throw new Error('CONVEX_URL (or VITE_CONVEX_URL) and INJECTIVE_CONTROL_SECRET are required.');
   }
   const client = new ConvexHttpClient(convexUrl);
   const result = await client.mutation((api as any).finance.proposeTrade, {

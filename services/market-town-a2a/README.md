@@ -130,7 +130,7 @@ Cloudflare, while Convex only needs `A2A_CONVEX_SHARED_SECRET` to persist A2A ta
 Competition mode refuses to start without HTTPS, Convex persistence, and all three `LLM_*` settings
 for PandaAI DeepSeek V4 Pro. The A2A endpoint is public and rate-limited. DeepSeek plans every
 competition task before deterministic financial tools run, then synthesizes the evidence-backed
-report. Do not add `INJECTIVE_PRIVATE_KEY` or `GATEWAY_SHARED_SECRET` to this process.
+report. Do not add `INJECTIVE_PRIVATE_KEY` or `INJECTIVE_CONTROL_SECRET` to this process.
 
 ## Verification
 

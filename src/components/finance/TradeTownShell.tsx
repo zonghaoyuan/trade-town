@@ -884,14 +884,14 @@ function ActivityBoard({
     id: 'injective-status',
     time: formatClock(testnetDashboard.asOf),
     kind: testnetDashboard.source === 'injective' ? 'chain' : 'error',
-    actor: 'Injective Gateway',
+    actor: 'Injective Worker',
     title:
       testnetDashboard.source === 'injective'
         ? 'Connected · no confirmed fill yet'
         : 'Testnet evidence pending',
     detail:
       testnetDashboard.source === 'injective'
-        ? 'The gateway is connected. Explorer proof appears here after a confirmed order or fill.'
+        ? 'The Convex worker is connected. Explorer proof appears here after a confirmed order or fill.'
         : 'Preview values stay isolated from Panda simulation and never update verified balances.',
   };
   const timeline: Array<{ record: CausalEvent; source: RecordSource }> = [

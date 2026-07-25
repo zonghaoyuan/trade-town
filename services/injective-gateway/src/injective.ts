@@ -13,7 +13,13 @@ import {
   spotQuantityToChainQuantityToFixed,
 } from '@injectivelabs/sdk-ts';
 import { deriveSubaccountId, TradeSide } from '../../../shared/finance';
-import { GatewayConfig } from './config';
+
+export type InjectiveClientConfig = {
+  mode: 'read-only' | 'signing';
+  privateKey?: string;
+  operatorAddress?: string;
+  marketIds: Record<string, string>;
+};
 
 export type ChainHealth = {
   ok: boolean;
@@ -114,7 +120,7 @@ export class InjectiveClient {
   readonly operatorAddress?: string;
   private readonly broadcaster?: MsgBroadcasterWithPk;
 
-  constructor(private readonly config: GatewayConfig) {
+  constructor(private readonly config: InjectiveClientConfig) {
     if (config.privateKey) {
       const privateKey = PrivateKey.fromHex(config.privateKey);
       const signerAddress = privateKey.toBech32();
@@ -162,7 +168,7 @@ export class InjectiveClient {
 
   async submitLimitOrder(intent: LimitOrderIntent) {
     if (this.config.mode !== 'signing' || !this.broadcaster || !this.operatorAddress) {
-      throw new Error('The Gateway is not in signing mode.');
+      throw new Error('The Injective worker is not in signing mode.');
     }
     const marketId = this.config.marketIds[intent.symbol];
     if (!marketId) {

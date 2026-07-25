@@ -477,6 +477,7 @@ function formatTransactionState(state: TownTransactionRecord['state']) {
       proposed: 'INTENT',
       risk_rejected: 'RISK BLOCKED',
       queued: 'QUEUED',
+      submitting: 'SUBMITTING',
       submitted: 'SUBMITTED',
       confirmed: 'CONFIRMED',
       cancelled: 'CANCELLED',

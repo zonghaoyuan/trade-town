@@ -10,7 +10,7 @@ The town starts in equilibrium. The central bank unexpectedly raises rates by 75
 4. A conversation carries the thesis to Imani.
 5. Imani's momentum signal and updated belief produce a sell intent.
 6. The deterministic risk layer checks cash, order size, and concentration.
-7. The Gateway submits a native Injective spot order.
+7. The Convex Injective worker submits a native Injective spot order.
 8. Delta-7 adjusts its deterministic two-sided quotes.
 9. The K-line and causal replay update after confirmed fills.
 
@@ -26,5 +26,6 @@ The town starts in equilibrium. The central bank unexpectedly raises rates by 75
 
 ## Failure-safe demo mode
 
-If the testnet or Gateway is unavailable, stop signing and use the clearly labeled illustrative
-scenario preview. Do not present preview transaction IDs, prices, or balances as live chain data.
+If the testnet or Convex worker is unavailable, stop signing and use the clearly labeled
+illustrative scenario preview. Do not present preview transaction IDs, prices, or balances as live
+chain data.

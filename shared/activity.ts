@@ -31,6 +31,7 @@ export type TownTransactionState =
   | 'proposed'
   | 'risk_rejected'
   | 'queued'
+  | 'submitting'
   | 'submitted'
   | 'confirmed'
   | 'cancelled'

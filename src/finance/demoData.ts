@@ -117,9 +117,9 @@ const injectivePreviewTraders: DashboardTrader[] = TOWN_TRADERS.slice(0, 8).map(
   action: 'HOLD',
   confidence: 0,
   beliefBefore: 'No chain-backed market observation yet.',
-  beliefAfter: 'Waiting for the Injective gateway and confirmed fills.',
+  beliefAfter: 'Waiting for the Convex Injective worker and confirmed fills.',
   thesis: 'Do not infer portfolio state from Panda simulation data.',
-  evidence: ['injective-gateway-unconfigured'],
+  evidence: ['injective-worker-unconfigured'],
   navStart: 10,
   navEnd: 10,
   cash: 10,
@@ -193,7 +193,7 @@ export const injectivePreviewDashboard: TradeTownDashboard = {
     {
       id: 'error-chain-01',
       time: '09:29:58',
-      scope: 'Injective Gateway',
+      scope: 'Injective Worker',
       message: 'Signing is not configured. Testnet values are preview-only.',
       recovered: false,
     },
@@ -315,7 +315,7 @@ export function mergeLiveDashboard(value: any): TradeTownDashboard {
             {
               id: 'injective-sync-status',
               time: new Date().toLocaleTimeString('en-GB', { hour12: false }),
-              scope: 'Injective Gateway',
+              scope: 'Injective Worker',
               message:
                 value.config.lastGatewayError ??
                 'Injective chain data is unavailable or stale; no preview values are treated as verified.',

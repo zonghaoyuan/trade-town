@@ -19,7 +19,7 @@ import {
   PROVISION_TOKENS,
 } from './provisionConfig';
 
-dotenv.config({ path: process.env.GATEWAY_ENV_FILE ?? '.env.local' });
+dotenv.config({ path: process.env.INJECTIVE_ENV_FILE ?? '.env.local' });
 
 type ProvisionStage = 'tokens' | 'markets' | 'funding';
 
@@ -79,8 +79,8 @@ async function executeStage() {
   if (!privateKey || !privateKeyHex) {
     throw new Error('--broadcast and --simulate require INJECTIVE_PRIVATE_KEY.');
   }
-  if (process.env.GATEWAY_MODE !== 'signing') {
-    throw new Error('--broadcast and --simulate require GATEWAY_MODE=signing.');
+  if (process.env.INJECTIVE_PROVISION_MODE !== 'signing') {
+    throw new Error('--broadcast and --simulate require INJECTIVE_PROVISION_MODE=signing.');
   }
   if (shouldBroadcast && process.env.TESTNET_PROVISION_CONFIRM !== 'trade-town-testnet') {
     throw new Error(

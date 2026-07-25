@@ -17,7 +17,7 @@ export type MarketMakerQuotes = {
 
 /**
  * Deterministic quoting used by Delta-7 and Sigma-2.
- * This never calls an LLM and never bypasses Gateway risk controls.
+ * This never calls an LLM and never bypasses the Convex Injective risk controls.
  */
 export function quoteTwoSidedMarket(input: MarketMakerQuoteInput): MarketMakerQuotes {
   if (input.fairValue <= 0 || input.inventoryLimit <= 0) {

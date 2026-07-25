@@ -6,6 +6,7 @@ const orderState = v.union(
   v.literal('proposed'),
   v.literal('risk_rejected'),
   v.literal('queued'),
+  v.literal('submitting'),
   v.literal('submitted'),
   v.literal('confirmed'),
   v.literal('cancelled'),
@@ -72,6 +73,9 @@ export const financeTables = {
     lastChainSyncAt: v.optional(v.number()),
     lastIndexerSyncAt: v.optional(v.number()),
     lastGatewayError: v.optional(v.string()),
+    workerLeaseId: v.optional(v.string()),
+    workerLeaseExpiresAt: v.optional(v.number()),
+    lastWorkerRunAt: v.optional(v.number()),
     updatedAt: v.number(),
   }).index('by_key', ['key']),
 
@@ -178,6 +182,9 @@ export const financeTables = {
     txHash: v.optional(v.string()),
     orderHash: v.optional(v.string()),
     error: v.optional(v.string()),
+    claimId: v.optional(v.string()),
+    claimedAt: v.optional(v.number()),
+    attemptCount: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })

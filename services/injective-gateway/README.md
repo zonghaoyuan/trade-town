@@ -1,35 +1,33 @@
-# Injective Gateway
+# Injective operations tools
 
-The Gateway is the only component allowed to hold a testnet signer. Convex stores town state,
-beliefs, proposed intents, and a reconciled cache; Injective Testnet remains the only matching and
-settlement authority.
+The directory name is retained for compatibility, but it is no longer a deployable Gateway service.
+The runtime integration lives in `convex/injectiveNode.ts` and is scheduled by Convex Cron.
+Injective Testnet remains the only matching and settlement authority.
 
-Start with a read-only health check:
+Run a local read-only diagnostic:
 
 ```bash
-npm run gateway:check
+npm run injective:check
 ```
 
-Signing stays disabled unless `GATEWAY_MODE=signing` and a dedicated testnet-only private key is
-provided. See the root `.env.example` for the full configuration. Never use a mainnet wallet.
+Run the Convex worker immediately instead of waiting for the next cron tick:
 
-The Gateway continuously reconciles the configured market, all ten town subaccounts, active and
-historical orders, and account fills into Convex. It never treats a local replay order as a chain
-order; only authenticated `executionMode=injective` intents enter the signing queue.
+```bash
+npm run injective:sync
+```
 
 Preview a single Agent order without changing Convex or broadcasting:
 
 ```bash
-npm run gateway:queue -- \
+npm run injective:queue -- \
   --agent "Delta-7" --side sell --quantity 100 --price 0.001 \
   --rationale "Provide initial ACME liquidity"
 ```
 
-Add `--submit` only while a signing Gateway is online. The Convex mutation authenticates the call,
+Add `--submit` only after the Convex deployment is in signing mode. The authenticated mutation
 requires fresh chain balances and market metadata, checks tick sizes, minimum notional, available
-funds, position limits, and queues the order. The Gateway then signs sequentially. A deterministic
-two-Agent testnet match can be produced by submitting the sell above, then a crossing buy from
-`Mira Chen` for the same quantity and price. Do not use this flow with a mainnet key.
+funds, and position limits, then queues the order. The Convex worker claims and signs queued orders
+serially.
 
 Preview the ACME TokenFactory denom and the single ACME/INJ market without signing:
 
@@ -37,15 +35,14 @@ Preview the ACME TokenFactory denom and the single ACME/INJ market without signi
 npm run provision:plan
 ```
 
-Provisioning is split into explicit `tokens`, `markets`, and `funding` stages. The market stage uses
-the Injective exchange v2 launch message and verifies INJ's chain minimum-notional configuration
-before signing. Every town subaccount receives 2,000 ACME and 10 INJ so it can participate on either
-side of the MVP orderbook. Broadcasting additionally requires `GATEWAY_MODE=signing`,
-`INJECTIVE_PRIVATE_KEY`, and `TESTNET_PROVISION_CONFIRM=trade-town-testnet`. This guard exists
-because each instant spot market launch pays the chain's configured testnet listing fee.
-
-Use `--simulate` before `--broadcast`; simulation signs locally but does not submit a transaction:
+Provisioning is split into explicit `tokens`, `markets`, and `funding` stages. Broadcasting requires
+`INJECTIVE_PROVISION_MODE=signing`, `INJECTIVE_PRIVATE_KEY`, and
+`TESTNET_PROVISION_CONFIRM=trade-town-testnet`. Use `--simulate` before `--broadcast`:
 
 ```bash
+INJECTIVE_PROVISION_MODE=signing \
 npm run provision:testnet -- --simulate --stage=markets
 ```
+
+See `docs/TESTNET_OPERATIONS.md` for deployment variables and the signing runbook. Never use a
+mainnet wallet.
