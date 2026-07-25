@@ -4,7 +4,7 @@
 
 - `/` 和前端路由从 `dist` 提供静态资源；
 - `/.well-known/*`、`/a2a/*`、`/healthz`、`/docs` 进入 Worker 中的 A2A 服务；
-- Worker 调用 DeepSeek V4 Pro；
+- Worker 调用配置的 OpenAI-compatible LLM；
 - Convex 只持久化 A2A Task 和 Artifact。
 
 Wrangler 需要 Node.js 22 或更高版本。比赛环境建议使用 Workers
@@ -61,15 +61,15 @@ A2A_CONVEX_URL=https://<your-convex-deployment>.convex.cloud
 A2A_MAX_TASK_MS=1080000
 A2A_MAX_PROMPT_CHARS=8000
 A2A_RATE_LIMIT_PER_MINUTE=60
-LLM_API_URL=<deepseek-openai-compatible-endpoint>
-LLM_MODEL=<deepseek-v4-pro-model-id>
+LLM_API_URL=<openai-compatible-chat-completions-endpoint>
+LLM_MODEL=<provider-model-id>
 ```
 
 添加以下加密 Secret：
 
 ```text
 A2A_CONVEX_SHARED_SECRET=<随机生成的内部共享密钥>
-LLM_API_KEY=<DeepSeek API Key>
+LLM_API_KEY=<Provider API Key>
 ```
 
 也可以通过 Wrangler 上传 Secret：
@@ -79,7 +79,8 @@ npx wrangler secret put A2A_CONVEX_SHARED_SECRET
 npx wrangler secret put LLM_API_KEY
 ```
 
-这里不需要额外的 Panda Token。`LLM_API_KEY` 就是 DeepSeek API Key。`/a2a/v1`
+这里不需要额外的 Panda Token。默认使用 `LLM_API_KEY`；火山方舟也可以把同一 Secret
+命名为 `ARK_API_KEY`。`/a2a/v1`
 作为公开接口提供，不需要调用方 Token；`A2A_RATE_LIMIT_PER_MINUTE` 继续限制单实例的请求频率。
 
 ## 4. 配置 Convex
@@ -205,7 +206,7 @@ Injective Worker 应先保持 `read-only`，并返回 `1` 个市场、`10` 个�
   "executionMode": "competition",
   "persistence": "convex",
   "modelConfigured": true,
-  "modelRole": "task-planning-and-report-synthesis"
+  "modelRole": "task-planning-and-question-answering"
 }
 ```
 
@@ -213,7 +214,7 @@ Injective Worker 应先保持 `read-only`，并返回 `1` 个市场、`10` 个�
 
 ```json
 {
-  "requiredModel": "DeepSeek V4 Pro",
+  "requiredModel": "OpenAI-compatible LLM",
   "used": true,
   "stages": {
     "taskPlanning": true,

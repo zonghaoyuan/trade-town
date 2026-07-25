@@ -42,7 +42,7 @@ describe('Market Town A2A server', () => {
     expect(v1.status).toBe(200);
     const v1Card = (await v1.json()) as {
       supportedInterfaces: Array<{ protocolVersion: string }>;
-      skills: Array<{ id: string }>;
+      skills: Array<{ id: string; name: string }>;
       securitySchemes: Record<string, unknown>;
       securityRequirements: unknown[];
     };
@@ -50,6 +50,10 @@ describe('Market Town A2A server', () => {
       expect.arrayContaining(['1.0', '0.3']),
     );
     expect(v1Card.skills).toHaveLength(5);
+    expect(v1Card.skills[0]).toMatchObject({
+      id: 'town-agent-history',
+      name: expect.stringContaining('问答'),
+    });
     expect(v1Card.securitySchemes).toEqual({});
     expect(v1Card.securityRequirements).toEqual([]);
 
@@ -97,6 +101,11 @@ describe('Market Town A2A server', () => {
     expect(isTask(response)).toBe(true);
     const task = response as Task;
     expect(task.status?.state).toBe(TaskState.TASK_STATE_COMPLETED);
+    expect(
+      task.status?.message?.parts.some(
+        (part) => part.content?.$case === 'text' && part.content.value.length > 0,
+      ),
+    ).toBe(true);
     const dataPart = task.artifacts
       .flatMap((artifact) => artifact.parts)
       .find((part) => part.content?.$case === 'data');
