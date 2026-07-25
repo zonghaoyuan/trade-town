@@ -12,14 +12,18 @@ import { GameId } from '../../convex/aiTown/ids.ts';
 import { useServerGame } from '../hooks/serverGame.ts';
 import type { FocusedTownCitizen } from './finance/TradeTownShell.tsx';
 import PixelAvatar from './finance/PixelAvatar.tsx';
+import { useI18n } from '../i18n';
 
 export const SHOW_DEBUG_UI = !!import.meta.env.VITE_SHOW_DEBUG_UI;
 
 export default function Game({
   focusedCitizen = null,
+  hudInspectorOpen = false,
 }: {
   focusedCitizen?: FocusedTownCitizen | null;
+  hudInspectorOpen?: boolean;
 }) {
+  const { locale, t, formatNumber } = useI18n();
   const convex = useConvex();
   const [selectedElement, setSelectedElement] = useState<{
     kind: 'player';
@@ -49,11 +53,15 @@ export default function Game({
     setFocusedCitizenPosition(null);
   }, [focusedCitizen?.requestId]);
 
+  useEffect(() => {
+    if (hudInspectorOpen) setSelectedElement(undefined);
+  }, [hudInspectorOpen]);
+
   if (!worldId || !engineId || !game) {
     return (
       <div className="town-loading">
         <span />
-        Loading live town state from Convex…
+        {t('game.loading')}
       </div>
     );
   }
@@ -83,6 +91,7 @@ https://github.com/michalochman/react-pixi-fiber/issues/145#issuecomment-5315492
                     setSelectedElement={setSelectedElement}
                     focusedCitizen={focusedCitizen}
                     onFocusedCitizenPositionChange={setFocusedCitizenPosition}
+                    locale={locale}
                   />
                 </ConvexProvider>
               </Stage>
@@ -107,7 +116,9 @@ https://github.com/michalochman/react-pixi-fiber/issues/145#issuecomment-5315492
                 <strong>{focusedCitizen.name}</strong>
                 <small>{focusedCitizen.role}</small>
                 <em className={focusedCitizen.pnl >= 0 ? 'pixel-up' : 'pixel-down'}>
-                  P&amp;L {formatSignedCompact(focusedCitizen.pnl)}
+                  {t('game.pnl', {
+                    value: formatSignedCompact(focusedCitizen.pnl, formatNumber),
+                  })}
                 </em>
               </span>
             </aside>
@@ -157,11 +168,14 @@ function useObservedElementSize<T extends HTMLElement>() {
   return [setElement, size] as const;
 }
 
-function formatSignedCompact(value: number) {
-  const formatted = new Intl.NumberFormat('en-US', {
+function formatSignedCompact(
+  value: number,
+  formatNumber: (value: number, options?: Intl.NumberFormatOptions) => string,
+) {
+  const formatted = formatNumber(value, {
     notation: 'compact',
     maximumFractionDigits: 1,
     signDisplay: 'always',
-  }).format(value);
+  });
   return `${formatted} TOWNUSD`;
 }

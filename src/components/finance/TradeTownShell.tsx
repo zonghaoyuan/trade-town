@@ -16,12 +16,25 @@ import CreateMeModal, { CreatedMeView, CreateMePayload } from '../create-me/Crea
 import { loadCreatedMe } from '../../features/create-me/storage';
 import { augmentDashboardWithMe, getMeAgentName } from '../../finance/meSimulation';
 import { PANDA_REPLAY_SPEEDS, type PandaReplayController } from '../../finance/usePandaReplay';
+import LanguageSwitcher from '../LanguageSwitcher';
+import { useI18n } from '../../i18n';
+import type { MessageKey } from '../../i18n';
+import {
+  localizeMarketName,
+  localizeTraderRole,
+} from '../../i18n/domain';
 
 type ViewMode = 'overview' | 'immersive';
 type Drawer = 'markets' | 'agents' | 'activity';
 type ActivityTab = 'timeline' | 'social' | 'trades';
 type AgentTab = 'belief' | 'portfolio' | 'risk' | 'trades';
 type RecordSource = 'panda' | 'injective' | 'preview';
+
+const drawerIds: Record<Drawer, string> = {
+  markets: 'town-markets-drawer',
+  agents: 'town-agents-drawer',
+  activity: 'town-activity-drawer',
+};
 
 export type FocusedTownCitizen = {
   requestId: number;
@@ -35,6 +48,7 @@ export type FocusedTownCitizen = {
 
 type TownRenderState = {
   focusedCitizen: FocusedTownCitizen | null;
+  hudInspectorOpen: boolean;
 };
 
 export type ReplayDisplayState = {
@@ -68,6 +82,7 @@ export default function TradeTownShell({
   onCreateMe?: (payload: CreateMePayload) => Promise<unknown>;
   replay?: ReplayDisplayState;
 }) {
+  const { locale, t } = useI18n();
   const [selectedSymbol, setSelectedSymbol] = useState(
     dayViewDashboard.markets[0]?.symbol ?? 'ACME',
   );
@@ -103,6 +118,7 @@ export default function TradeTownShell({
     activeDashboard.traders.find((candidate) => candidate.name === selectedAgent) ??
     activeDashboard.traders[0];
   const immersive = viewMode === 'immersive';
+  const hasCompactReplay = replay?.mode === 'deterministic' && Boolean(replay.controller);
 
   useEffect(() => {
     const symbolExists = activeDashboard.markets.some(
@@ -161,6 +177,17 @@ export default function TradeTownShell({
     setViewMode((current) => (current === 'overview' ? 'immersive' : 'overview'));
   };
 
+  const toggleDrawer = (nextDrawer: Drawer) => {
+    setAgentDetailOpen(false);
+    setDrawer((current) => (current === nextDrawer ? null : nextDrawer));
+  };
+
+  const openHelp = () => {
+    setDrawer(null);
+    setAgentDetailOpen(false);
+    setHelpOpen(true);
+  };
+
   const focusCitizen = (name: string) => {
     focusRequestId.current += 1;
     setSelectedAgent(name);
@@ -182,14 +209,21 @@ export default function TradeTownShell({
     ? {
         requestId: focusRequest!.requestId,
         name: focusedTrader.name,
-        role: focusedTrader.role,
+        role: localizeTraderRole(
+          locale,
+          focusedTrader.name,
+          focusedTrader.role,
+        ),
         pnl: focusedFinancialTrader!.pnl,
         pnlSource: focusedFinancialTrader === focusedTrader ? 'simulated' : 'verified',
         avatarIndex: Math.max(0, townTraderAvatarIndex(focusedTrader.name)),
         avatarUrl: focusedTrader.avatarUrl,
       }
     : null;
-  const townContent = typeof town === 'function' ? town({ focusedCitizen }) : town;
+  const townContent =
+    typeof town === 'function'
+      ? town({ focusedCitizen, hudInspectorOpen: drawer !== null })
+      : town;
 
   return (
     <main
@@ -205,7 +239,9 @@ export default function TradeTownShell({
     >
       <div className="pixel-town-backdrop" aria-hidden="true" />
 
-      <header className="pixel-town-header">
+      <header
+        className={`pixel-town-header${hasCompactReplay ? ' has-compact-replay' : ''}`}
+      >
         <div className="pixel-brand">
           <img
             className="pixel-brand-seal"
@@ -220,13 +256,13 @@ export default function TradeTownShell({
               href="https://www.pandaaiquant.com/"
               target="_blank"
               rel="noreferrer"
-              aria-label="Market data by PandaAI — open the official PandaAI website"
+              aria-label={t('shell.pandaAria')}
             >
               <span className="pixel-panda-mark" aria-hidden="true">
                 <img src="/assets/brand/pandaai-mark.svg" alt="" />
               </span>
-              <span className="pixel-brand-credit-full">Market data by PandaAI</span>
-              <span className="pixel-brand-credit-compact">PandaAI data</span>
+              <span className="pixel-brand-credit-full">{t('shell.pandaFull')}</span>
+              <span className="pixel-brand-credit-compact">{t('shell.pandaCompact')}</span>
             </a>
           </div>
         </div>
@@ -241,7 +277,9 @@ export default function TradeTownShell({
               activeMe ? 'is-avatar-only' : ''
             }`}
             aria-haspopup="dialog"
-            aria-label={activeMe ? '编辑角色' : '创建角色'}
+            aria-label={
+              activeMe ? t('shell.editCharacter') : t('shell.createCharacter')
+            }
             onClick={() => setCreateMeOpen(true)}
           >
             {activeMe ? (
@@ -252,16 +290,19 @@ export default function TradeTownShell({
               />
             ) : (
               <>
-                <span>+</span> Create ME
+                <span className="pixel-create-me-symbol">+</span>
+                <span className="pixel-create-me-label-full">{t('shell.createMe')}</span>
+                <span className="pixel-create-me-label-compact">ME</span>
               </>
             )}
           </button>
           <button
             type="button"
-            className="pixel-button pixel-button-small"
-            onClick={() => setHelpOpen(true)}
+            className="pixel-button pixel-button-small pixel-help-trigger"
+            aria-haspopup="dialog"
+            onClick={openHelp}
           >
-            <span>?</span> Help
+            <span>?</span> {t('common.help')}
           </button>
           <button
             type="button"
@@ -270,10 +311,13 @@ export default function TradeTownShell({
             onClick={toggleView}
           >
             <span aria-hidden="true">{immersive ? '↙' : '↗'}</span>
-            {immersive ? 'Market view' : 'Full town'}
+            {immersive ? t('shell.marketView') : t('shell.fullTown')}
           </button>
+          <LanguageSwitcher />
           <InjectiveConnectionStatus />
         </div>
+
+        {hasCompactReplay && replay && <CompactReplayControls replay={replay} />}
       </header>
 
       <div className="pixel-town-layout">
@@ -289,7 +333,7 @@ export default function TradeTownShell({
           <div className="pixel-town-stage-wrap">
             <div className="pixel-town-stage">{townContent}</div>
             {townControls && (
-              <div className="pixel-stage-controls" aria-label="Town controls">
+              <div className="pixel-stage-controls" aria-label={t('shell.townControls')}>
                 {townControls}
               </div>
             )}
@@ -303,7 +347,10 @@ export default function TradeTownShell({
           />
         </section>
 
-        <aside className="pixel-side-panel pixel-agent-panel" aria-label="Town citizens">
+        <aside
+          className="pixel-side-panel pixel-agent-panel"
+          aria-label={t('shell.townCitizens')}
+        >
           <AgentBoard
             testnetDashboard={dashboard}
             dayViewDashboard={activeDashboard}
@@ -314,23 +361,45 @@ export default function TradeTownShell({
         </aside>
       </div>
 
-      <nav className="pixel-hud-dock" aria-label="Town information">
-        <button type="button" onClick={() => setDrawer(drawer === 'markets' ? null : 'markets')}>
-          <span aria-hidden="true">▥</span> Markets
+      <nav className="pixel-hud-dock" aria-label={t('shell.townInformation')}>
+        <button
+          type="button"
+          className={drawer === 'markets' ? 'is-active' : undefined}
+          aria-expanded={drawer === 'markets'}
+          aria-controls={drawerIds.markets}
+          onClick={() => toggleDrawer('markets')}
+        >
+          <span aria-hidden="true">▥</span> {t('common.markets')}
         </button>
-        <button type="button" onClick={() => setDrawer(drawer === 'agents' ? null : 'agents')}>
-          <span aria-hidden="true">♟</span> Citizens
+        <button
+          type="button"
+          className={drawer === 'agents' ? 'is-active' : undefined}
+          aria-expanded={drawer === 'agents'}
+          aria-controls={drawerIds.agents}
+          onClick={() => toggleDrawer('agents')}
+        >
+          <span aria-hidden="true">♟</span> {t('common.citizens')}
         </button>
         <button
           type="button"
           className={drawer === 'activity' ? 'is-active' : undefined}
           aria-expanded={drawer === 'activity'}
-          aria-controls="town-activity-drawer"
-          onClick={() => setDrawer(drawer === 'activity' ? null : 'activity')}
+          aria-controls={drawerIds.activity}
+          onClick={() => toggleDrawer('activity')}
         >
           <span aria-hidden="true">{immersive ? '“' : '!'}</span>
-          {immersive ? 'Agent Talk' : 'Activity'}
+          {immersive ? t('common.agentTalk') : t('common.activity')}
         </button>
+        {immersive && (
+          <button
+            type="button"
+            className="pixel-hud-help"
+            aria-haspopup="dialog"
+            onClick={openHelp}
+          >
+            <span aria-hidden="true">?</span> {t('common.help')}
+          </button>
+        )}
         {!immersive && (
           <>
             <button
@@ -341,16 +410,14 @@ export default function TradeTownShell({
               }}
             >
               <span aria-hidden="true">{activeMe ? '✎' : '+'}</span>
-              {activeMe ? 'Edit ME' : 'Create'}
+              {activeMe ? t('shell.editMe') : t('shell.create')}
             </button>
             <button
               type="button"
-              onClick={() => {
-                setDrawer(null);
-                setHelpOpen(true);
-              }}
+              aria-haspopup="dialog"
+              onClick={openHelp}
             >
-              <span aria-hidden="true">?</span> Help
+              <span aria-hidden="true">?</span> {t('common.help')}
             </button>
           </>
         )}
@@ -358,46 +425,56 @@ export default function TradeTownShell({
 
       {drawer && (
         <section
-          id={drawer === 'activity' ? 'town-activity-drawer' : undefined}
+          id={drawerIds[drawer]}
           className={`pixel-hud-drawer drawer-${drawer}`}
-          aria-label={drawer === 'activity' ? 'Agent Talk panel' : `${drawer} panel`}
+          aria-label={
+            drawer === 'activity'
+              ? t('shell.drawerActivity')
+              : drawer === 'markets'
+                ? t('shell.drawerMarkets')
+                : t('shell.drawerAgents')
+          }
         >
-          <button
-            type="button"
-            className="pixel-drawer-close"
-            aria-label="Close panel"
-            onClick={() => setDrawer(null)}
-          >
-            ×
-          </button>
-          {drawer === 'markets' && (
-            <MarketBoard
-              dashboard={activeDashboard}
-              selectedSymbol={market?.symbol ?? ''}
-              onSelect={setSelectedSymbol}
-            />
-          )}
-          {drawer === 'agents' && (
-            <AgentBoard
-              testnetDashboard={dashboard}
-              dayViewDashboard={activeDashboard}
-              selectedAgent={trader?.name ?? ''}
-              onSelect={focusCitizen}
-              onOpenDetails={() => {
-                setDrawer(null);
-                setAgentDetailOpen(true);
-              }}
-            />
-          )}
-          {drawer === 'activity' && (
-            <TownActivityPanel
-              activity={activityFeed}
-              contextEvents={activeDashboard.events}
-              contextExecutions={replay?.mode === 'llm' ? [] : activeDashboard.executions}
-              contextAsOf={activeDashboard.asOf}
-              drawer
-            />
-          )}
+          <div className="pixel-hud-drawer-toolbar">
+            <button
+              type="button"
+              className="pixel-drawer-close"
+              aria-label={t('shell.closePanel')}
+              onClick={() => setDrawer(null)}
+            >
+              ×
+            </button>
+          </div>
+          <div className="pixel-hud-drawer-body">
+            {drawer === 'markets' && (
+              <MarketBoard
+                dashboard={activeDashboard}
+                selectedSymbol={market?.symbol ?? ''}
+                onSelect={setSelectedSymbol}
+              />
+            )}
+            {drawer === 'agents' && (
+              <AgentBoard
+                testnetDashboard={dashboard}
+                dayViewDashboard={activeDashboard}
+                selectedAgent={trader?.name ?? ''}
+                onSelect={focusCitizen}
+                onOpenDetails={() => {
+                  setDrawer(null);
+                  setAgentDetailOpen(true);
+                }}
+              />
+            )}
+            {drawer === 'activity' && (
+              <TownActivityPanel
+                activity={activityFeed}
+                contextEvents={activeDashboard.events}
+                contextExecutions={replay?.mode === 'llm' ? [] : activeDashboard.executions}
+                contextAsOf={activeDashboard.asOf}
+                drawer
+              />
+            )}
+          </div>
         </section>
       )}
 
@@ -440,35 +517,29 @@ export default function TradeTownShell({
             <button
               type="button"
               className="pixel-drawer-close"
-              aria-label="Close help"
+              aria-label={t('help.close')}
               onClick={() => setHelpOpen(false)}
             >
               ×
             </button>
-            <span className="pixel-modal-kicker">Town guide</span>
-            <h2 id="town-help-title">Read the market as a town</h2>
-            <p>
-              PandaAI is the town&apos;s only market-data source. Agent reasoning, opinions, and
-              conversations are produced by INJ Trade Town rather than supplied by PandaAI.
-              Injective records orders, fills, positions, assets, and transaction proofs.
-            </p>
+            <span className="pixel-modal-kicker">{t('help.kicker')}</span>
+            <h2 id="town-help-title">{t('help.title')}</h2>
+            <p>{t('help.intro')}</p>
             <div className="pixel-help-grid">
               <div>
-                <strong>PandaAI market data</strong>
-                <span>
-                  Inspect sourced market bars, volume, and indicators without switching feeds.
-                </span>
+                <strong>{t('help.pandaTitle')}</strong>
+                <span>{t('help.pandaBody')}</span>
               </div>
               <div>
-                <strong>Agent &amp; Injective records</strong>
-                <span>
-                  Agent outputs are generated by the town. Orders, fills, positions, and assets use
-                  available financial records.
-                </span>
+                <strong>{t('help.recordsTitle')}</strong>
+                <span>{t('help.recordsBody')}</span>
               </div>
             </div>
-            <div className="pixel-platform-credits" aria-label="Data and infrastructure sources">
-              <span>Sources</span>
+            <div
+              className="pixel-platform-credits"
+              aria-label={t('help.sourcesAria')}
+            >
+              <span>{t('common.sources')}</span>
               <a href="https://www.pandaaiquant.com/data-service" target="_blank" rel="noreferrer">
                 PandaAI Data
               </a>
@@ -483,17 +554,13 @@ export default function TradeTownShell({
                 Testnet Explorer
               </a>
             </div>
-            <p>
-              Hackathon demo: your Agent is associated with this browser and joins a shared town
-              session; Panda replay Agent balances, positions, orders, fills, PnL, and returns are
-              simulated.
-            </p>
+            <p>{t('help.demo')}</p>
             <p className="pixel-asset-credits">
-              Town visuals:{' '}
+              {t('help.visualsPrefix')}{' '}
               <a href="https://kenney.nl/assets/rpg-urban-pack" target="_blank" rel="noreferrer">
                 Kenney RPG Urban Pack
               </a>{' '}
-              (CC0) · characters composed from the{' '}
+              {t('help.visualsMiddle')}{' '}
               <a
                 href="https://github.com/LiberatedPixelCup/Universal-LPC-Spritesheet-Character-Generator"
                 target="_blank"
@@ -507,10 +574,10 @@ export default function TradeTownShell({
                 target="_blank"
                 rel="noreferrer"
               >
-                Detailed art credits
+                {t('help.visualsCredits')}
               </a>
             </p>
-            <p className="pixel-help-shortcuts">ESC closes panels · M toggles music</p>
+            <p className="pixel-help-shortcuts">{t('help.shortcuts')}</p>
           </section>
         </div>
       )}
@@ -536,26 +603,33 @@ export default function TradeTownShell({
 }
 
 function ReplayStatus({ replay }: { replay: ReplayDisplayState }) {
-  const controller = replay.mode === 'deterministic' ? replay.controller : undefined;
-  const atStart = replay.dayIndex <= 0;
-  const atEnd = replay.dayIndex >= replay.dayCount - 1;
-  const statusLabel = {
-    replaying: 'REPLAYING',
-    waiting: 'WAITING',
-    completed: 'COMPLETED',
-    failed: 'FAILED',
-    paused: 'PAUSED',
-  }[replay.status];
+  const { t } = useI18n();
+  const statusKey = {
+    replaying: 'replay.status.replaying',
+    waiting: 'replay.status.waiting',
+    completed: 'replay.status.completed',
+    failed: 'replay.status.failed',
+    paused: 'replay.status.paused',
+  } satisfies Record<ReplayDisplayState['status'], MessageKey>;
+  const statusLabel = t(statusKey[replay.status]);
 
   return (
     <section
       className={`pixel-replay-status is-${replay.status}`}
-      aria-label={`Replay day ${replay.dayIndex + 1} of ${replay.dayCount}, ${replay.currentDate}, ${statusLabel.toLowerCase()}`}
+      aria-label={t('replay.aria', {
+        current: replay.dayIndex + 1,
+        total: replay.dayCount,
+        date: replay.currentDate,
+        status: statusLabel,
+      })}
       aria-live="polite"
     >
       <div className="pixel-replay-status-copy">
         <span>
-          DAY {replay.dayIndex + 1}/{replay.dayCount}
+          {t('replay.dayDisplay', {
+            current: replay.dayIndex + 1,
+            total: replay.dayCount,
+          })}
         </span>
         <time dateTime={replay.currentDate} data-short-date={replay.currentDate.slice(5)}>
           {replay.currentDate}
@@ -565,69 +639,174 @@ function ReplayStatus({ replay }: { replay: ReplayDisplayState }) {
           {statusLabel}
         </small>
       </div>
-      {controller && (
-        <div className="pixel-replay-status-controls" aria-label="Panda replay controls">
-          <button
-            type="button"
-            aria-label="Previous Panda day"
-            title="Previous day"
-            onClick={() => controller.step(-1)}
-            disabled={atStart}
-          >
-            ◀
-          </button>
-          <button
-            type="button"
-            className="is-primary"
-            aria-label={controller.isPlaying ? 'Pause replay' : 'Play replay'}
-            onClick={controller.togglePlaying}
-          >
-            {controller.isPlaying ? 'Ⅱ' : '▶'}
-          </button>
-          <button
-            type="button"
-            aria-label="Next Panda day"
-            title="Next day"
-            onClick={() => controller.step(1)}
-            disabled={atEnd}
-          >
-            ▶
-          </button>
-          <select
-            aria-label="Replay speed"
-            value={controller.speedMs}
-            onChange={(event) => controller.setSpeed(Number(event.target.value))}
-          >
-            {PANDA_REPLAY_SPEEDS.map((speed) => (
-              <option value={speed} key={speed}>
-                {speed === 400 ? '2.5×' : speed === 1_000 ? '1×' : '0.5×'}
-              </option>
-            ))}
-          </select>
-          <label className="pixel-replay-loop" title="Automatically restart after the last day">
-            <input
-              type="checkbox"
-              checked={controller.isLooping}
-              onChange={controller.toggleLooping}
-            />
-            <span aria-hidden="true">
-              <i />
-            </span>
-            <em>LOOP</em>
-          </label>
-        </div>
-      )}
+      <ReplayControls replay={replay} />
     </section>
   );
 }
 
+function CompactReplayControls({ replay }: { replay: ReplayDisplayState }) {
+  const { t } = useI18n();
+  return (
+    <div
+      className="pixel-compact-replay"
+      aria-label={t('replay.compactAria', {
+        current: replay.dayIndex + 1,
+        total: replay.dayCount,
+      })}
+    >
+      <span className="pixel-compact-replay-day">
+        {t('replay.dayDisplay', {
+          current: replay.dayIndex + 1,
+          total: replay.dayCount,
+        })}
+      </span>
+      <ReplayControls replay={replay} compact />
+    </div>
+  );
+}
+
+function ReplayControls({
+  replay,
+  compact = false,
+}: {
+  replay: ReplayDisplayState;
+  compact?: boolean;
+}) {
+  const { t } = useI18n();
+  const controller = replay.mode === 'deterministic' ? replay.controller : undefined;
+  if (!controller) return null;
+
+  const atStart = replay.dayIndex <= 0;
+  const atEnd = replay.dayIndex >= replay.dayCount - 1;
+
+  if (compact) {
+    return (
+      <div
+        className="pixel-compact-replay-controls"
+        aria-label={t('replay.compactControls')}
+      >
+        <button
+          type="button"
+          className="pixel-replay-primary"
+          aria-label={
+            controller.isPlaying ? t('replay.pause') : t('replay.play')
+          }
+          onClick={controller.togglePlaying}
+        >
+          {controller.isPlaying ? 'Ⅱ' : '▶'}
+        </button>
+        <select
+          className="pixel-replay-speed"
+          aria-label={t('replay.speed')}
+          value={controller.speedMs}
+          onChange={(event) => controller.setSpeed(Number(event.target.value))}
+        >
+          {PANDA_REPLAY_SPEEDS.map((speed) => (
+            <option value={speed} key={speed}>
+              {speed === 400 ? '2.5×' : speed === 1_000 ? '1×' : '0.5×'}
+            </option>
+          ))}
+        </select>
+        <details className="pixel-replay-more">
+          <summary aria-label={t('replay.more')}>•••</summary>
+          <div className="pixel-replay-more-menu" aria-label={t('replay.additional')}>
+            <button
+              type="button"
+              aria-label={t('replay.previous')}
+              title={t('replay.previousTitle')}
+              onClick={() => controller.step(-1)}
+              disabled={atStart}
+            >
+              {t('replay.previousButton')}
+            </button>
+            <button
+              type="button"
+              aria-label={t('replay.next')}
+              title={t('replay.nextTitle')}
+              onClick={() => controller.step(1)}
+              disabled={atEnd}
+            >
+              {t('replay.nextButton')}
+            </button>
+            <label className="pixel-replay-loop" title={t('replay.loopTitle')}>
+              <input
+                type="checkbox"
+                checked={controller.isLooping}
+                onChange={controller.toggleLooping}
+              />
+              <span aria-hidden="true">
+                <i />
+              </span>
+              <em>{t('replay.loop')}</em>
+            </label>
+          </div>
+        </details>
+      </div>
+    );
+  }
+
+  return (
+    <div className="pixel-replay-status-controls" aria-label={t('replay.controls')}>
+      <button
+        type="button"
+        aria-label={t('replay.previous')}
+        title={t('replay.previousTitle')}
+        onClick={() => controller.step(-1)}
+        disabled={atStart}
+      >
+        ◀
+      </button>
+      <button
+        type="button"
+        className="is-primary"
+        aria-label={controller.isPlaying ? t('replay.pause') : t('replay.play')}
+        onClick={controller.togglePlaying}
+      >
+        {controller.isPlaying ? 'Ⅱ' : '▶'}
+      </button>
+      <button
+        type="button"
+        aria-label={t('replay.next')}
+        title={t('replay.nextTitle')}
+        onClick={() => controller.step(1)}
+        disabled={atEnd}
+      >
+        ▶
+      </button>
+      <select
+        aria-label={t('replay.speed')}
+        value={controller.speedMs}
+        onChange={(event) => controller.setSpeed(Number(event.target.value))}
+      >
+        {PANDA_REPLAY_SPEEDS.map((speed) => (
+          <option value={speed} key={speed}>
+            {speed === 400 ? '2.5×' : speed === 1_000 ? '1×' : '0.5×'}
+          </option>
+        ))}
+      </select>
+      <label className="pixel-replay-loop" title={t('replay.loopTitle')}>
+        <input
+          type="checkbox"
+          checked={controller.isLooping}
+          onChange={controller.toggleLooping}
+        />
+        <span aria-hidden="true">
+          <i />
+        </span>
+        <em>{t('replay.loop')}</em>
+      </label>
+    </div>
+  );
+}
+
 function InjectiveConnectionStatus() {
+  const { t } = useI18n();
   return (
     <div
       className="pixel-injective-status"
       role="status"
-      aria-label="Injective Testnet connected"
-      title="Injective Testnet · Connected"
+      aria-label={t('shell.injectiveConnected')}
+      title={`Injective Testnet · ${t('common.connected')}`}
     >
       <span className="pixel-injective-status-mark" aria-hidden="true">
         <img src="/assets/brand/inj-logo.png" alt="" />
@@ -636,7 +815,7 @@ function InjectiveConnectionStatus() {
         <span>Injective Testnet</span>
         <strong>
           <i aria-hidden="true" />
-          Connected
+          {t('common.connected')}
         </strong>
       </span>
     </div>
@@ -652,6 +831,7 @@ function MarketBoard({
   selectedSymbol: string;
   onSelect: (symbol: string) => void;
 }) {
+  const { locale, t, formatNumber } = useI18n();
   const market =
     dashboard.markets.find((candidate) => candidate.symbol === selectedSymbol) ??
     dashboard.markets[0];
@@ -664,26 +844,35 @@ function MarketBoard({
   return (
     <div className="pixel-board pixel-market-board">
       <div className="pixel-board-title">
-        <h2>Markets</h2>
+        <h2>{t('common.markets')}</h2>
       </div>
       <div className="pixel-market-hero">
         <h3>{market.symbol}</h3>
         <div>
-          <strong>{formatPrice(market.lastPrice)}</strong>
+          <strong>{formatPrice(market.lastPrice, formatNumber)}</strong>
           <small className={market.changePct >= 0 ? 'pixel-up' : 'pixel-down'}>
             {market.changePct >= 0 ? '+' : ''}
-            {market.changePct.toFixed(2)}%
+            {formatNumber(Math.abs(market.changePct), {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}
+            %
           </small>
         </div>
-        <small className="pixel-price-unit">{quoteCurrency} · DAY CLOSE</small>
+        <small className="pixel-price-unit">
+          {quoteCurrency} · {t('market.dayClose')}
+        </small>
       </div>
       <PixelCandles
         values={market.candles}
         symbol={market.symbol}
-        periodLabel="DAY"
-        sourceLabel="PANDAAI DATA"
+        periodLabel={t('market.periodDay')}
+        sourceLabel={t('market.pandaData')}
       />
-      <div className="pixel-indicator-row" aria-label={`${market.symbol} indicators`}>
+      <div
+        className="pixel-indicator-row"
+        aria-label={t('market.indicatorsAria', { symbol: market.symbol })}
+      >
         {market.indicators.map((indicator) => (
           <span key={indicator.label} className={`tone-${indicator.tone}`}>
             <small>{indicator.label}</small>
@@ -693,25 +882,29 @@ function MarketBoard({
       </div>
       <dl className="pixel-quote-grid pixel-quote-grid-four">
         <div>
-          <dt>Day volume</dt>
-          <dd>{formatCompact(market.volume)}</dd>
+          <dt>{t('market.dayVolume')}</dt>
+          <dd>{formatCompact(market.volume, formatNumber)}</dd>
         </div>
         <div>
-          <dt>Reference</dt>
-          <dd>{formatPrice(market.referencePrice)}</dd>
+          <dt>{t('market.reference')}</dt>
+          <dd>{formatPrice(market.referencePrice, formatNumber)}</dd>
         </div>
         <div>
-          <dt>Day high</dt>
-          <dd>{formatPrice(latestCandle?.high ?? market.lastPrice)}</dd>
+          <dt>{t('market.dayHigh')}</dt>
+          <dd>
+            {formatPrice(latestCandle?.high ?? market.lastPrice, formatNumber)}
+          </dd>
         </div>
         <div>
-          <dt>Day low</dt>
-          <dd>{formatPrice(latestCandle?.low ?? market.lastPrice)}</dd>
+          <dt>{t('market.dayLow')}</dt>
+          <dd>
+            {formatPrice(latestCandle?.low ?? market.lastPrice, formatNumber)}
+          </dd>
         </div>
       </dl>
       {hasSentiment ? (
         <div className="pixel-sentiment">
-          <small className="pixel-sentiment-label">SIMULATED AGENT CONSENSUS</small>
+          <small className="pixel-sentiment-label">{t('market.consensus')}</small>
           <div>
             <span className="pixel-up">▲ {market.sentiment!.bulls} BUY</span>
             <strong>
@@ -730,9 +923,14 @@ function MarketBoard({
           </i>
         </div>
       ) : (
-        <div className="pixel-sentiment pixel-sentiment-empty">Agent consensus unavailable</div>
+        <div className="pixel-sentiment pixel-sentiment-empty">
+          {t('market.consensusUnavailable')}
+        </div>
       )}
-      <div className="pixel-market-list pixel-market-list-single" aria-label="PandaAI markets">
+      <div
+        className="pixel-market-list pixel-market-list-single"
+        aria-label={t('market.listAria')}
+      >
         {dashboard.markets.map((item) => (
           <button
             type="button"
@@ -742,14 +940,21 @@ function MarketBoard({
           >
             <PixelMarketIcon symbol={item.symbol} accent={item.accent} />
             <span className="pixel-market-copy">
-              <strong>{item.displayName}</strong>
+              <strong>
+                {localizeMarketName(locale, item.symbol, item.displayName)}
+              </strong>
               <small>
-                {formatPrice(item.lastPrice)} {item.quoteCurrency ?? 'CNY'} · {item.symbol}
+                {formatPrice(item.lastPrice, formatNumber)}{' '}
+                {item.quoteCurrency ?? 'CNY'} · {item.symbol}
               </small>
             </span>
             <span className={item.changePct >= 0 ? 'pixel-up' : 'pixel-down'}>
               {item.changePct >= 0 ? '+' : ''}
-              {item.changePct.toFixed(2)}%
+              {formatNumber(Math.abs(item.changePct), {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
+              %
             </span>
           </button>
         ))}
@@ -771,6 +976,7 @@ function AgentBoard({
   onSelect: (name: string) => void;
   onOpenDetails: () => void;
 }) {
+  const { locale, t, formatNumber } = useI18n();
   const pandaTrader =
     dayViewDashboard.traders.find((candidate) => candidate.name === selectedAgent) ??
     dayViewDashboard.traders[0];
@@ -790,7 +996,7 @@ function AgentBoard({
   return (
     <div className="pixel-board pixel-unified-agent-board">
       <div className="pixel-board-title">
-        <h2>Citizens</h2>
+        <h2>{t('common.citizens')}</h2>
       </div>
       <div className="pixel-agent-list">
         {rankedTraders.map((agent, index) => (
@@ -805,17 +1011,25 @@ function AgentBoard({
             <PixelAvatar index={townTraderAvatarIndex(agent.name)} textureUrl={agent.avatarUrl} />
             <span className="pixel-agent-identity">
               <strong>{agent.name}</strong>
-              <small title={agent.role}>{agent.role}</small>
+              <small title={localizeTraderRole(locale, agent.name, agent.role)}>
+                {localizeTraderRole(locale, agent.name, agent.role)}
+              </small>
             </span>
             <span className="pixel-agent-scan-state">
               <em className={`pixel-action action-${agent.action.toLowerCase()}`}>
                 {agent.action}
               </em>
               <strong className={agent.pnl >= 0 ? 'pixel-up' : 'pixel-down'}>
-                {formatCompact(agent.navEnd)} {agent.currency ?? 'CNY'} · SIM
+                {t('agents.simulatedValue', {
+                  value: formatCompact(agent.navEnd, formatNumber),
+                  currency: agent.currency ?? 'CNY',
+                })}
               </strong>
               <small className={agent.pnl >= 0 ? 'pixel-up' : 'pixel-down'}>
-                {formatSignedPercent(agent.navStart > 0 ? (agent.pnl / agent.navStart) * 100 : 0)}
+                {formatSignedPercent(
+                  agent.navStart > 0 ? (agent.pnl / agent.navStart) * 100 : 0,
+                  formatNumber,
+                )}
               </small>
             </span>
           </button>
@@ -829,7 +1043,10 @@ function AgentBoard({
               #{selectedRank} {pandaTrader.name}
             </h3>
             <span>
-              {formatCompact(pandaTrader.navEnd)} {pandaTrader.currency ?? 'CNY'} · SIM NAV
+              {t('agents.simulatedNav', {
+                value: formatCompact(pandaTrader.navEnd, formatNumber),
+                currency: pandaTrader.currency ?? 'CNY',
+              })}
             </span>
           </div>
           <em className={`pixel-action action-${pandaTrader.action.toLowerCase()}`}>
@@ -837,31 +1054,31 @@ function AgentBoard({
           </em>
         </div>
         <div className="pixel-selected-agent-state">
-          <strong>Agent reasoning</strong>
+          <strong>{t('agents.reasoning')}</strong>
           <p>{pandaTrader.beliefAfter}</p>
         </div>
         <div className="pixel-agent-summary-metrics">
           <div>
-            <span>Confidence</span>
+            <span>{t('common.confidence')}</span>
             <strong>{Math.round(pandaTrader.confidence * 100)}%</strong>
           </div>
           <div>
             <span>P&amp;L</span>
             <strong className={financialTrader.pnl >= 0 ? 'pixel-up' : 'pixel-down'}>
-              {formatSignedCompact(financialTrader.pnl)}
+              {formatSignedCompact(financialTrader.pnl, formatNumber)}
             </strong>
           </div>
           <div>
-            <span>Position</span>
+            <span>{t('common.position')}</span>
             <strong>
               {financialTrader.positions.length > 0
-                ? `${financialTrader.positions.length} OPEN`
-                : 'FLAT'}
+                ? `${financialTrader.positions.length} ${t('common.open')}`
+                : t('common.flat')}
             </strong>
           </div>
         </div>
         <button type="button" className="pixel-detail-button" onClick={onOpenDetails}>
-          View details
+          {t('agents.viewDetails')}
         </button>
       </article>
     </div>
@@ -892,23 +1109,24 @@ function ActivityBoard({
   dayViewDashboard: TradeTownDashboard;
   drawer?: boolean;
 }) {
+  const { t, formatDateTime, formatNumber } = useI18n();
   const [tab, setTab] = useState<ActivityTab>('timeline');
   const chainEvents = testnetDashboard.events.filter(
     (event) => event.kind === 'chain' || Boolean(event.proof),
   );
   const testnetStatusEvent: CausalEvent = {
     id: 'injective-status',
-    time: formatClock(testnetDashboard.asOf),
+    time: formatClock(testnetDashboard.asOf, formatDateTime),
     kind: testnetDashboard.source === 'injective' ? 'chain' : 'error',
-    actor: 'Injective Worker',
+    actor: t('intelligence.worker'),
     title:
       testnetDashboard.source === 'injective'
-        ? 'Connected · no confirmed fill yet'
-        : 'Testnet evidence pending',
+        ? t('intelligence.connectedTitle')
+        : t('intelligence.pendingTitle'),
     detail:
       testnetDashboard.source === 'injective'
-        ? 'The Convex worker is connected. Explorer proof appears here after a confirmed order or fill.'
-        : 'Preview values stay isolated from Panda simulation and never update verified balances.',
+        ? t('intelligence.connectedDetail')
+        : t('intelligence.pendingDetail'),
   };
   const timeline: Array<{ record: CausalEvent; source: RecordSource }> = [
     ...dayViewDashboard.events.map((record) => ({ record, source: 'panda' as const })),
@@ -939,10 +1157,14 @@ function ActivityBoard({
     <section className={`pixel-event-board is-unified ${drawer ? 'is-drawer' : ''}`}>
       <div className="pixel-board-title pixel-event-title">
         <div>
-          <span>Cross-source evidence chain · simulation never counts as chain truth</span>
-          <h2>Town intelligence</h2>
+          <span>{t('intelligence.kicker')}</span>
+          <h2>{t('intelligence.title')}</h2>
         </div>
-        <div className="pixel-event-tabs" role="tablist" aria-label="Town intelligence sections">
+        <div
+          className="pixel-event-tabs"
+          role="tablist"
+          aria-label={t('intelligence.sections')}
+        >
           {(['timeline', 'social', 'trades'] as ActivityTab[]).map((item) => (
             <button
               type="button"
@@ -952,11 +1174,17 @@ function ActivityBoard({
               onClick={() => setTab(item)}
               key={item}
             >
-              {item}
+              {t(
+                {
+                  timeline: 'intelligence.timeline',
+                  social: 'intelligence.social',
+                  trades: 'intelligence.trades',
+                }[item] as MessageKey,
+              )}
             </button>
           ))}
         </div>
-        <strong>{count} records</strong>
+        <strong>{t('common.records', { count })}</strong>
       </div>
 
       {tab === 'timeline' && (
@@ -980,7 +1208,9 @@ function ActivityBoard({
                     target="_blank"
                     rel="noreferrer"
                   >
-                    Explorer ↗ · {formatReference(event.proof)}
+                    {t('intelligence.explorer', {
+                      reference: formatReference(event.proof),
+                    })}
                   </a>
                 ) : (
                   <code>{formatReference(event.proof)}</code>
@@ -1015,8 +1245,8 @@ function ActivityBoard({
         <div className="pixel-event-track">
           {executions.length === 0 && (
             <div className="pixel-empty-state">
-              <strong>No executions</strong>
-              <span>Panda simulation and Injective verification remain separate here.</span>
+              <strong>{t('intelligence.noExecutions')}</strong>
+              <span>{t('intelligence.noExecutionsBody')}</span>
             </div>
           )}
           {executions.map(({ record: execution, source }, index) => (
@@ -1035,7 +1265,7 @@ function ActivityBoard({
               </small>
               <p>
                 {execution.reason ??
-                  `${formatPrice(execution.price)} ${
+                  `${formatPrice(execution.price, formatNumber)} ${
                     execution.priceUnit ??
                     (source === 'panda' ? dayViewDashboard : testnetDashboard).markets.find(
                       (market) => market.symbol === execution.symbol,
@@ -1051,7 +1281,9 @@ function ActivityBoard({
                     target="_blank"
                     rel="noreferrer"
                   >
-                    Explorer ↗ · {formatReference(execution.reference)}
+                    {t('intelligence.explorer', {
+                      reference: formatReference(execution.reference),
+                    })}
                   </a>
                 ) : (
                   <code>{formatReference(execution.reference)}</code>
@@ -1065,13 +1297,14 @@ function ActivityBoard({
 }
 
 function EventSourceTag({ source }: { source: RecordSource }) {
+  const { t } = useI18n();
   return (
     <span className={`pixel-event-source source-${source}`}>
       {source === 'panda'
-        ? '◇ Panda · sim'
+        ? t('intelligence.sourcePanda')
         : source === 'injective'
-          ? '◆ Injective · verified'
-          : '◈ Injective · preview'}
+          ? t('intelligence.sourceInjective')
+          : t('intelligence.sourcePreview')}
     </span>
   );
 }
@@ -1089,6 +1322,7 @@ function AgentDetailDrawer({
   executions: DashboardExecution[];
   onClose: () => void;
 }) {
+  const { locale, t, formatNumber } = useI18n();
   const [tab, setTab] = useState<AgentTab>('belief');
 
   return (
@@ -1097,18 +1331,29 @@ function AgentDetailDrawer({
         className="pixel-agent-drawer"
         role="dialog"
         aria-modal="true"
-        aria-label={`${reasoningTrader.name} details`}
+        aria-label={t('agents.detailsAria', { name: reasoningTrader.name })}
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <button type="button" className="pixel-drawer-close" aria-label="Close" onClick={onClose}>
+        <button
+          type="button"
+          className="pixel-drawer-close"
+          aria-label={t('common.close')}
+          onClick={onClose}
+        >
           ×
         </button>
         <header>
           <PixelAvatar index={avatarIndex} textureUrl={reasoningTrader.avatarUrl} />
           <div>
-            <span>Agent intelligence</span>
+            <span>{t('agents.intelligence')}</span>
             <h2>{reasoningTrader.name}</h2>
-            <p>{reasoningTrader.role}</p>
+            <p>
+              {localizeTraderRole(
+                locale,
+                reasoningTrader.name,
+                reasoningTrader.role,
+              )}
+            </p>
           </div>
           <em className={`pixel-action action-${reasoningTrader.action.toLowerCase()}`}>
             {reasoningTrader.action}
@@ -1117,7 +1362,11 @@ function AgentDetailDrawer({
         {financialTrader.injectiveAccount && (
           <InjectiveAccountCard account={financialTrader.injectiveAccount} />
         )}
-        <nav className="pixel-agent-tabs" role="tablist" aria-label="Agent details">
+        <nav
+          className="pixel-agent-tabs"
+          role="tablist"
+          aria-label={t('agents.detailsTabs')}
+        >
           {(['belief', 'portfolio', 'risk', 'trades'] as AgentTab[]).map((item) => (
             <button
               key={item}
@@ -1127,7 +1376,7 @@ function AgentDetailDrawer({
               className={tab === item ? 'is-active' : ''}
               onClick={() => setTab(item)}
             >
-              {item}
+              {t(`agents.tab.${item}` as MessageKey)}
             </button>
           ))}
         </nav>
@@ -1137,21 +1386,21 @@ function AgentDetailDrawer({
             <>
               <div className="pixel-belief-compare">
                 <article>
-                  <span>Before</span>
+                  <span>{t('common.before')}</span>
                   <p>{reasoningTrader.beliefBefore}</p>
                 </article>
                 <b aria-hidden="true">→</b>
                 <article>
-                  <span>After</span>
+                  <span>{t('common.after')}</span>
                   <p>{reasoningTrader.beliefAfter}</p>
                 </article>
               </div>
               <section className="pixel-detail-section">
-                <span>Decision thesis</span>
+                <span>{t('agents.decisionThesis')}</span>
                 <p>{reasoningTrader.thesis}</p>
               </section>
               <section className="pixel-detail-section">
-                <span>Evidence</span>
+                <span>{t('common.evidence')}</span>
                 <div className="pixel-evidence-list">
                   {reasoningTrader.evidence.map((item) => (
                     <code key={item}>{item}</code>
@@ -1159,13 +1408,13 @@ function AgentDetailDrawer({
                 </div>
               </section>
               <div className="pixel-detail-metrics">
-                <Metric label="Action" value={reasoningTrader.action} />
+                <Metric label={t('common.action')} value={reasoningTrader.action} />
                 <Metric
-                  label="Confidence"
+                  label={t('common.confidence')}
                   value={`${Math.round(reasoningTrader.confidence * 100)}%`}
                 />
                 <Metric
-                  label="Risk tolerance"
+                  label={t('agents.riskTolerance')}
                   value={`${Math.round(reasoningTrader.riskTolerance * 100)}`}
                 />
               </div>
@@ -1176,40 +1425,52 @@ function AgentDetailDrawer({
             <>
               <div className="pixel-detail-metrics">
                 <Metric
-                  label="Start NAV"
-                  value={formatMoney(financialTrader.navStart, financialTrader.currency)}
+                  label={t('agents.startNav')}
+                  value={formatMoney(
+                    financialTrader.navStart,
+                    financialTrader.currency,
+                    formatNumber,
+                  )}
                 />
                 <Metric
-                  label="End NAV"
-                  value={formatMoney(financialTrader.navEnd, financialTrader.currency)}
+                  label={t('agents.endNav')}
+                  value={formatMoney(
+                    financialTrader.navEnd,
+                    financialTrader.currency,
+                    formatNumber,
+                  )}
                 />
                 <Metric
                   label="PnL"
-                  value={formatSignedCompact(financialTrader.pnl)}
+                  value={formatSignedCompact(financialTrader.pnl, formatNumber)}
                   tone={financialTrader.pnl >= 0 ? 'positive' : 'negative'}
                 />
                 <Metric
-                  label="Cash"
-                  value={formatMoney(financialTrader.cash, financialTrader.currency)}
+                  label={t('common.cash')}
+                  value={formatMoney(
+                    financialTrader.cash,
+                    financialTrader.currency,
+                    formatNumber,
+                  )}
                 />
               </div>
               <section className="pixel-position-list">
                 <div className="pixel-position-head">
-                  <span>Symbol</span>
-                  <span>Quantity</span>
-                  <span>Weight</span>
+                  <span>{t('common.symbol')}</span>
+                  <span>{t('common.quantity')}</span>
+                  <span>{t('common.weight')}</span>
                   <span>PnL</span>
                 </div>
                 {financialTrader.positions.length === 0 && (
-                  <p className="pixel-no-positions">No open positions.</p>
+                  <p className="pixel-no-positions">{t('agents.noPositions')}</p>
                 )}
                 {financialTrader.positions.map((position) => (
                   <div key={position.symbol}>
                     <strong>{position.symbol}</strong>
-                    <span>{position.quantity}</span>
+                    <span>{formatNumber(position.quantity)}</span>
                     <span>{position.weightPct}%</span>
                     <span className={position.pnl >= 0 ? 'pixel-up' : 'pixel-down'}>
-                      {formatSignedCompact(position.pnl)}
+                      {formatSignedCompact(position.pnl, formatNumber)}
                     </span>
                   </div>
                 ))}
@@ -1221,27 +1482,35 @@ function AgentDetailDrawer({
             <>
               <div className="pixel-detail-metrics">
                 <Metric
-                  label="Risk tolerance"
+                  label={t('agents.riskTolerance')}
                   value={`${Math.round(reasoningTrader.riskTolerance * 100)}`}
                 />
-                <Metric label="Risk rejections" value={String(financialTrader.riskRejections)} />
-                <Metric label="Orders" value={String(financialTrader.orderCount)} />
-                <Metric label="Fills" value={String(financialTrader.tradeCount)} />
+                <Metric
+                  label={t('agents.riskRejections')}
+                  value={formatNumber(financialTrader.riskRejections)}
+                />
+                <Metric
+                  label={t('common.orders')}
+                  value={formatNumber(financialTrader.orderCount)}
+                />
+                <Metric
+                  label={t('common.fills')}
+                  value={formatNumber(financialTrader.tradeCount)}
+                />
               </div>
               <section className="pixel-detail-section">
-                <span>Current risk reading</span>
+                <span>{t('agents.currentRisk')}</span>
                 <p>
                   {financialTrader.riskRejections > 0
-                    ? `${financialTrader.riskRejections} proposed order(s) were blocked or resized by deterministic portfolio rules.`
-                    : 'All proposed orders remained inside cash, size, and concentration limits.'}
+                    ? t('agents.riskBlocked', {
+                        count: financialTrader.riskRejections,
+                      })
+                    : t('agents.riskClear')}
                 </p>
               </section>
               <section className="pixel-detail-section">
-                <span>Rule boundary</span>
-                <p>
-                  The model chooses an exposure change. Code calculates quantity, limit price, and
-                  validates available cash and position concentration.
-                </p>
+                <span>{t('agents.ruleBoundary')}</span>
+                <p>{t('agents.ruleBoundaryBody')}</p>
               </section>
             </>
           )}
@@ -1250,8 +1519,8 @@ function AgentDetailDrawer({
             <section className="pixel-agent-executions">
               {executions.length === 0 && (
                 <div className="pixel-empty-state">
-                  <strong>No executions for this agent</strong>
-                  <span>The current decision is HOLD or has not passed the risk gateway.</span>
+                  <strong>{t('agents.noExecutions')}</strong>
+                  <span>{t('agents.noExecutionsBody')}</span>
                 </div>
               )}
               {executions.map((execution) => (
@@ -1265,7 +1534,7 @@ function AgentDetailDrawer({
                   </strong>
                   <p>
                     {execution.reason ??
-                      `${formatPrice(execution.price)} ${
+                      `${formatPrice(execution.price, formatNumber)} ${
                         execution.priceUnit ?? financialTrader.currency ?? 'CNY'
                       } · ${execution.state}`}
                   </p>
@@ -1285,26 +1554,33 @@ function InjectiveAccountCard({
 }: {
   account: NonNullable<DashboardTrader['injectiveAccount']>;
 }) {
+  const { t, formatNumber } = useI18n();
   const proof = account.lastAction?.txHash;
   const secondaryProof = account.lastAction?.orderHash ?? account.lastAction?.tradeId;
   return (
-    <section className="pixel-injective-account" aria-label="Verified Injective account">
+    <section
+      className="pixel-injective-account"
+      aria-label={t('agents.injectiveAccount')}
+    >
       <header>
-        <span>◆ Injective account · verified</span>
+        <span>{t('agents.injectiveVerified')}</span>
         <code>{formatReference(account.subaccountId)}</code>
       </header>
       <div>
         <p>
-          <span>Balance</span>
+          <span>{t('common.balance')}</span>
           <strong>
-            {formatPrice(account.quoteAvailable)} INJ · {formatCompact(account.baseAvailable)} ACME
+            {formatPrice(account.quoteAvailable, formatNumber)} INJ ·{' '}
+            {formatCompact(account.baseAvailable, formatNumber)} ACME
           </strong>
         </p>
         <p>
-          <span>Activity</span>
+          <span>{t('common.activityLabel')}</span>
           <strong>
-            {account.openOrderCount} open · {account.fillCount} fill
-            {account.fillCount === 1 ? '' : 's'}
+            {t('agents.accountActivity', {
+              orders: formatNumber(account.openOrderCount),
+              fills: formatNumber(account.fillCount),
+            })}
           </strong>
         </p>
       </div>
@@ -1312,7 +1588,7 @@ function InjectiveAccountCard({
         <footer>
           <span>
             {account.lastAction.state} · {account.lastAction.side} {account.lastAction.quantity}{' '}
-            ACME @ {formatPrice(account.lastAction.price)} INJ
+            ACME @ {formatPrice(account.lastAction.price, formatNumber)} INJ
           </span>
           {proof ? (
             <a
@@ -1320,7 +1596,7 @@ function InjectiveAccountCard({
               target="_blank"
               rel="noreferrer"
             >
-              Explorer ↗ · {formatReference(proof)}
+              {t('intelligence.explorer', { reference: formatReference(proof) })}
             </a>
           ) : secondaryProof ? (
             <code>{formatReference(secondaryProof)}</code>
@@ -1348,33 +1624,40 @@ function Metric({
   );
 }
 
-function formatPrice(price: number) {
-  return price >= 1000
-    ? price.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
-    : price >= 1
-      ? price.toFixed(2)
-      : price >= 0.01
-        ? price.toFixed(4)
-        : price.toFixed(6);
+type NumberFormatter = (value: number, options?: Intl.NumberFormatOptions) => string;
+type DateTimeFormatter = (
+  value: Date | number | string,
+  options?: Intl.DateTimeFormatOptions,
+) => string;
+
+function formatPrice(price: number, formatNumber: NumberFormatter) {
+  const digits = price >= 1000 ? 1 : price >= 1 ? 2 : price >= 0.01 ? 4 : 6;
+  return formatNumber(price, {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  });
 }
 
-function formatCompact(value: number) {
-  return new Intl.NumberFormat('en-US', {
+function formatCompact(value: number, formatNumber: NumberFormatter) {
+  return formatNumber(value, {
     notation: 'compact',
     maximumFractionDigits: 1,
-  }).format(value);
+  });
 }
 
-function formatSignedCompact(value: number) {
-  return new Intl.NumberFormat('en-US', {
+function formatSignedCompact(value: number, formatNumber: NumberFormatter) {
+  return formatNumber(value, {
     notation: 'compact',
     maximumFractionDigits: 1,
     signDisplay: 'always',
-  }).format(value);
+  });
 }
 
-function formatSignedPercent(value: number) {
-  return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
+function formatSignedPercent(value: number, formatNumber: NumberFormatter) {
+  return `${value >= 0 ? '+' : '-'}${formatNumber(Math.abs(value), {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}%`;
 }
 
 function townTraderAvatarIndex(name: string) {
@@ -1384,12 +1667,16 @@ function townTraderAvatarIndex(name: string) {
   return hash % Math.max(1, TOWN_TRADERS.length);
 }
 
-function formatMoney(value: number, currency = 'TOWNUSD') {
-  return `${formatCompact(value)} ${currency}`;
+function formatMoney(
+  value: number,
+  currency: string | undefined,
+  formatNumber: NumberFormatter,
+) {
+  return `${formatCompact(value, formatNumber)} ${currency ?? 'TOWNUSD'}`;
 }
 
-function formatClock(value: number) {
-  return new Date(value).toLocaleTimeString('en-GB', {
+function formatClock(value: number, formatDateTime: DateTimeFormatter) {
+  return formatDateTime(value, {
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,

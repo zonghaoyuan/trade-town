@@ -21,6 +21,13 @@ import {
   saveCreateMeState,
   saveCreatedMe,
 } from '../../features/create-me/storage';
+import { useI18n } from '../../i18n';
+import {
+  localizeCompiledProfileText,
+  localizeCreateMeLabel,
+  localizeScenarioChoice,
+  localizeScenarioTitle,
+} from '../../i18n/domain';
 
 export type CreateMePayload = CreateMeDraft & {
   ownerId: string;
@@ -42,16 +49,44 @@ type CreateMeModalProps = {
 };
 
 const goalOptions = [
-  { value: 'growth', label: '资产增长', note: '接受波动，追求长期增值' },
-  { value: 'income', label: '稳定收益', note: '重视现金流与收益稳定性' },
-  { value: 'preservation', label: '本金保护', note: '优先控制回撤与尾部风险' },
-  { value: 'learning', label: '观察学习', note: '以小仓位验证投资逻辑' },
+  {
+    value: 'growth',
+    labelKey: 'create.goalGrowth',
+    noteKey: 'create.goalGrowthNote',
+  },
+  {
+    value: 'income',
+    labelKey: 'create.goalIncome',
+    noteKey: 'create.goalIncomeNote',
+  },
+  {
+    value: 'preservation',
+    labelKey: 'create.goalPreservation',
+    noteKey: 'create.goalPreservationNote',
+  },
+  {
+    value: 'learning',
+    labelKey: 'create.goalLearning',
+    noteKey: 'create.goalLearningNote',
+  },
 ] as const;
 
 const horizonOptions = [
-  { value: 'short', label: '短期', note: '数天至数周' },
-  { value: 'medium', label: '中期', note: '数月至一年' },
-  { value: 'long', label: '长期', note: '一年以上' },
+  {
+    value: 'short',
+    labelKey: 'create.horizonShort',
+    noteKey: 'create.horizonShortNote',
+  },
+  {
+    value: 'medium',
+    labelKey: 'create.horizonMedium',
+    noteKey: 'create.horizonMediumNote',
+  },
+  {
+    value: 'long',
+    labelKey: 'create.horizonLong',
+    noteKey: 'create.horizonLongNote',
+  },
 ] as const;
 
 function createRequestId() {
@@ -66,6 +101,7 @@ export default function CreateMeModal({
   onSubmit,
   onCreated,
 }: CreateMeModalProps) {
+  const { t } = useI18n();
   const localState = useMemo(() => loadCreateMeState(), []);
   const [step, setStep] = useState(initialMe ? 0 : localState.step);
   const [draft, setDraft] = useState<CreateMeDraft>(initialMe?.draft ?? localState.draft);
@@ -118,7 +154,7 @@ export default function CreateMeModal({
             setCustomPreview({
               dataUrl: '',
               loading: false,
-              error: caught instanceof Error ? caught.message : 'LPC 素材加载失败',
+              error: caught instanceof Error ? caught.message : t('create.loadFailed'),
             });
           }
         });
@@ -137,6 +173,7 @@ export default function CreateMeModal({
     draft.skinTone,
     draft.topColor,
     draft.topStyle,
+    t,
   ]);
 
   useEffect(() => {
@@ -217,7 +254,7 @@ export default function CreateMeModal({
 
   const next = () => {
     if (step === 0 && !draft.displayName.trim()) {
-      setError('请先给你的数字分身起一个名字。');
+      setError(t('create.nameRequired'));
       return;
     }
     if (step === 0 && draft.appearanceMode === 'custom' && customPreview.error) {
@@ -225,7 +262,7 @@ export default function CreateMeModal({
       return;
     }
     if (step === 1 && Object.keys(draft.scenarioAnswers).length < CREATE_ME_SCENARIOS.length) {
-      setError('请完成 5 个市场情景选择。');
+      setError(t('create.scenariosRequired'));
       return;
     }
     setError('');
@@ -269,7 +306,7 @@ export default function CreateMeModal({
           : null;
       setError(
         backendMessage ??
-          (caught instanceof Error ? caught.message : '创建失败，请稍后再试。'),
+          (caught instanceof Error ? caught.message : t('create.failed')),
       );
     } finally {
       setSubmitting(false);
@@ -288,7 +325,7 @@ export default function CreateMeModal({
         <button
           type="button"
           className="create-me-close"
-          aria-label="关闭角色创建"
+          aria-label={t('create.close')}
           disabled={submitting}
           onClick={onClose}
         >
@@ -305,12 +342,16 @@ export default function CreateMeModal({
           <>
             <header className="create-me-heading">
               <h2 id="create-me-title" ref={titleRef} tabIndex={-1}>
-                CREATE CHARACTER
+                {t('create.title')}
               </h2>
             </header>
 
-            <ol className="create-me-steps" aria-label="创建步骤">
-              {['角色形象', '金融画像', '确认入镇'].map((label, index) => (
+            <ol className="create-me-steps" aria-label={t('create.stepsAria')}>
+              {[
+                t('create.stepAppearance'),
+                t('create.stepProfile'),
+                t('create.stepConfirm'),
+              ].map((label, index) => (
                 <li
                   key={label}
                   className={index === step ? 'is-active' : index < step ? 'is-done' : ''}
@@ -361,7 +402,7 @@ export default function CreateMeModal({
                 disabled={submitting}
                 onClick={onClose}
               >
-                稍后再说
+                {t('create.later')}
               </button>
               <div>
                 {step > 0 && (
@@ -371,7 +412,7 @@ export default function CreateMeModal({
                     disabled={submitting}
                     onClick={() => setStep((current) => current - 1)}
                   >
-                    ← 上一步
+                    {t('create.back')}
                   </button>
                 )}
                 {step < 2 ? (
@@ -385,7 +426,9 @@ export default function CreateMeModal({
                     }
                     onClick={next}
                   >
-                    {customPreview.loading && step === 0 ? '正在合成…' : '下一步 →'}
+                    {customPreview.loading && step === 0
+                      ? t('create.composing')
+                      : t('create.next')}
                   </button>
                 ) : (
                   <button
@@ -394,7 +437,11 @@ export default function CreateMeModal({
                     disabled={submitting}
                     onClick={() => void submit()}
                   >
-                    {submitting ? '正在创建…' : initialMe ? '保存新版本' : '进入小镇'}
+                    {submitting
+                      ? t('create.creating')
+                      : initialMe
+                        ? t('create.saveVersion')
+                        : t('create.enterTown')}
                   </button>
                 )}
               </div>
@@ -415,11 +462,12 @@ function CharacterPreview({
   label: string;
   size?: 'small' | 'large';
 }) {
+  const { t } = useI18n();
   return (
     <span
       className={`create-me-sprite is-${size} ${textureUrl ? '' : 'is-empty'}`}
       role="img"
-      aria-label={`${label} LPC 像素角色预览`}
+      aria-label={t('create.previewAria', { name: label })}
     >
       {textureUrl ? <i style={{ backgroundImage: `url("${textureUrl}")` }} /> : <b>…</b>}
     </span>
@@ -444,26 +492,29 @@ function AppearanceStep({
   ) => void;
   onRandomize: () => void;
 }) {
+  const { t } = useI18n();
   const preset = getCreateMePreset(draft.presetId);
   return (
     <div className="create-me-appearance">
       <aside className="create-me-preview-panel">
         <CharacterPreview
           textureUrl={previewTextureUrl}
-          label={draft.appearanceMode === 'custom' ? '自定义角色' : preset.label}
+          label={
+            draft.appearanceMode === 'custom' ? t('create.customCharacter') : preset.label
+          }
         />
         <strong>{draft.displayName || 'ME'}</strong>
         {(previewError || previewLoading) && (
-          <small>{previewError || '正在合成角色…'}</small>
+          <small>{previewError || t('create.previewLoading')}</small>
         )}
         <button type="button" className="create-me-random" onClick={onRandomize}>
-          ⚄ 随机外观
+          {t('create.randomAppearance')}
         </button>
       </aside>
 
       <div className="create-me-form-panel">
         <label className="create-me-name-field">
-          <span>角色名称</span>
+          <span>{t('create.characterName')}</span>
           <input
             value={draft.displayName}
             maxLength={20}
@@ -473,20 +524,20 @@ function AppearanceStep({
           <small>{draft.displayName.length}/20</small>
         </label>
 
-        <div className="create-me-mode-toggle" aria-label="外观创建方式">
+        <div className="create-me-mode-toggle" aria-label={t('create.appearanceMode')}>
           <button
             type="button"
             className={draft.appearanceMode === 'preset' ? 'is-selected' : ''}
             onClick={() => onChange('appearanceMode', 'preset')}
           >
-            推荐预设
+            {t('create.presets')}
           </button>
           <button
             type="button"
             className={draft.appearanceMode === 'custom' ? 'is-selected' : ''}
             onClick={() => onChange('appearanceMode', 'custom')}
           >
-            部件组合
+            {t('create.customize')}
           </button>
         </div>
 
@@ -494,7 +545,7 @@ function AppearanceStep({
           <>
             <div className="create-me-section-title">
               <div>
-                <h3>选择初始形象</h3>
+                <h3>{t('create.choosePreset')}</h3>
               </div>
             </div>
             <div className="create-me-preset-grid">
@@ -519,49 +570,57 @@ function AppearanceStep({
         ) : (
           <div className="create-me-customizer">
             <VariantRow
-              label="身体"
+              label={t('create.body')}
+              category="skinTone"
               items={LPC_SKIN_TONES}
               selected={draft.skinTone}
               onSelect={(value) => onChange('skinTone', value)}
             />
             <VariantRow
-              label="发型"
+              label={t('create.hairStyle')}
+              category="hairStyle"
               items={LPC_HAIR_STYLES}
               selected={draft.hairStyle}
               onSelect={(value) => onChange('hairStyle', value)}
             />
             <ColorRow
-              label="发色"
+              label={t('create.hairColor')}
+              category="hairColor"
               items={LPC_HAIR_COLORS}
               selected={draft.hairColor}
               onSelect={(value) => onChange('hairColor', value)}
             />
             <VariantRow
-              label="上衣"
+              label={t('create.top')}
+              category="topStyle"
               items={LPC_TOP_STYLES}
               selected={draft.topStyle}
               onSelect={(value) => onChange('topStyle', value)}
             />
             <ColorRow
-              label="上衣颜色"
+              label={t('create.topColor')}
+              category="clothingColor"
               items={LPC_CLOTHING_COLORS}
               selected={draft.topColor}
               onSelect={(value) => onChange('topColor', value)}
             />
             <VariantRow
-              label="下装"
+              label={t('create.bottom')}
+              category="bottomStyle"
               items={LPC_BOTTOM_STYLES}
               selected={draft.bottomStyle}
               onSelect={(value) => onChange('bottomStyle', value)}
             />
             <ColorRow
-              label="下装颜色"
+              label={t('create.bottomColor')}
+              category="clothingColor"
               items={LPC_CLOTHING_COLORS}
               selected={draft.bottomColor}
               onSelect={(value) => onChange('bottomColor', value)}
             />
             <VariantRow
-              label="鞋子"
+              label={t('create.shoes')}
+              category="shoesStyle"
               items={LPC_SHOES_STYLES}
               selected={draft.shoesStyle}
               onSelect={(value) => onChange('shoesStyle', value)}
@@ -575,15 +634,18 @@ function AppearanceStep({
 
 function VariantRow<Id extends string>({
   label,
+  category,
   items,
   selected,
   onSelect,
 }: {
   label: string;
+  category: string;
   items: readonly { id: Id; label: string }[];
   selected: Id;
   onSelect: (id: Id) => void;
 }) {
+  const { locale } = useI18n();
   return (
     <div className="create-me-variant-row">
       <strong>{label}</strong>
@@ -596,7 +658,7 @@ function VariantRow<Id extends string>({
             aria-pressed={selected === item.id}
             onClick={() => onSelect(item.id)}
           >
-            {item.label}
+            {localizeCreateMeLabel(locale, category, item.id, item.label)}
           </button>
         ))}
       </div>
@@ -606,15 +668,18 @@ function VariantRow<Id extends string>({
 
 function ColorRow<Id extends string>({
   label,
+  category,
   items,
   selected,
   onSelect,
 }: {
   label: string;
+  category: string;
   items: readonly { id: Id; label: string; tint: string }[];
   selected: Id;
   onSelect: (id: Id) => void;
 }) {
+  const { locale, t } = useI18n();
   return (
     <div className="create-me-variant-row create-me-color-row">
       <strong>{label}</strong>
@@ -624,13 +689,16 @@ function ColorRow<Id extends string>({
             type="button"
             key={item.id}
             className={selected === item.id ? 'is-selected' : ''}
-            aria-label={`${label}：${item.label}`}
+            aria-label={t('create.colorAria', {
+              label,
+              item: localizeCreateMeLabel(locale, category, item.id, item.label),
+            })}
             aria-pressed={selected === item.id}
-            title={item.label}
+            title={localizeCreateMeLabel(locale, category, item.id, item.label)}
             onClick={() => onSelect(item.id)}
           >
             <i style={{ background: item.tint }} />
-            <span>{item.label}</span>
+            <span>{localizeCreateMeLabel(locale, category, item.id, item.label)}</span>
           </button>
         ))}
       </div>
@@ -655,12 +723,13 @@ function ProfileStep({
     >,
   ) => void;
 }) {
+  const { locale, t } = useI18n();
   return (
     <div className="create-me-profile">
       <section className="create-me-profile-block">
         <div className="create-me-section-title">
           <div>
-            <h3>你希望 ME 优先实现什么？</h3>
+            <h3>{t('create.goalTitle')}</h3>
           </div>
         </div>
         <div className="create-me-option-grid goal-grid">
@@ -672,8 +741,8 @@ function ProfileStep({
               aria-pressed={draft.investmentGoal === option.value}
               onClick={() => onChange('investmentGoal', option.value)}
             >
-              <strong>{option.label}</strong>
-              <small>{option.note}</small>
+              <strong>{t(option.labelKey)}</strong>
+              <small>{t(option.noteKey)}</small>
             </button>
           ))}
         </div>
@@ -682,7 +751,7 @@ function ProfileStep({
       <section className="create-me-profile-block create-me-traits">
         <div className="create-me-section-title">
           <div>
-            <h3>时间、风险与性格</h3>
+            <h3>{t('create.riskTitle')}</h3>
           </div>
         </div>
         <div className="create-me-horizon">
@@ -694,13 +763,13 @@ function ProfileStep({
               aria-pressed={draft.horizon === option.value}
               onClick={() => onChange('horizon', option.value)}
             >
-              <strong>{option.label}</strong>
-              <small>{option.note}</small>
+              <strong>{t(option.labelKey)}</strong>
+              <small>{t(option.noteKey)}</small>
             </button>
           ))}
         </div>
         <RangeField
-          label="最大可接受回撤"
+          label={t('create.maxDrawdown')}
           value={draft.maxDrawdownPct}
           min={5}
           max={40}
@@ -708,17 +777,17 @@ function ProfileStep({
           onChange={(value) => onChange('maxDrawdownPct', value)}
         />
         <RangeField
-          label="观点确信度"
+          label={t('create.conviction')}
           value={draft.conviction}
           onChange={(value) => onChange('conviction', value)}
         />
         <RangeField
-          label="群体影响度"
+          label={t('create.socialInfluence')}
           value={draft.socialInfluence}
           onChange={(value) => onChange('socialInfluence', value)}
         />
         <RangeField
-          label="损失厌恶度"
+          label={t('create.lossAversion')}
           value={draft.lossAversion}
           onChange={(value) => onChange('lossAversion', value)}
         />
@@ -727,14 +796,14 @@ function ProfileStep({
       <section className="create-me-profile-block create-me-scenarios">
         <div className="create-me-section-title">
           <div>
-            <h3>市场情景选择</h3>
+            <h3>{t('create.scenariosTitle')}</h3>
           </div>
           <small>{Object.keys(draft.scenarioAnswers).length}/5</small>
         </div>
         <div className="create-me-scenario-grid">
           {CREATE_ME_SCENARIOS.map((scenario) => (
             <div key={scenario.id}>
-              <strong>{scenario.title}</strong>
+              <strong>{localizeScenarioTitle(locale, scenario.id, scenario.title)}</strong>
               <span>
                 {scenario.choices.map((choice) => (
                   <button
@@ -748,7 +817,12 @@ function ProfileStep({
                     aria-pressed={draft.scenarioAnswers[scenario.id] === choice.value}
                     onClick={() => onAnswerScenario(scenario.id, choice.value)}
                   >
-                    {choice.label}
+                    {localizeScenarioChoice(
+                      locale,
+                      scenario.id,
+                      choice.value,
+                      choice.label,
+                    )}
                   </button>
                 ))}
               </span>
@@ -805,6 +879,7 @@ function ConfirmStep({
   compiled: ReturnType<typeof compileMeProfile>;
   textureUrl: string;
 }) {
+  const { locale, t } = useI18n();
   const goal = goalOptions.find((option) => option.value === draft.investmentGoal);
   const horizon = horizonOptions.find((option) => option.value === draft.horizon);
   return (
@@ -812,16 +887,16 @@ function ConfirmStep({
       <section className="create-me-passport">
         <CharacterPreview textureUrl={textureUrl} label={draft.displayName} />
         <h3>{draft.displayName}</h3>
-        <p>{compiled.decisionStyle}</p>
+        <p>{localizeCompiledProfileText(locale, compiled.decisionStyle)}</p>
         <div>
-          <span>{goal?.label}</span>
-          <span>{horizon?.label}</span>
+          <span>{goal ? t(goal.labelKey) : ''}</span>
+          <span>{horizon ? t(horizon.labelKey) : ''}</span>
           <span>
             {compiled.tradeFrequency === 'high'
-              ? '高频'
+              ? t('create.frequencyHigh')
               : compiled.tradeFrequency === 'low'
-                ? '低频'
-                : '中频'}
+                ? t('create.frequencyLow')
+                : t('create.frequencyMedium')}
           </span>
         </div>
       </section>
@@ -829,44 +904,42 @@ function ConfirmStep({
       <section className="create-me-compiled">
         <div className="create-me-section-title">
           <div>
-            <h3>行为参数预览</h3>
+            <h3>{t('create.behaviorPreview')}</h3>
           </div>
         </div>
         <dl>
           <div>
-            <dt>风险承受</dt>
+            <dt>{t('create.riskCapacity')}</dt>
             <dd>{compiled.riskTolerance}/100</dd>
           </div>
           <div>
-            <dt>建议现金缓冲</dt>
+            <dt>{t('create.cashBuffer')}</dt>
             <dd>{compiled.cashBufferPct}%</dd>
           </div>
           <div>
-            <dt>单仓上限</dt>
+            <dt>{t('create.positionLimit')}</dt>
             <dd>{compiled.maxPositionPct}%</dd>
           </div>
           <div>
-            <dt>参考持有周期</dt>
-            <dd>{compiled.holdingPeriodDays} 天</dd>
+            <dt>{t('create.holdingPeriod')}</dt>
+            <dd>{t('create.daysUnit', { count: compiled.holdingPeriodDays })}</dd>
           </div>
           <div>
-            <dt>社交信号权重</dt>
+            <dt>{t('create.socialWeight')}</dt>
             <dd>{compiled.socialSignalWeight}/100</dd>
           </div>
           <div>
-            <dt>止损纪律</dt>
+            <dt>{t('create.stopLoss')}</dt>
             <dd>{compiled.stopLossDiscipline}/100</dd>
           </div>
         </dl>
         <div className="create-me-risk-note">
-          <strong>行为提醒</strong>
+          <strong>{t('create.behaviorReminder')}</strong>
           {compiled.riskFlags.map((flag) => (
-            <span key={flag}>! {flag}</span>
+            <span key={flag}>! {localizeCompiledProfileText(locale, flag)}</span>
           ))}
         </div>
-        <p>
-          创建后，ME 将作为自主 Agent 进入小镇。参数用于模拟与压力测试，不构成投资建议。
-        </p>
+        <p>{t('create.disclaimer')}</p>
       </section>
     </div>
   );
@@ -881,12 +954,13 @@ function CreateComplete({
   textureUrl: string;
   onClose: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <div className="create-me-complete">
       <CharacterPreview textureUrl={textureUrl} label={name} />
-      <h2>{name} 已准备入镇</h2>
+      <h2>{t('create.ready', { name })}</h2>
       <button type="button" className="pixel-button create-me-primary" onClick={onClose}>
-        返回小镇
+        {t('create.returnTown')}
       </button>
     </div>
   );

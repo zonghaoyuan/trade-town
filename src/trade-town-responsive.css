@@ -11,6 +11,7 @@
   --town-overview-dock-height: 0px;
   --town-immersive-top-inset: 120px;
   --town-immersive-bottom-inset: 84px;
+  --town-immersive-min-map-height: 220px;
   --town-safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
@@ -208,21 +209,45 @@
     padding-bottom: calc(10px + var(--town-safe-bottom));
   }
 
-  .pixel-modal-backdrop {
-    padding:
-      max(10px, env(safe-area-inset-top, 0px))
-      max(10px, env(safe-area-inset-right, 0px))
-      max(10px, env(safe-area-inset-bottom, 0px))
-      max(10px, env(safe-area-inset-left, 0px));
-  }
+}
 
-  .pixel-help-modal {
-    max-height: calc(
-      100dvh - max(20px, env(safe-area-inset-top, 0px)) -
-        max(20px, env(safe-area-inset-bottom, 0px))
-    );
-    overflow-y: auto;
-  }
+/* Viewport-contained dialogs use height and safe areas at every width. */
+.pixel-modal-backdrop {
+  box-sizing: border-box;
+  padding:
+    max(10px, env(safe-area-inset-top, 0px))
+    max(10px, env(safe-area-inset-right, 0px))
+    max(10px, env(safe-area-inset-bottom, 0px))
+    max(10px, env(safe-area-inset-left, 0px));
+}
+
+.pixel-help-modal {
+  box-sizing: border-box;
+  max-height: calc(
+    100dvh - max(20px, env(safe-area-inset-top, 0px)) -
+      max(20px, env(safe-area-inset-bottom, 0px))
+  );
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.create-me-backdrop {
+  box-sizing: border-box;
+  padding:
+    max(clamp(12px, 3vw, 32px), env(safe-area-inset-top, 0px))
+    max(clamp(12px, 3vw, 32px), env(safe-area-inset-right, 0px))
+    max(clamp(12px, 3vw, 32px), env(safe-area-inset-bottom, 0px))
+    max(clamp(12px, 3vw, 32px), env(safe-area-inset-left, 0px));
+}
+
+.create-me-modal {
+  max-height: min(
+    880px,
+    calc(
+      100dvh - max(24px, env(safe-area-inset-top, 0px)) -
+        max(24px, env(safe-area-inset-bottom, 0px))
+    )
+  );
 }
 
 /* Component-level reflow follows the actual dashboard column, not the device. */
@@ -347,6 +372,12 @@
     --town-immersive-bottom-inset: 78px;
   }
 
+  .pixel-town-shell:is(.is-overview, .is-immersive) .pixel-language-switcher {
+    display: grid;
+    width: 40px;
+    min-width: 40px;
+  }
+
   .pixel-town-shell.is-immersive .pixel-town-header {
     height: 62px;
     min-height: 62px;
@@ -383,6 +414,13 @@
     white-space: nowrap;
   }
 
+  .pixel-town-shell.is-immersive .pixel-language-switcher {
+    width: 40px;
+    min-width: 40px;
+    height: 42px;
+    min-height: 42px;
+  }
+
   .pixel-town-shell.is-immersive .pixel-hud-dock {
     right: 8px !important;
     bottom: calc(8px + var(--town-safe-bottom)) !important;
@@ -396,10 +434,318 @@
     font-size: 9px;
   }
 
+  .pixel-town-shell.is-immersive .pixel-hud-help {
+    display: block;
+  }
+
   .pixel-town-shell.is-immersive .pixel-hud-drawer {
     right: 8px;
     bottom: calc(var(--town-immersive-bottom-inset) + var(--town-safe-bottom));
     width: calc(100vw - 16px);
+  }
+}
+
+/* Keep global actions compact while replay controls need responsive space. */
+@media (min-width: 641px) and (max-width: 1320px) {
+  .pixel-town-shell:is(.is-overview, .is-immersive) .pixel-town-header {
+    grid-template-columns: minmax(0, 1fr) 100px auto;
+    gap: 6px;
+  }
+
+  .pixel-town-shell:is(.is-overview, .is-immersive) .pixel-brand {
+    width: 100%;
+    gap: 6px;
+  }
+
+  .pixel-town-shell:is(.is-overview, .is-immersive) .pixel-brand h1 {
+    overflow: hidden;
+    font-size: 23px;
+    text-overflow: ellipsis;
+  }
+
+  .pixel-town-shell:is(.is-overview, .is-immersive) .pixel-brand-credit {
+    display: none;
+  }
+
+  .pixel-town-shell:is(.is-overview, .is-immersive) .pixel-header-actions {
+    gap: 4px;
+  }
+
+  .pixel-town-shell:is(.is-overview, .is-immersive) .pixel-replay-status {
+    width: 100px;
+    min-width: 0;
+    padding: 4px 5px;
+  }
+
+  .pixel-town-shell:is(.is-overview, .is-immersive) .pixel-replay-status-copy {
+    min-width: 0;
+    grid-template-columns: 1fr;
+    gap: 3px;
+  }
+
+  .pixel-town-shell:is(.is-overview, .is-immersive) .pixel-replay-status-copy > span,
+  .pixel-town-shell:is(.is-overview, .is-immersive) .pixel-replay-status-copy > time {
+    overflow: hidden;
+    font-size: 8px;
+    text-overflow: ellipsis;
+  }
+
+  .pixel-town-shell:is(.is-overview, .is-immersive) .pixel-replay-status-copy > time {
+    font-size: 0;
+  }
+
+  .pixel-town-shell:is(.is-overview, .is-immersive) .pixel-replay-status-copy > time::after {
+    font-size: 8px;
+    content: attr(data-short-date);
+  }
+
+  .pixel-town-shell:is(.is-overview, .is-immersive)
+    .pixel-header-actions
+    .pixel-create-me-trigger {
+    min-width: 52px;
+    padding-inline: 4px;
+    display: inline-flex;
+    justify-content: center;
+    gap: 3px;
+  }
+
+  .pixel-town-shell:is(.is-overview, .is-immersive)
+    .pixel-header-actions
+    .pixel-create-me-label-full {
+    display: none;
+  }
+
+  .pixel-town-shell:is(.is-overview, .is-immersive)
+    .pixel-header-actions
+    .pixel-create-me-label-compact {
+    display: inline;
+  }
+
+  .pixel-town-shell:is(.is-overview, .is-immersive)
+    .pixel-header-actions
+    .pixel-help-trigger {
+    width: 46px;
+    min-width: 46px;
+    padding-inline: 4px;
+    justify-content: center;
+    font-size: 0;
+  }
+
+  .pixel-town-shell:is(.is-overview, .is-immersive)
+    .pixel-header-actions
+    .pixel-help-trigger
+    > span {
+    font-size: 14px;
+  }
+
+  .pixel-town-shell:is(.is-overview, .is-immersive) .pixel-language-switcher {
+    width: 40px;
+    min-width: 40px;
+  }
+
+  .pixel-town-shell:is(.is-overview, .is-immersive)
+    .pixel-header-actions
+    .pixel-view-toggle {
+    width: 98px;
+    padding-inline: 4px;
+    font-size: 9px;
+    white-space: nowrap;
+  }
+
+  .pixel-town-shell:is(.is-overview, .is-immersive) .pixel-injective-status {
+    width: 38px;
+    min-width: 38px;
+    min-height: 38px;
+    padding: 3px;
+  }
+
+  .pixel-town-shell:is(.is-overview, .is-immersive) .pixel-injective-status-mark {
+    width: 30px;
+    height: 30px;
+    flex-basis: 30px;
+  }
+
+  .pixel-town-shell:is(.is-overview, .is-immersive) .pixel-injective-status-mark::after {
+    position: absolute;
+    right: -1px;
+    bottom: -1px;
+    width: 8px;
+    height: 8px;
+    border: 2px solid #241a31;
+    border-radius: 50%;
+    background: var(--town-green);
+    box-shadow: 0 0 6px rgba(129, 219, 146, 0.72);
+    content: '';
+  }
+
+  .pixel-town-shell:is(.is-overview, .is-immersive) .pixel-injective-status-copy {
+    display: none;
+  }
+}
+
+/* Medium laptops have enough height for one row, but not enough width for the
+ * full-size global actions plus replay controls. Keep the actions compact while
+ * restoring the complete replay control group. */
+@media (min-width: 1101px) and (max-width: 1320px) {
+  .pixel-town-shell:is(.is-overview, .is-immersive) .pixel-town-header {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+
+  .pixel-town-shell:is(.is-overview, .is-immersive) .pixel-replay-status {
+    width: auto;
+  }
+}
+
+/* Deterministic replay keeps its primary controls visible in a second compact
+ * header row instead of dropping all controls at tablet widths. */
+@media (max-width: 1100px) {
+  .pixel-town-shell:has(.pixel-town-header.has-compact-replay) {
+    --town-overview-header-height: 122px;
+    --town-immersive-top-inset: 140px;
+  }
+
+  .pixel-town-shell.is-overview .pixel-town-header.has-compact-replay,
+  .pixel-town-shell.is-immersive .pixel-town-header.has-compact-replay {
+    height: 122px;
+    min-height: 122px;
+    max-height: none;
+    overflow: visible;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: minmax(0, 1fr) 32px;
+    gap: 4px 8px;
+  }
+
+  .pixel-town-header.has-compact-replay .pixel-brand {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .pixel-town-header.has-compact-replay > .pixel-replay-status {
+    display: none;
+  }
+
+  .pixel-town-header.has-compact-replay .pixel-header-actions {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .pixel-town-header.has-compact-replay .pixel-header-actions .pixel-button {
+    height: 42px;
+    min-height: 42px;
+    padding: 2px 4px;
+    border-width: 7px;
+  }
+
+  .pixel-town-header.has-compact-replay > .pixel-compact-replay {
+    min-width: 0;
+    width: 100%;
+    min-height: 32px;
+    padding: 2px 5px;
+    border: 2px solid var(--town-night);
+    color: var(--town-paper);
+    background: #262b44;
+    display: flex;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    box-shadow: inset -2px -2px 0 var(--town-clay);
+  }
+}
+
+@media (max-width: 640px) and (min-height: 601px) {
+  .pixel-town-shell:has(.pixel-town-header.has-compact-replay) {
+    --town-overview-header-height: 112px;
+    --town-immersive-top-inset: 122px;
+  }
+
+  .pixel-town-shell.is-overview .pixel-town-header.has-compact-replay,
+  .pixel-town-shell.is-immersive .pixel-town-header.has-compact-replay {
+    height: 112px;
+    min-height: 112px;
+  }
+}
+
+/* Short landscape keeps the replay bar in the main header row so map height is
+ * not reduced by a permanent second row. */
+@media (max-width: 1100px) and (max-height: 600px) {
+  .pixel-town-shell:has(.pixel-town-header.has-compact-replay) {
+    --town-overview-header-height: 68px;
+    --town-immersive-top-inset: 80px;
+  }
+
+  .pixel-town-shell.is-overview .pixel-town-header.has-compact-replay,
+  .pixel-town-shell.is-immersive .pixel-town-header.has-compact-replay {
+    height: 68px;
+    min-height: 68px;
+    max-height: 68px;
+    overflow: visible;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: 1fr;
+    gap: 5px;
+  }
+
+  .pixel-town-shell.is-immersive .pixel-town-header.has-compact-replay {
+    padding: 2px 4px;
+    border-width: 8px;
+  }
+
+  .pixel-town-header.has-compact-replay .pixel-brand {
+    display: none;
+  }
+
+  .pixel-town-header.has-compact-replay > .pixel-compact-replay {
+    width: fit-content;
+    max-width: 100%;
+    padding: 2px 4px;
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: start;
+  }
+
+  .pixel-town-header.has-compact-replay .pixel-header-actions {
+    height: 42px;
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .pixel-compact-replay-day {
+    font-size: 8px;
+  }
+}
+
+@media (max-width: 640px) and (max-height: 600px) {
+  .pixel-town-shell:has(.pixel-town-header.has-compact-replay) {
+    --town-overview-header-height: 62px;
+    --town-immersive-top-inset: 67px;
+  }
+
+  .pixel-town-shell.is-overview .pixel-town-header.has-compact-replay,
+  .pixel-town-shell.is-immersive .pixel-town-header.has-compact-replay {
+    height: 62px;
+    min-height: 62px;
+    max-height: 62px;
+  }
+
+  .pixel-town-header.has-compact-replay > .pixel-compact-replay {
+    gap: 4px;
+  }
+
+  .pixel-compact-replay-controls {
+    gap: 2px;
+  }
+
+  .pixel-compact-replay-controls button,
+  .pixel-compact-replay-controls select,
+  .pixel-replay-more > summary {
+    min-width: 27px;
+    height: 28px;
+    padding-inline: 3px;
+  }
+
+  .pixel-compact-replay-controls select {
+    width: 43px;
   }
 }
 
@@ -412,12 +758,50 @@
   display: none;
 }
 
+.pixel-hud-help {
+  display: none;
+}
+
+.pixel-hud-drawer {
+  box-sizing: border-box;
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: 0 minmax(0, 1fr);
+}
+
+.pixel-hud-drawer-toolbar {
+  position: relative;
+  z-index: 6;
+  min-height: 0;
+}
+
+.pixel-hud-drawer-body {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: var(--town-wine) var(--town-night);
+  scrollbar-width: thin;
+}
+
+.pixel-hud-drawer.drawer-activity .pixel-hud-drawer-body {
+  overflow: hidden;
+  display: flex;
+}
+
+.pixel-hud-drawer.drawer-markets .pixel-market-list,
+.pixel-hud-drawer.drawer-agents .pixel-agent-list {
+  max-height: none;
+  overflow: visible;
+}
+
 .pixel-hud-drawer .pixel-activity-panel {
   width: 100%;
   height: auto;
   min-height: min(560px, 66vh);
   border: 0;
-  grid-template-rows: auto minmax(280px, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  flex: 1 1 auto;
   filter: none;
 }
 
@@ -485,13 +869,13 @@
 
   .pixel-hud-drawer .pixel-activity-panel {
     min-height: min(540px, 70vh);
-    grid-template-rows: auto minmax(260px, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
   }
 }
 
 /* Full-town data panels participate in the layout instead of covering the map.
  * The Pixi map observes its frame and refits itself when this column opens. */
-@media (min-width: 721px) {
+@media (min-width: 861px) {
   .pixel-town-shell.is-immersive.has-hud-drawer {
     --town-immersive-drawer-gap: 10px;
     --town-immersive-drawer-inset: 14px;
@@ -528,10 +912,19 @@
 
 /* A side-by-side split would make both panes unusably narrow on phones, so the
  * same non-overlapping contract becomes a map-above / panel-below split. */
-@media (max-width: 720px) {
+@media (max-width: 860px) {
   .pixel-town-shell.is-immersive.has-hud-drawer {
     --town-immersive-mobile-drawer-gap: 8px;
-    --town-immersive-mobile-drawer-height: min(46dvh, 390px);
+    --town-immersive-mobile-drawer-max-height: calc(
+      100dvh - var(--town-immersive-top-inset) - var(--town-immersive-bottom-inset) -
+        var(--town-immersive-min-map-height) - var(--town-immersive-mobile-drawer-gap) -
+        var(--town-safe-bottom)
+    );
+    --town-immersive-mobile-drawer-height: clamp(
+      200px,
+      38dvh,
+      min(360px, var(--town-immersive-mobile-drawer-max-height))
+    );
   }
 
   .pixel-town-shell.is-immersive.has-hud-drawer .pixel-town-layout {
@@ -554,6 +947,34 @@
     width: calc(100vw - 16px);
     height: var(--town-immersive-mobile-drawer-height);
     max-height: none;
+  }
+}
+
+/* When height cannot support both panes, the approved panel-first mode takes
+ * over the usable viewport instead of leaving an unusable strip of map. */
+@media (max-width: 960px) and (max-height: 600px) {
+  .pixel-town-shell.is-immersive.has-hud-drawer .pixel-town-layout {
+    inset: 0;
+    width: 100%;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .pixel-town-shell.is-immersive.has-hud-drawer .pixel-hud-dock {
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .pixel-town-shell.is-immersive.has-hud-drawer .pixel-hud-drawer {
+    z-index: 90;
+    top: max(8px, env(safe-area-inset-top, 0px));
+    right: max(8px, env(safe-area-inset-right, 0px));
+    bottom: max(8px, env(safe-area-inset-bottom, 0px));
+    left: max(8px, env(safe-area-inset-left, 0px));
+    width: auto;
+    height: auto;
+    max-height: none;
+    border-width: 12px;
   }
 }
 

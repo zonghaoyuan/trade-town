@@ -5,6 +5,7 @@ import { Id } from '../../convex/_generated/dataModel';
 import { useSendInput } from '../hooks/sendInput';
 import { Player } from '../../convex/aiTown/player';
 import { Conversation } from '../../convex/aiTown/conversation';
+import { useI18n } from '../i18n';
 
 export function MessageInput({
   worldId,
@@ -17,6 +18,7 @@ export function MessageInput({
   humanPlayer: Player;
   conversation: Conversation;
 }) {
+  const { t } = useI18n();
   const inputRef = useRef<HTMLParagraphElement>(null);
   const inflightUuid = useRef<string | undefined>();
   const [isSending, setIsSending] = useState(false);
@@ -88,9 +90,9 @@ export function MessageInput({
         contentEditable
         suppressContentEditableWarning
         role="textbox"
-        aria-label="Message"
+        aria-label={t('chat.messageAria')}
         tabIndex={0}
-        placeholder="Type a message..."
+        placeholder={t('chat.placeholder')}
         onKeyDown={(event) => void onKeyDown(event)}
       />
       <button
@@ -100,7 +102,7 @@ export function MessageInput({
         onMouseDown={(event) => event.preventDefault()}
         onClick={() => void sendMessage()}
       >
-        {isSending ? 'Sending' : 'Send'}
+        {isSending ? t('common.sending') : t('common.send')}
       </button>
     </div>
   );

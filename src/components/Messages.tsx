@@ -5,6 +5,7 @@ import { MessageInput } from './MessageInput';
 import { Player } from '../../convex/aiTown/player';
 import { Conversation } from '../../convex/aiTown/conversation';
 import { useEffect, useRef } from 'react';
+import { useI18n } from '../i18n';
 
 export function Messages({
   worldId,
@@ -23,6 +24,7 @@ export function Messages({
   humanPlayer?: Player;
   scrollViewRef: React.RefObject<HTMLDivElement>;
 }) {
+  const { t, formatDateTime } = useI18n();
   const humanPlayerId = humanPlayer?.id;
   const descriptions = useQuery(api.world.gameDescriptions, { worldId });
   const messages = useQuery(api.messages.listMessages, {
@@ -81,7 +83,7 @@ export function Messages({
         <ChatHeading active={conversation.kind === 'active'} />
         <div className="town-chat-loading">
           <i aria-hidden="true" />
-          Loading conversation...
+          {t('chat.loading')}
         </div>
       </section>
     );
@@ -96,9 +98,12 @@ export function Messages({
         className={`town-chat-message ${mine ? 'is-mine' : 'is-theirs'}`}
       >
         <header>
-          <span>{mine ? 'You' : message.authorName}</span>
+          <span>{mine ? t('chat.you') : message.authorName}</span>
           <time dateTime={new Date(message._creationTime).toISOString()}>
-            {formatChatTime(message._creationTime)}
+            {formatDateTime(message._creationTime, {
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
           </time>
         </header>
         <div className="town-chat-bubble">
@@ -124,7 +129,11 @@ export function Messages({
         membershipNodes.push({
           node: (
             <div key={`joined-${playerId}`} className="town-chat-system">
-              <span>{playerName ?? 'A citizen'} joined the conversation.</span>
+              <span>
+                {t('chat.joined', {
+                  name: playerName ?? t('chat.unknownCitizen'),
+                })}
+              </span>
             </div>
           ),
           time: started,
@@ -140,7 +149,11 @@ export function Messages({
       membershipNodes.push({
         node: (
           <div key={`joined-${playerId}`} className="town-chat-system">
-            <span>{playerName ?? 'A citizen'} joined the conversation.</span>
+            <span>
+              {t('chat.joined', {
+                name: playerName ?? t('chat.unknownCitizen'),
+              })}
+            </span>
           </div>
         ),
         time: started,
@@ -149,7 +162,11 @@ export function Messages({
       membershipNodes.push({
         node: (
           <div key={`left-${playerId}`} className="town-chat-system">
-            <span>{playerName ?? 'A citizen'} left the conversation.</span>
+            <span>
+              {t('chat.left', {
+                name: playerName ?? t('chat.unknownCitizen'),
+              })}
+            </span>
           </div>
         ),
         // Keep archived departures after the final text message.
@@ -168,20 +185,23 @@ export function Messages({
         ) : (
           <div className="town-chat-empty-log">
             <span aria-hidden="true">···</span>
-            <p>Conversation started. Say hello.</p>
+            <p>{t('chat.empty')}</p>
           </div>
         )}
         {currentlyTyping && currentlyTyping.playerId !== humanPlayerId && (
           <article className="town-chat-message is-theirs is-typing">
             <header>
-              <span>{currentlyTypingName ?? 'Citizen'}</span>
+              <span>{currentlyTypingName ?? t('chat.citizen')}</span>
               <time dateTime={new Date(currentlyTyping.since).toISOString()}>
-                {formatChatTime(currentlyTyping.since)}
+                {formatDateTime(currentlyTyping.since, {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
               </time>
             </header>
             <div className="town-chat-bubble">
               <p>
-                Typing<span aria-hidden="true">...</span>
+                {t('chat.typing')}
               </p>
             </div>
           </article>
@@ -200,20 +220,16 @@ export function Messages({
 }
 
 function ChatHeading({ active }: { active: boolean }) {
+  const { t } = useI18n();
   return (
     <header className="town-chat-heading">
-      <span>{active ? 'Live conversation' : 'Previous conversation'}</span>
+      <span>
+        {active ? t('chat.liveConversation') : t('chat.previousConversation')}
+      </span>
       <small className={active ? 'is-live' : undefined}>
         <i aria-hidden="true" />
-        {active ? 'Live' : 'Archived'}
+        {active ? t('chat.live') : t('chat.archived')}
       </small>
     </header>
   );
-}
-
-function formatChatTime(timestamp: number) {
-  return new Intl.DateTimeFormat('en', {
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(timestamp);
 }

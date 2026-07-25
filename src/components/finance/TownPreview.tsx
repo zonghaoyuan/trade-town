@@ -2,6 +2,7 @@ import { previewDashboard } from '../../finance/demoData';
 import { CSSProperties } from 'react';
 import type { FocusedTownCitizen } from './TradeTownShell';
 import PixelAvatar from './PixelAvatar';
+import { useI18n } from '../../i18n';
 
 const positions = [
   [18, 28],
@@ -18,24 +19,31 @@ const positions = [
 
 export default function TownPreview({
   focusedCitizen = null,
+  hudInspectorOpen = false,
 }: {
   focusedCitizen?: FocusedTownCitizen | null;
+  hudInspectorOpen?: boolean;
 }) {
+  const { t, formatNumber } = useI18n();
   const focusedIndex = focusedCitizen
     ? previewDashboard.traders.findIndex((trader) => trader.name === focusedCitizen.name)
     : -1;
   const focusedPosition = focusedIndex >= 0 ? positions[focusedIndex] : undefined;
 
   return (
-    <div className="town-preview" aria-label="Injective Trade Town preview">
+    <div
+      className="town-preview"
+      aria-label={t('preview.aria')}
+      data-hud-inspector-open={hudInspectorOpen}
+    >
       <div className="preview-grid" aria-hidden="true" />
       <div className="exchange-building">
         <span>INJ</span>
-        <strong>EXCHANGE</strong>
+        <strong>{t('preview.exchange')}</strong>
       </div>
-      <div className="town-building building-bank">BANK</div>
-      <div className="town-building building-news">NEWS</div>
-      <div className="town-building building-fund">FUND</div>
+      <div className="town-building building-bank">{t('preview.bank')}</div>
+      <div className="town-building building-news">{t('preview.news')}</div>
+      <div className="town-building building-fund">{t('preview.fund')}</div>
       {previewDashboard.traders.map((trader, index) => (
         <div
           className={`preview-agent ${trader.kind === 'market_maker' ? 'preview-mm' : ''}`}
@@ -62,7 +70,9 @@ export default function TownPreview({
             <strong>{focusedCitizen.name}</strong>
             <small>{focusedCitizen.role}</small>
             <em className={focusedCitizen.pnl >= 0 ? 'pixel-up' : 'pixel-down'}>
-              P&amp;L {formatSignedCompact(focusedCitizen.pnl)}
+              {t('game.pnl', {
+                value: formatSignedCompact(focusedCitizen.pnl, formatNumber),
+              })}
             </em>
           </span>
         </aside>
@@ -71,16 +81,19 @@ export default function TownPreview({
         <strong>MIRA</strong>
         “75 bps changes ACME's refinancing math.”
       </div>
-      <div className="preview-mode-note">ADD VITE_CONVEX_URL TO LOAD THE LIVE PIXI TOWN</div>
+      <div className="preview-mode-note">{t('preview.missingConvex')}</div>
     </div>
   );
 }
 
-function formatSignedCompact(value: number) {
-  const formatted = new Intl.NumberFormat('en-US', {
+function formatSignedCompact(
+  value: number,
+  formatNumber: (value: number, options?: Intl.NumberFormatOptions) => string,
+) {
+  const formatted = formatNumber(value, {
     notation: 'compact',
     maximumFractionDigits: 1,
     signDisplay: 'always',
-  }).format(value);
+  });
   return `${formatted} TOWNUSD`;
 }

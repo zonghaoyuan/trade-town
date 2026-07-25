@@ -8,19 +8,22 @@ import 'react-toastify/dist/ReactToastify.css';
 import ConvexClientProvider from './components/ConvexClientProvider.tsx';
 import { hasConvexDeployment } from './components/ConvexClientProvider.tsx';
 import DemoApp from './DemoApp.tsx';
+import { I18nProvider } from './i18n';
 
 const Home = lazy(() => import('./App.tsx'));
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    {hasConvexDeployment ? (
-      <ConvexClientProvider>
-        <Suspense fallback={null}>
-          <Home />
-        </Suspense>
-      </ConvexClientProvider>
-    ) : (
-      <DemoApp />
-    )}
+    <I18nProvider>
+      {hasConvexDeployment ? (
+        <ConvexClientProvider>
+          <Suspense fallback={null}>
+            <Home />
+          </Suspense>
+        </ConvexClientProvider>
+      ) : (
+        <DemoApp />
+      )}
+    </I18nProvider>
   </React.StrictMode>,
 );

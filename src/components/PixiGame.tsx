@@ -19,6 +19,7 @@ import type { FocusedTownCitizen } from './finance/TradeTownShell.tsx';
 import type { Player as ServerPlayer } from '../../convex/aiTown/player.ts';
 import { locationFields, playerLocation, type Location } from '../../convex/aiTown/location.ts';
 import { useHistoricalValue } from '../hooks/useHistoricalValue.ts';
+import type { Locale } from '../i18n';
 
 export const PixiGame = (props: {
   worldId: Id<'worlds'>;
@@ -30,6 +31,7 @@ export const PixiGame = (props: {
   setSelectedElement: SelectElement;
   focusedCitizen?: FocusedTownCitizen | null;
   onFocusedCitizenPositionChange?: (position: { x: number; y: number } | null) => void;
+  locale: Locale;
 }) => {
   // PIXI setup.
   const pixiApp = useApp();
@@ -111,7 +113,9 @@ export const PixiGame = (props: {
       viewportRef={viewportRef}
     >
       <PixiStaticMap
+        key={`static-map-${props.locale}`}
         map={props.game.worldMap}
+        locale={props.locale}
         onpointerup={onMapPointerUp}
         onpointerdown={onMapPointerDown}
       />
