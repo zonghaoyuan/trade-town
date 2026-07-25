@@ -35,7 +35,7 @@
   grid-row: 3;
   height: auto;
   min-height: 0;
-  align-items: start;
+  align-items: stretch;
 }
 
 .pixel-town-shell.is-overview .pixel-world-column {

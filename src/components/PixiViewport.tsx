@@ -5,7 +5,6 @@ import { PixiComponent } from '@pixi/react';
 import { Viewport } from 'pixi-viewport';
 import { Application } from 'pixi.js';
 import { MutableRefObject, ReactNode } from 'react';
-import { getMapContainScale } from './viewportFit';
 
 export type ViewportProps = {
   app: Application;
@@ -22,18 +21,16 @@ function fitViewportToFrame(viewport: Viewport, props: ViewportProps) {
   viewport.resize(props.screenWidth, props.screenHeight, props.worldWidth, props.worldHeight);
 
   // The same Pixi world stays mounted when switching between the market and full-town
-  // layouts. Re-fit the camera when its frame changes and use a contain scale so every
-  // edge of the map remains visible when a data panel narrows the available frame.
-  const containScale = getMapContainScale(
-    props.screenWidth,
-    props.screenHeight,
-    props.worldWidth,
-    props.worldHeight,
+  // layouts. Re-fit the camera when its frame changes so the map fills the new space
+  // instead of keeping the smaller overview viewport in the top-left corner.
+  const coverScale = Math.min(
+    3,
+    Math.max(props.screenWidth / props.worldWidth, props.screenHeight / props.worldHeight),
   );
-  viewport.setZoom(containScale, true);
+  viewport.setZoom(coverScale, true);
   viewport
     .clamp({ direction: 'all', underflow: 'center' })
-    .clampZoom({ minScale: containScale, maxScale: Math.max(3, containScale) });
+    .clampZoom({ minScale: coverScale, maxScale: Math.max(3, coverScale) });
 }
 
 function hasMeasuredFrame(props: ViewportProps) {
