@@ -513,7 +513,7 @@ function MarketBoard({
     testnetDashboard.markets[0];
   if (!market) return null;
 
-  const pandaMode = dashboard.dataMode === 'panda_dayview';
+  const pandaMode = dashboard.dataMode === 'panda_market';
   const latestCandle = market.candles[market.candles.length - 1];
   const hasSentiment = pandaMode && market.sentiment;
   const quoteCurrency = market.quoteCurrency ?? (pandaMode ? 'CNY' : 'INJ');
