@@ -24,9 +24,9 @@ export function loadA2AConfig(env: NodeJS.ProcessEnv = process.env): A2AConfig {
   const apiKey = optional(env.A2A_API_KEY);
   const convexUrl = optional(env.A2A_CONVEX_URL);
   const convexSecret = optional(env.A2A_CONVEX_SHARED_SECRET);
-  const deepseekBaseUrl = optional(env.PANDA_DEEPSEEK_BASE_URL);
-  const deepseekApiKey = optional(env.PANDA_DEEPSEEK_API_KEY);
-  const deepseekModel = optional(env.PANDA_DEEPSEEK_MODEL);
+  const deepseekBaseUrl = optional(env.LLM_API_URL);
+  const deepseekApiKey = optional(env.LLM_API_KEY);
+  const deepseekModel = optional(env.LLM_MODEL);
   const maxTaskMs = readInteger(
     env.A2A_MAX_TASK_MS,
     18 * 60 * 1000,
@@ -57,7 +57,7 @@ export function loadA2AConfig(env: NodeJS.ProcessEnv = process.env): A2AConfig {
     ![deepseekBaseUrl, deepseekApiKey, deepseekModel].every(Boolean)
   ) {
     throw new Error(
-      'PANDA_DEEPSEEK_BASE_URL, PANDA_DEEPSEEK_API_KEY and PANDA_DEEPSEEK_MODEL must be configured together.',
+      'LLM_API_URL, LLM_API_KEY and LLM_MODEL must be configured together.',
     );
   }
   if (executionMode === 'competition') {
@@ -69,7 +69,7 @@ export function loadA2AConfig(env: NodeJS.ProcessEnv = process.env): A2AConfig {
     }
     if (!deepseekBaseUrl || !deepseekApiKey || !deepseekModel) {
       throw new Error(
-        'A2A_EXECUTION_MODE=competition requires the PandaAI DeepSeek endpoint, token and model identifier.',
+        'A2A_EXECUTION_MODE=competition requires LLM_API_URL, LLM_API_KEY and LLM_MODEL for DeepSeek V4 Pro.',
       );
     }
     if (!publicBaseUrl.startsWith('https://')) {

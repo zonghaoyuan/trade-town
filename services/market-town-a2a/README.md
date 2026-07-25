@@ -1,8 +1,8 @@
 # Market Town A2A Remote Agent
 
-This service exposes selected Injective Trade Town capabilities through the official A2A TypeScript SDK. It
-lives in this repository but runs as an independent public process and never imports the Injective
-signer.
+This service exposes selected Injective Trade Town capabilities through the official A2A TypeScript
+SDK. It can run as a standalone Node process for development or inside the same Cloudflare Worker
+that serves the frontend. It never imports the Injective signer.
 
 ## Implemented surface
 
@@ -10,6 +10,7 @@ signer.
 - `POST /a2a/v1` using JSON-RPC
 - A2A 1.0 with the official SDK's v0.3 compatibility layer
 - blocking, polling, and streaming task flows
+- DeepSeek V4 Pro task planning, parameter extraction, and final report synthesis in competition mode
 - `Task` persistence in Convex when configured, with an in-memory local fallback
 - four whitelisted skills:
   - `panda-market-replay`
@@ -74,9 +75,9 @@ A2A_PUBLIC_BASE_URL=https://agent.example.com
 A2A_API_KEY=<review-token>
 A2A_CONVEX_URL=<convex-url>
 A2A_CONVEX_SHARED_SECRET=<random-secret>
-PANDA_DEEPSEEK_BASE_URL=<panda-provided-endpoint>
-PANDA_DEEPSEEK_API_KEY=<panda-provided-token>
-PANDA_DEEPSEEK_MODEL=<panda-provided-model-id>
+LLM_API_URL=<deepseek-openai-compatible-endpoint>
+LLM_API_KEY=<deepseek-api-key>
+LLM_MODEL=<deepseek-v4-pro-model-id>
 ```
 
 Set the same persistence secret in Convex:
@@ -85,9 +86,22 @@ Set the same persistence secret in Convex:
 npx convex env set A2A_CONVEX_SHARED_SECRET '<random-secret>'
 ```
 
+If the town's Convex-hosted conversations should also use PandaAI DeepSeek V4 Pro, configure the
+same values in Convex separately:
+
+```bash
+npx convex env set LLM_API_URL '<deepseek-openai-compatible-endpoint>'
+npx convex env set LLM_API_KEY '<deepseek-api-key>'
+npx convex env set LLM_MODEL '<deepseek-v4-pro-model-id>'
+```
+
+These Convex `LLM_*` values are optional for A2A. The A2A Worker itself reads `LLM_*` from
+Cloudflare, while Convex only needs `A2A_CONVEX_SHARED_SECRET` to persist A2A tasks and artifacts.
+
 Competition mode refuses to start without HTTPS, Bearer authentication, Convex persistence, and all
-three PandaAI DeepSeek settings. Do not add `INJECTIVE_PRIVATE_KEY` or `GATEWAY_SHARED_SECRET` to
-this process.
+three `LLM_*` settings for PandaAI DeepSeek V4 Pro. DeepSeek plans every competition task before
+deterministic financial tools run, then synthesizes the evidence-backed report. Do not add
+`INJECTIVE_PRIVATE_KEY` or `GATEWAY_SHARED_SECRET` to this process.
 
 ## Verification
 
@@ -99,3 +113,6 @@ npm run build
 Before submission, deploy the public HTTPS process, run the example tasks against that URL, and
 verify it with PandaAI's test environment. If a real-time PandaAI feed is added later, implement it
 as a separate `live` data provider rather than relabeling this historical replay.
+
+For the combined Cloudflare Worker and frontend deployment, follow
+[`docs/CLOUDFLARE_WORKER_DEPLOYMENT.md`](../../docs/CLOUDFLARE_WORKER_DEPLOYMENT.md).

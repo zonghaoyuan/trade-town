@@ -32,6 +32,7 @@ export function createA2AApp(config: A2AConfig) {
       executionMode: config.executionMode,
       persistence: config.convexUrl ? 'convex' : 'memory',
       modelConfigured: Boolean(config.deepseekModel),
+      modelRole: config.deepseekModel ? 'task-planning-and-report-synthesis' : 'not-configured',
     });
   });
   app.get('/docs', (_req, res) => {

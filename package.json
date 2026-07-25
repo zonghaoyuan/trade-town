@@ -18,6 +18,8 @@
     "a2a:dev": "tsx services/market-town-a2a/src/index.ts",
     "a2a:examples": "tsx services/market-town-a2a/src/example-client.ts",
     "a2a:test": "NODE_OPTIONS=--experimental-vm-modules jest --verbose services/market-town-a2a",
+    "cf:dev": "npm run build && CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV=false wrangler dev",
+    "cf:deploy": "npm run build && wrangler deploy",
     "provision:plan": "tsx services/injective-gateway/src/provision.ts",
     "provision:testnet": "tsx services/injective-gateway/src/provision.ts",
     "level-editor": "vite src/editor/",
@@ -71,7 +73,8 @@
     "ts-node": "^10.9.1",
     "tsx": "4.20.3",
     "typescript": "5.9.3",
-    "vite": "8.1.5"
+    "vite": "8.1.5",
+    "wrangler": "4.114.0"
   },
   "type": "module"
 }

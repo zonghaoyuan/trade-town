@@ -1,0 +1,21 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "injective-trade-town",
+  "main": "services/market-town-a2a/src/cloudflare.ts",
+  "compatibility_date": "2026-07-25",
+  "compatibility_flags": ["nodejs_compat"],
+  "keep_vars": true,
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": [
+      "/.well-known/*",
+      "/a2a/*",
+      "/healthz",
+      "/docs"
+    ]
+  },
+  "observability": {
+    "enabled": true
+  }
+}

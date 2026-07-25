@@ -35,7 +35,18 @@ export type ModelDisclosure = {
   requiredModel: 'DeepSeek V4 Pro';
   configuredModel: string | null;
   used: boolean;
+  stages: {
+    taskPlanning: boolean;
+    reportSynthesis: boolean;
+  };
+  planningRationale: string;
   analysis: string;
+};
+
+export type SkillPlan = {
+  request: SkillRequest;
+  usedModel: boolean;
+  rationale: string;
 };
 
 export type MarketDataDisclosure = {
