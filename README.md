@@ -22,6 +22,14 @@ real investing:
 - A2A Agent Card: [View Agent Card](https://tradetown.net/.well-known/agent-card.json)
 - Service status: [Health Check](https://tradetown.net/healthz)
 
+## Project video
+
+[![Watch the Injective Trade Town project introduction on Bilibili](docs/assets/project-video-cover.jpg)](https://www.bilibili.com/video/BV1pp3G6KECd/)
+
+**[Watch “我们一起做了一座会聊天、会交易的 AI 小镇 🏘️” on Bilibili](https://www.bilibili.com/video/BV1pp3G6KECd/)**
+
+Chinese-language video · about 5 minutes
+
 ---
 
 ## The problem we want to solve

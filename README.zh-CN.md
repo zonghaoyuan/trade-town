@@ -16,6 +16,14 @@
 - A2A Agent Card：[查看 Agent Card](https://tradetown.net/.well-known/agent-card.json)
 - 服务状态：[Health Check](https://tradetown.net/healthz)
 
+## 项目介绍视频
+
+[![观看 Injective Trade Town 项目介绍视频](docs/assets/project-video-cover.jpg)](https://www.bilibili.com/video/BV1pp3G6KECd/)
+
+**[在哔哩哔哩观看《我们一起做了一座会聊天、会交易的 AI 小镇 🏘️》](https://www.bilibili.com/video/BV1pp3G6KECd/)**
+
+中文视频 · 约 5 分钟
+
 ---
 
 ## 我们想解决的问题
