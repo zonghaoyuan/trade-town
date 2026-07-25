@@ -7,6 +7,7 @@ A2A_MAX_TASK_MS=1080000
 A2A_MAX_PROMPT_CHARS=8000
 A2A_RATE_LIMIT_PER_MINUTE=60
 
-LLM_API_URL=https://replace-with-panda-deepseek-endpoint/v1
-LLM_API_KEY=replace-with-deepseek-key
-LLM_MODEL=replace-with-deepseek-v4-pro-model-id
+LLM_API_URL=https://replace-with-openai-compatible-endpoint/chat/completions
+LLM_API_KEY=replace-with-provider-key
+# Volcano Ark may use ARK_API_KEY instead of LLM_API_KEY.
+LLM_MODEL=replace-with-provider-model-id

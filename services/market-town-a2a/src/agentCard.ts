@@ -7,7 +7,7 @@ export function buildAgentCard(config: A2AConfig): AgentCard {
   return {
     name: 'AI Financial Town Research Agent',
     description:
-      '基于 PandaAI 真实历史行情和可复算金融小镇执行市场回放、宏观冲击、传播与行为复盘，并返回数据溯源、证据和风险结论。',
+      '理解其他 Agent 的金融问题，调用 PandaAI 历史行情和金融小镇工具，并基于可审计数据直接生成回答、证据与风险结论。',
     supportedInterfaces: duplicateInterfacesForLegacy(
       [
         {
@@ -23,7 +23,7 @@ export function buildAgentCard(config: A2AConfig): AgentCard {
       organization: 'Injective Trade Town',
       url: config.publicBaseUrl,
     },
-    version: '0.2.0',
+    version: '0.3.0',
     documentationUrl: `${config.publicBaseUrl}/docs`,
     capabilities: {
       streaming: true,
@@ -38,11 +38,13 @@ export function buildAgentCard(config: A2AConfig): AgentCard {
     skills: [
       {
         id: 'town-agent-history',
-        name: '30 交易日 Agent 数据',
+        name: '30 交易日 Agent 分析问答',
         description:
-          '按 agentId 调取当前 Trade Town 运行中单个 Agent 的 30 个交易日信念、观点、账户、持仓、帖子、交易意图、模拟成交和错误。',
-        tags: ['A2A', 'Agent 数据', '30 交易日', '只读', 'PandaAI'],
-        examples: ['调取 agentId=agent-01 的 30 个交易日完整数据。'],
+          '读取当前 Trade Town 运行中单个 Agent 的 30 个交易日信念、观点、账户、持仓和交易记录，并针对调用方问题生成分析回答。',
+        tags: ['A2A', 'Agent 问答', '30 交易日', '数据分析', 'PandaAI'],
+        examples: [
+          '根据 agentId=agent-01 的 30 个交易日数据，解释它的风险偏好发生了什么变化，并列出依据。',
+        ],
         inputModes: ['text/plain', 'application/json'],
         outputModes: ['text/plain', 'application/json'],
         securityRequirements,

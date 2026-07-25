@@ -11,16 +11,16 @@ import {
 import { AgentEvent, AgentExecutor, ExecutionEventBus, RequestContext } from '@a2a-js/sdk/server';
 import { A2AConfig } from './config';
 import { loadTownAgentHistory } from './agentHistory';
-import { DeepSeekReasoner } from './reasoner';
+import { MarketTownReasoner } from './reasoner';
 import { runSkill } from './skills';
 
 export class MarketTownAgentExecutor implements AgentExecutor {
   private readonly canceled = new Set<string>();
   private readonly taskContexts = new Map<string, string>();
-  private readonly reasoner: DeepSeekReasoner;
+  private readonly reasoner: MarketTownReasoner;
 
   constructor(private readonly config: A2AConfig) {
-    this.reasoner = new DeepSeekReasoner(config);
+    this.reasoner = new MarketTownReasoner(config);
   }
 
   cancelTask = async (taskId: string, eventBus: ExecutionEventBus) => {
@@ -62,10 +62,7 @@ export class MarketTownAgentExecutor implements AgentExecutor {
 
     try {
       this.publishWorking(taskId, contextId, eventBus);
-      const plan = await withTimeout(
-        this.reasoner.planRequest(userMessage),
-        this.config.maxTaskMs,
-      );
+      const plan = await withTimeout(this.reasoner.planRequest(userMessage), this.config.maxTaskMs);
       const skillResult =
         plan.request.skillId === 'town-agent-history'
           ? await withTimeout(
@@ -78,7 +75,7 @@ export class MarketTownAgentExecutor implements AgentExecutor {
         execution: {
           ...skillResult.execution,
           steps: [
-            `${plan.usedModel ? 'DeepSeek V4 Pro' : '本地确定性路由'}完成任务规划：${plan.rationale}`,
+            `${plan.usedModel ? 'LLM' : '本地确定性路由'}完成任务规划：${plan.rationale}`,
             ...skillResult.execution.steps,
           ],
         },
@@ -139,7 +136,13 @@ export class MarketTownAgentExecutor implements AgentExecutor {
         metadata: { schemaVersion: '1.0' },
       };
       eventBus.publish(AgentEvent.artifactUpdate(artifactUpdate));
-      this.publishFinal(taskId, contextId, TaskState.TASK_STATE_COMPLETED, eventBus);
+      this.publishFinal(
+        taskId,
+        contextId,
+        TaskState.TASK_STATE_COMPLETED,
+        eventBus,
+        report.model.analysis,
+      );
     } catch (error) {
       this.publishFinal(
         taskId,
@@ -161,11 +164,7 @@ export class MarketTownAgentExecutor implements AgentExecutor {
       status: {
         state: TaskState.TASK_STATE_WORKING,
         timestamp: new Date().toISOString(),
-        message: agentMessage(
-          taskId,
-          contextId,
-          '正在校验任务并读取结构化金融小镇数据。',
-        ),
+        message: agentMessage(taskId, contextId, '正在校验任务并读取结构化金融小镇数据。'),
       },
       metadata: { stage: 'financial-analysis' },
     };

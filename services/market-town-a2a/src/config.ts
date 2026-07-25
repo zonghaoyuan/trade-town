@@ -6,9 +6,9 @@ export type A2AConfig = {
   executionMode: ExecutionMode;
   convexUrl?: string;
   convexSecret?: string;
-  deepseekBaseUrl?: string;
-  deepseekApiKey?: string;
-  deepseekModel?: string;
+  llmBaseUrl?: string;
+  llmApiKey?: string;
+  llmModel?: string;
   townBackendUrl?: string;
   townRunId?: string;
   translationCacheDir?: string;
@@ -26,9 +26,9 @@ export function loadA2AConfig(env: NodeJS.ProcessEnv = process.env): A2AConfig {
   const executionMode = readExecutionMode(env.A2A_EXECUTION_MODE);
   const convexUrl = optional(env.A2A_CONVEX_URL);
   const convexSecret = optional(env.A2A_CONVEX_SHARED_SECRET);
-  const sharedDeepseek = {
+  const sharedLlm = {
     baseUrl: optional(env.LLM_API_URL),
-    apiKey: optional(env.LLM_API_KEY),
+    apiKey: optional(env.LLM_API_KEY) ?? optional(env.ARK_API_KEY),
     model: optional(env.LLM_MODEL),
   };
   const pandaDeepseek = {
@@ -36,14 +36,14 @@ export function loadA2AConfig(env: NodeJS.ProcessEnv = process.env): A2AConfig {
     apiKey: optional(env.PANDA_DEEPSEEK_API_KEY),
     model: optional(env.PANDA_DEEPSEEK_MODEL),
   };
-  validateOptionalGroup(sharedDeepseek, 'LLM_API_URL, LLM_API_KEY and LLM_MODEL');
+  validateOptionalGroup(sharedLlm, 'LLM_API_URL, LLM_MODEL and either LLM_API_KEY or ARK_API_KEY');
   validateOptionalGroup(
     pandaDeepseek,
     'PANDA_DEEPSEEK_BASE_URL, PANDA_DEEPSEEK_API_KEY and PANDA_DEEPSEEK_MODEL',
   );
-  const deepseekBaseUrl = sharedDeepseek.baseUrl ?? pandaDeepseek.baseUrl;
-  const deepseekApiKey = sharedDeepseek.apiKey ?? pandaDeepseek.apiKey;
-  const deepseekModel = sharedDeepseek.model ?? pandaDeepseek.model;
+  const llmBaseUrl = sharedLlm.baseUrl ?? pandaDeepseek.baseUrl;
+  const llmApiKey = sharedLlm.apiKey ?? pandaDeepseek.apiKey;
+  const llmModel = sharedLlm.model ?? pandaDeepseek.model;
   const townBackendUrl = optional(env.TOWN_BACKEND_URL)?.replace(/\/+$/, '');
   const townRunId = optional(env.TOWN_RUN_ID);
   const translationCacheDir = optional(env.TOWN_TRANSLATION_CACHE_DIR);
@@ -83,9 +83,9 @@ export function loadA2AConfig(env: NodeJS.ProcessEnv = process.env): A2AConfig {
     if (!convexUrl || !convexSecret) {
       throw new Error('A2A_EXECUTION_MODE=competition requires Convex-backed task persistence.');
     }
-    if (!deepseekBaseUrl || !deepseekApiKey || !deepseekModel) {
+    if (!llmBaseUrl || !llmApiKey || !llmModel) {
       throw new Error(
-        'A2A_EXECUTION_MODE=competition requires a complete LLM_* or PANDA_DEEPSEEK_* configuration for DeepSeek V4 Pro.',
+        'A2A_EXECUTION_MODE=competition requires a complete OpenAI-compatible LLM configuration.',
       );
     }
     if (!publicBaseUrl.startsWith('https://')) {
@@ -99,9 +99,9 @@ export function loadA2AConfig(env: NodeJS.ProcessEnv = process.env): A2AConfig {
     executionMode,
     convexUrl,
     convexSecret,
-    deepseekBaseUrl,
-    deepseekApiKey,
-    deepseekModel,
+    llmBaseUrl,
+    llmApiKey,
+    llmModel,
     townBackendUrl,
     townRunId,
     translationCacheDir,

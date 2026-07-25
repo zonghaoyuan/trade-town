@@ -30,8 +30,9 @@ export function createA2AApp(config: A2AConfig) {
       version: agentCard.version,
       executionMode: config.executionMode,
       persistence: config.convexUrl ? 'convex' : 'memory',
-      modelConfigured: Boolean(config.deepseekModel),
-      modelRole: config.deepseekModel ? 'task-planning-and-report-synthesis' : 'not-configured',
+      modelConfigured: Boolean(config.llmModel),
+      configuredModel: config.llmModel ?? null,
+      modelRole: config.llmModel ? 'task-planning-and-question-answering' : 'not-configured',
     });
   });
   app.get('/docs', (_req, res) => {

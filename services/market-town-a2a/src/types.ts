@@ -33,7 +33,8 @@ export type Counterfactual = {
 };
 
 export type ModelDisclosure = {
-  requiredModel: 'DeepSeek V4 Pro';
+  requiredModel: 'OpenAI-compatible LLM';
+  provider: string;
   configuredModel: string | null;
   used: boolean;
   stages: {
