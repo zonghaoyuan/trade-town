@@ -43,11 +43,15 @@ describe('Market Town A2A server', () => {
     const v1Card = (await v1.json()) as {
       supportedInterfaces: Array<{ protocolVersion: string }>;
       skills: Array<{ id: string }>;
+      securitySchemes: Record<string, unknown>;
+      securityRequirements: unknown[];
     };
     expect(v1Card.supportedInterfaces.map((item) => item.protocolVersion)).toEqual(
       expect.arrayContaining(['1.0', '0.3']),
     );
     expect(v1Card.skills).toHaveLength(5);
+    expect(v1Card.securitySchemes).toEqual({});
+    expect(v1Card.securityRequirements).toEqual([]);
 
     const legacy = await fetch(`${baseUrl}/.well-known/agent-card.json`);
     expect(legacy.status).toBe(200);

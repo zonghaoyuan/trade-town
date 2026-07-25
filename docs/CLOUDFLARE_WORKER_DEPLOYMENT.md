@@ -43,7 +43,6 @@ VITE_CONVEX_URL=https://<your-convex-deployment>.convex.cloud
 
 ```text
 LLM_API_KEY
-A2A_API_KEY
 A2A_CONVEX_SHARED_SECRET
 INJECTIVE_PRIVATE_KEY
 GATEWAY_SHARED_SECRET
@@ -70,7 +69,6 @@ LLM_MODEL=<deepseek-v4-pro-model-id>
 添加以下加密 Secret：
 
 ```text
-A2A_API_KEY=<提供给A2A调用方的Bearer Token>
 A2A_CONVEX_SHARED_SECRET=<随机生成的内部共享密钥>
 LLM_API_KEY=<DeepSeek API Key>
 ```
@@ -78,12 +76,13 @@ LLM_API_KEY=<DeepSeek API Key>
 也可以通过 Wrangler 上传 Secret：
 
 ```bash
-npx wrangler secret put A2A_API_KEY
 npx wrangler secret put A2A_CONVEX_SHARED_SECRET
 npx wrangler secret put LLM_API_KEY
 ```
 
-这里不需要额外的 Panda Token。`LLM_API_KEY` 就是 DeepSeek API Key。
+这里不需要额外的 Panda Token。`LLM_API_KEY` 就是 DeepSeek API Key。`/a2a/v1`
+作为公开接口提供，不需要调用方 Token；`A2A_RATE_LIMIT_PER_MINUTE` 继续限制单实例的
+请求频率。
 
 ## 4. 配置 Convex
 
@@ -121,7 +120,6 @@ curl -fsS -H 'A2A-Version: 1.0' \
   http://127.0.0.1:8787/.well-known/agent-card.json
 
 A2A_EXAMPLE_BASE_URL=http://127.0.0.1:8787 \
-A2A_API_KEY='<A2A_API_KEY>' \
 npm run a2a:examples
 ```
 
@@ -154,7 +152,6 @@ curl -fsS -H 'A2A-Version: 1.0' \
   https://<public-domain>/.well-known/agent-card.json
 
 A2A_EXAMPLE_BASE_URL=https://<public-domain> \
-A2A_API_KEY='<A2A_API_KEY>' \
 npm run a2a:examples
 ```
 

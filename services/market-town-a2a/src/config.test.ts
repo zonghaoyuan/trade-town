@@ -5,7 +5,6 @@ describe('A2A configuration', () => {
     const config = loadA2AConfig({
       A2A_EXECUTION_MODE: 'competition',
       A2A_PUBLIC_BASE_URL: 'https://agent.example.com',
-      A2A_API_KEY: 'review-token',
       A2A_CONVEX_URL: 'https://example.convex.cloud',
       A2A_CONVEX_SHARED_SECRET: 'persistence-secret',
       LLM_API_URL: 'https://deepseek.example.com/v1',
@@ -14,6 +13,7 @@ describe('A2A configuration', () => {
     });
 
     expect(config).toMatchObject({
+      executionMode: 'competition',
       deepseekBaseUrl: 'https://deepseek.example.com/v1',
       deepseekApiKey: 'deepseek-token',
       deepseekModel: 'deepseek-v4-pro',

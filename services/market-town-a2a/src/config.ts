@@ -4,7 +4,6 @@ export type A2AConfig = {
   port: number;
   publicBaseUrl: string;
   executionMode: ExecutionMode;
-  apiKey?: string;
   convexUrl?: string;
   convexSecret?: string;
   deepseekBaseUrl?: string;
@@ -25,7 +24,6 @@ export function loadA2AConfig(env: NodeJS.ProcessEnv = process.env): A2AConfig {
     env.A2A_PUBLIC_BASE_URL?.trim() || `http://127.0.0.1:${port}`,
   );
   const executionMode = readExecutionMode(env.A2A_EXECUTION_MODE);
-  const apiKey = optional(env.A2A_API_KEY);
   const convexUrl = optional(env.A2A_CONVEX_URL);
   const convexSecret = optional(env.A2A_CONVEX_SHARED_SECRET);
   const sharedDeepseek = {
@@ -82,9 +80,6 @@ export function loadA2AConfig(env: NodeJS.ProcessEnv = process.env): A2AConfig {
     throw new Error('A2A_CONVEX_URL and A2A_CONVEX_SHARED_SECRET must be configured together.');
   }
   if (executionMode === 'competition') {
-    if (!apiKey) {
-      throw new Error('A2A_EXECUTION_MODE=competition requires A2A_API_KEY.');
-    }
     if (!convexUrl || !convexSecret) {
       throw new Error('A2A_EXECUTION_MODE=competition requires Convex-backed task persistence.');
     }
@@ -102,7 +97,6 @@ export function loadA2AConfig(env: NodeJS.ProcessEnv = process.env): A2AConfig {
     port,
     publicBaseUrl,
     executionMode,
-    apiKey,
     convexUrl,
     convexSecret,
     deepseekBaseUrl,

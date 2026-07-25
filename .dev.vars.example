@@ -1,7 +1,6 @@
 # Copy to .dev.vars for `npm run cf:dev`. Never commit the real file.
 A2A_EXECUTION_MODE=competition
 A2A_PUBLIC_BASE_URL=https://trade-town.example.workers.dev
-A2A_API_KEY=replace-with-review-token
 A2A_CONVEX_URL=https://replace-with-your-deployment.convex.cloud
 A2A_CONVEX_SHARED_SECRET=replace-with-random-shared-secret
 A2A_MAX_TASK_MS=1080000

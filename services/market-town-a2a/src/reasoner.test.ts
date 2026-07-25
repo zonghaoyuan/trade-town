@@ -3,6 +3,7 @@ import { jest } from '@jest/globals';
 import { A2AConfig } from './config';
 import { DeepSeekReasoner } from './reasoner';
 import { runSkill } from './skills';
+import { SkillResult } from './types';
 
 describe('DeepSeek V4 Pro A2A reasoning', () => {
   const originalFetch = globalThis.fetch;
@@ -58,7 +59,6 @@ describe('DeepSeek V4 Pro A2A reasoning', () => {
       port: 41241,
       publicBaseUrl: 'https://agent.example.com',
       executionMode: 'competition',
-      apiKey: 'review-token',
       convexUrl: 'https://example.convex.cloud',
       convexSecret: 'persistence-secret',
       deepseekBaseUrl: 'https://deepseek.example.com/v1',
@@ -108,7 +108,140 @@ describe('DeepSeek V4 Pro A2A reasoning', () => {
       expect(body.messages).toHaveLength(2);
     }
   });
+
+  test('uses DeepSeek for town-agent-history while keeping the model input bounded', async () => {
+    const responses = [
+      jsonCompletion({
+        skillId: 'town-agent-history',
+        input: { agentId: 'agent-01', symbol: '002594.SZ' },
+        seed: 20260725,
+        dataMode: 'verified-replay',
+        rationale: '读取指定 Agent 的 30 个交易日记录，再基于可审计摘要生成结论。',
+      }),
+      jsonCompletion('该 Agent 的 30 日记录已完成读取与风险复盘，所有成交均为模拟。'),
+    ];
+    const fetchMock = jest.fn(
+      async (_input: RequestInfo | URL, _init?: RequestInit): Promise<Response> => {
+        const response = responses.shift();
+        if (!response) throw new Error('Unexpected DeepSeek request.');
+        return response;
+      },
+    );
+    globalThis.fetch = fetchMock;
+
+    const reasoner = new DeepSeekReasoner(deepSeekConfig());
+    const plan = await reasoner.planRequest(
+      textMessage('调取 agentId=agent-01 的 30 个交易日数据，并总结风险变化。'),
+    );
+    const report = await reasoner.completeReport(historyResult(), Date.now(), plan);
+
+    expect(plan).toMatchObject({
+      usedModel: true,
+      request: {
+        skillId: 'town-agent-history',
+        input: { agentId: 'agent-01', symbol: '002594.SZ' },
+        dataMode: 'verified-replay',
+      },
+    });
+    expect(report.model).toMatchObject({
+      used: true,
+      stages: {
+        taskPlanning: true,
+        reportSynthesis: true,
+      },
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    const synthesisBody = JSON.parse(String(fetchMock.mock.calls[1][1]?.body)) as {
+      messages: Array<{ content: string }>;
+    };
+    const synthesisInput = JSON.parse(synthesisBody.messages[1].content) as {
+      findings: { dailySummary: unknown[] };
+    };
+    expect(synthesisInput.findings.dailySummary).toHaveLength(30);
+    expect(synthesisBody.messages[1].content).not.toContain('raw unverified post');
+  });
 });
+
+function jsonCompletion(content: unknown) {
+  return new Response(
+    JSON.stringify({
+      choices: [{ message: { content: typeof content === 'string' ? content : JSON.stringify(content) } }],
+    }),
+    { status: 200, headers: { 'Content-Type': 'application/json' } },
+  );
+}
+
+function deepSeekConfig(): A2AConfig {
+  return {
+    port: 41241,
+    publicBaseUrl: 'https://agent.example.com',
+    executionMode: 'competition',
+    convexUrl: 'https://example.convex.cloud',
+    convexSecret: 'persistence-secret',
+    deepseekBaseUrl: 'https://deepseek.example.com/v1',
+    deepseekApiKey: 'deepseek-token',
+    deepseekModel: 'deepseek-v4-pro',
+    replayTotalDays: 30,
+    maxTaskMs: 5_000,
+    maxPromptChars: 8_000,
+    rateLimitPerMinute: 60,
+  };
+}
+
+function historyResult(): SkillResult {
+  return {
+    schemaVersion: '1.0',
+    reportId: 'agent-history-test',
+    runId: 'run-30',
+    skillId: 'town-agent-history',
+    title: 'Mira Chen · 30 Trading-Day Agent Data',
+    taskSummary: 'Read-only retrieval of one Agent across 30 trading days.',
+    execution: {
+      mode: 'competition',
+      dataMode: 'verified-replay',
+      isSimulated: true,
+      seed: 20260725,
+      durationMs: 0,
+      steps: ['Read and verify 30 daily records'],
+    },
+    marketData: null,
+    evidence: [
+      {
+        id: 'agent-daily-state',
+        kind: 'agent-decision',
+        summary: 'agent-01 has 30 verified daily records.',
+        source: 'Town API run run-30',
+        isSimulated: true,
+      },
+    ],
+    findings: {
+      provenance: { agentDecisionsAndFills: 'formal-simulation' },
+      range: { tradingDays: 30, startTradeDate: '2025-01-02', endTradeDate: '2025-02-12' },
+      agent: { agentId: 'agent-01', displayName: 'Mira Chen' },
+      days: Array.from({ length: 30 }, (_, index) => ({
+        tradeDate: `day-${index + 1}`,
+        agent: {
+          beliefScoreBefore: 0.4,
+          beliefScoreAfter: 0.5,
+          account: { equity: 1_000_000 + index },
+          positions: [],
+          riskRejections: 0,
+          orderCount: 1,
+          fillCount: 1,
+        },
+        views: [{}],
+        posts: [{ content: 'raw unverified post' }],
+        transactions: [{}],
+        errors: [],
+      })),
+    },
+    counterfactuals: [],
+    riskConclusion: 'All decisions and fills are simulated.',
+    chainProofs: [],
+    warnings: ['This report is not investment advice.'],
+  };
+}
 
 function textMessage(text: string): Message {
   return {

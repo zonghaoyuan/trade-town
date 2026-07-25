@@ -108,8 +108,8 @@ Then configure the Worker runtime variables and secrets described in
 npm run cf:deploy
 ```
 
-`.env.local` remains a frontend/build-time configuration source. Never expose `LLM_API_KEY`,
-`A2A_API_KEY`, or `A2A_CONVEX_SHARED_SECRET` as `VITE_*` variables.
+`.env.local` remains a frontend/build-time configuration source. Never expose `LLM_API_KEY` or
+`A2A_CONVEX_SHARED_SECRET` as `VITE_*` variables.
 
 ## Injective Testnet
 

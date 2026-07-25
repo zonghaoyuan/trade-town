@@ -1,4 +1,3 @@
-import { timingSafeEqual } from 'node:crypto';
 import { AGENT_CARD_PATH } from '@a2a-js/sdk';
 import { DefaultRequestHandler } from '@a2a-js/sdk/server';
 import { UserBuilder, agentCardHandler, jsonRpcHandler } from '@a2a-js/sdk/server/express';
@@ -40,7 +39,7 @@ export function createA2AApp(config: A2AConfig) {
       agentCard: `${config.publicBaseUrl}/.well-known/agent-card.json`,
       jsonRpc: `${config.publicBaseUrl}/a2a/v1`,
       protocolVersions: ['1.0', '0.3'],
-      authentication: config.apiKey ? 'Authorization: Bearer <token>' : 'none (local demo only)',
+      authentication: 'none (public endpoint)',
       examples: agentCard.skills.map((skill) => ({
         skillId: skill.id,
         prompt: skill.examples[0],
@@ -61,7 +60,6 @@ export function createA2AApp(config: A2AConfig) {
   app.use(
     '/a2a/v1',
     createRateLimiter(config.rateLimitPerMinute),
-    createBearerAuth(config.apiKey),
     rejectOversizedContentLength(100_000),
     jsonRpcHandler({
       requestHandler,
@@ -75,31 +73,6 @@ export function createA2AApp(config: A2AConfig) {
     res.status(500).json({ error: message.slice(0, 300) });
   });
   return app;
-}
-
-function createBearerAuth(apiKey: string | undefined) {
-  return (req: Request, res: Response, next: NextFunction) => {
-    if (!apiKey) {
-      next();
-      return;
-    }
-    const authorization = req.header('authorization');
-    const token = authorization?.startsWith('Bearer ') ? authorization.slice(7) : '';
-    if (!constantTimeEqual(token, apiKey)) {
-      res.setHeader('WWW-Authenticate', 'Bearer');
-      res.status(401).json({ error: 'Unauthorized' });
-      return;
-    }
-    next();
-  };
-}
-
-function constantTimeEqual(actual: string, expected: string) {
-  const actualBuffer = Buffer.from(actual);
-  const expectedBuffer = Buffer.from(expected);
-  return (
-    actualBuffer.length === expectedBuffer.length && timingSafeEqual(actualBuffer, expectedBuffer)
-  );
 }
 
 function rejectOversizedContentLength(maxBytes: number) {

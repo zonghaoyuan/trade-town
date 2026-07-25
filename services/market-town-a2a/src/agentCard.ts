@@ -3,7 +3,7 @@ import { duplicateInterfacesForLegacy } from '@a2a-js/sdk/compat/v0_3';
 import { A2AConfig } from './config';
 
 export function buildAgentCard(config: A2AConfig): AgentCard {
-  const securityRequirements = config.apiKey ? [{ schemes: { bearerAuth: { list: [] } } }] : [];
+  const securityRequirements: AgentCard['securityRequirements'] = [];
   return {
     name: 'AI Financial Town Research Agent',
     description:
@@ -31,20 +31,7 @@ export function buildAgentCard(config: A2AConfig): AgentCard {
       extensions: [],
       extendedAgentCard: false,
     },
-    securitySchemes: config.apiKey
-      ? {
-          bearerAuth: {
-            scheme: {
-              $case: 'httpAuthSecurityScheme',
-              value: {
-                description: 'PandaAI 评审调用使用的 Bearer Token。',
-                scheme: 'Bearer',
-                bearerFormat: 'opaque',
-              },
-            },
-          },
-        }
-      : {},
+    securitySchemes: {},
     securityRequirements,
     defaultInputModes: ['text/plain', 'application/json'],
     defaultOutputModes: ['text/plain', 'application/json'],

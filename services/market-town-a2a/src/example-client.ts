@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { randomUUID } from 'node:crypto';
 import { Role, Task, TaskState } from '@a2a-js/sdk';
-import { ClientFactory, ClientFactoryOptions, JsonRpcTransportFactory } from '@a2a-js/sdk/client';
+import { ClientFactory } from '@a2a-js/sdk/client';
 
 const prompts = [
   '分析 PandaAI 数据中 002594.SZ 的历史走势，并总结 8 个居民的分歧。',
@@ -15,19 +15,7 @@ async function main() {
     /\/+$/,
     '',
   );
-  const apiKey = process.env.A2A_API_KEY;
-  const authenticatedFetch: typeof fetch = async (input, init = {}) => {
-    const headers = new Headers(init.headers);
-    if (apiKey) {
-      headers.set('Authorization', `Bearer ${apiKey}`);
-    }
-    return await fetch(input, { ...init, headers });
-  };
-  const options = ClientFactoryOptions.createFrom(ClientFactoryOptions.default, {
-    transports: [new JsonRpcTransportFactory({ fetchImpl: authenticatedFetch })],
-    preferredTransports: ['JSONRPC'],
-  });
-  const client = await new ClientFactory(options).createFromUrl(baseUrl);
+  const client = await new ClientFactory().createFromUrl(baseUrl);
 
   const agentId = process.env.TOWN_EXAMPLE_AGENT_ID;
   if (agentId) {
@@ -68,15 +56,30 @@ async function main() {
     const report = response.artifacts
       .flatMap((artifact) => artifact.parts)
       .find((part) => part.content?.$case === 'data');
-    const skillId =
+    const reportValue =
       report?.content?.$case === 'data'
-        ? (report.content.value as { skillId?: string } | undefined)?.skillId
+        ? (report.content.value as
+            | {
+                skillId?: string;
+                execution?: { dataMode?: string };
+                model?: {
+                  configuredModel?: string | null;
+                  used?: boolean;
+                  stages?: {
+                    taskPlanning?: boolean;
+                    reportSynthesis?: boolean;
+                  };
+                };
+              }
+            | undefined)
         : undefined;
     console.log({
       prompt,
       taskId: response.id,
       state: TaskState[response.status?.state ?? TaskState.TASK_STATE_UNSPECIFIED],
-      skillId,
+      skillId: reportValue?.skillId,
+      dataMode: reportValue?.execution?.dataMode,
+      model: reportValue?.model,
     });
   }
 }

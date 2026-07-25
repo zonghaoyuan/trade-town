@@ -44,6 +44,7 @@ export class DeepSeekReasoner {
             '- rate-shock-experiment：模拟利率冲击；dataMode 必须为 simulated。',
             '- rumor-propagation-analysis：模拟谣言传播与更正；dataMode 必须为 simulated。',
             '- user-behavior-review：复盘仓位与行为偏差；dataMode 必须为 simulated。',
+            '- town-agent-history：读取一个 Agent 的 30 个交易日记录；dataMode 必须为 verified-replay，input 必须保留 agentId，可选保留 symbol。',
             '如果请求包含明确 skillId，除非该值不在白名单中，否则保持不变。',
             '只输出一个 JSON 对象，不要 Markdown。格式：',
             '{"skillId":"...","input":{},"seed":20260722,"dataMode":"...","rationale":"一句简短规划理由"}',
@@ -113,7 +114,7 @@ export class DeepSeekReasoner {
             title: result.title,
             taskSummary: result.taskSummary,
             marketData: result.marketData,
-            findings: result.findings,
+            findings: summarizeFindingsForModel(result),
             riskConclusion: result.riskConclusion,
             evidence: result.evidence,
             warnings: result.warnings,
@@ -269,6 +270,36 @@ function buildPlannedMessage(
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function summarizeFindingsForModel(result: SkillResult) {
+  if (result.skillId !== 'town-agent-history') {
+    return result.findings;
+  }
+  const days = Array.isArray(result.findings.days) ? result.findings.days : [];
+  return {
+    provenance: result.findings.provenance,
+    range: result.findings.range,
+    agent: result.findings.agent,
+    dailySummary: days.map((value) => {
+      const day = isRecord(value) ? value : {};
+      const agent = isRecord(day.agent) ? day.agent : {};
+      return {
+        tradeDate: day.tradeDate,
+        beliefScoreBefore: agent.beliefScoreBefore,
+        beliefScoreAfter: agent.beliefScoreAfter,
+        account: agent.account,
+        positionCount: Array.isArray(agent.positions) ? agent.positions.length : 0,
+        viewCount: Array.isArray(day.views) ? day.views.length : 0,
+        postCount: Array.isArray(day.posts) ? day.posts.length : 0,
+        transactionCount: Array.isArray(day.transactions) ? day.transactions.length : 0,
+        errorCount: Array.isArray(day.errors) ? day.errors.length : 0,
+        riskRejections: agent.riskRejections,
+        orderCount: agent.orderCount,
+        fillCount: agent.fillCount,
+      };
+    }),
+  };
 }
 
 function chatCompletionsUrl(baseUrl: string) {

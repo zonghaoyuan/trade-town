@@ -9,7 +9,7 @@ import type {
   TranslationMap,
 } from '../../town-replay-bridge/src/types';
 import { A2AConfig } from './config';
-import { MarketTownReport, SkillRequest } from './types';
+import { SkillRequest, SkillResult } from './types';
 
 type V2TranslationCache = {
   cacheVersion: number;
@@ -27,7 +27,7 @@ type V2TranslationCache = {
 export async function loadTownAgentHistory(
   request: SkillRequest,
   config: A2AConfig,
-): Promise<MarketTownReport> {
+): Promise<SkillResult> {
   if (!config.townBackendUrl || !config.townRunId || !config.translationCacheDir) {
     throw new Error(
       'town-agent-history requires TOWN_BACKEND_URL, TOWN_RUN_ID and TOWN_TRANSLATION_CACHE_DIR.',
@@ -69,7 +69,6 @@ export async function loadTownAgentHistory(
     skillId: 'town-agent-history',
     title: `${agent.display_name || agent.agent_id} · 30 Trading-Day Agent Data`,
     taskSummary: 'Read-only A2A retrieval of one Agent from the connected 30-trading-day Town run.',
-    createdAt: new Date().toISOString(),
     execution: {
       mode: config.executionMode,
       dataMode: 'verified-replay',
@@ -83,18 +82,6 @@ export async function loadTownAgentHistory(
         'Filter beliefs, views, posts, positions, intents and simulated fills by Agent',
         'Return one structured A2A artifact with provenance fields',
       ],
-    },
-    model: {
-      requiredModel: 'DeepSeek V4 Pro',
-      configuredModel: config.deepseekModel ?? null,
-      used: false,
-      stages: {
-        taskPlanning: false,
-        reportSynthesis: false,
-      },
-      planningRationale:
-        'Agent history uses deterministic routing and source retrieval without generating a new interpretation.',
-      analysis: 'This skill performs source retrieval and deterministic filtering; it does not generate a new model interpretation.',
     },
     marketData: null,
     evidence: [

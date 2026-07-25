@@ -10,7 +10,8 @@ that serves the frontend. It never imports the Injective signer.
 - `POST /a2a/v1` using JSON-RPC
 - A2A 1.0 with the official SDK's v0.3 compatibility layer
 - blocking, polling, and streaming task flows
-- DeepSeek V4 Pro task planning, parameter extraction, and final report synthesis in competition mode
+- DeepSeek V4 Pro task planning, parameter extraction, and final report synthesis for all five
+  declared Skills in competition mode
 - `Task` persistence in Convex when configured, with an in-memory local fallback
 - five whitelisted skills:
   - `town-agent-history`
@@ -101,7 +102,6 @@ Set the following in the A2A process:
 ```bash
 A2A_EXECUTION_MODE=competition
 A2A_PUBLIC_BASE_URL=https://agent.example.com
-A2A_API_KEY=<review-token>
 A2A_CONVEX_URL=<convex-url>
 A2A_CONVEX_SHARED_SECRET=<random-secret>
 LLM_API_URL=<deepseek-openai-compatible-endpoint>
@@ -127,10 +127,10 @@ npx convex env set LLM_MODEL '<deepseek-v4-pro-model-id>'
 These Convex `LLM_*` values are optional for A2A. The A2A Worker itself reads `LLM_*` from
 Cloudflare, while Convex only needs `A2A_CONVEX_SHARED_SECRET` to persist A2A tasks and artifacts.
 
-Competition mode refuses to start without HTTPS, Bearer authentication, Convex persistence, and all
-three `LLM_*` settings for PandaAI DeepSeek V4 Pro. DeepSeek plans every competition task before
-deterministic financial tools run, then synthesizes the evidence-backed report. Do not add
-`INJECTIVE_PRIVATE_KEY` or `GATEWAY_SHARED_SECRET` to this process.
+Competition mode refuses to start without HTTPS, Convex persistence, and all three `LLM_*` settings
+for PandaAI DeepSeek V4 Pro. The A2A endpoint is public and rate-limited. DeepSeek plans every
+competition task before deterministic financial tools run, then synthesizes the evidence-backed
+report. Do not add `INJECTIVE_PRIVATE_KEY` or `GATEWAY_SHARED_SECRET` to this process.
 
 ## Verification
 
