@@ -36,11 +36,8 @@ type AgentState = {
   profile: TraderProfileSeed;
   rule: AgentRule;
   cash: number;
-  quantity: number;
-  averagePrice: number;
-  action: TradeAction;
-  confidence: number;
-  score: number;
+  positions: Map<string, { quantity: number; averagePrice: number }>;
+  decisions: Map<string, { action: TradeAction; confidence: number; score: number }>;
   riskRejections: number;
   orderCount: number;
   tradeCount: number;
@@ -58,7 +55,7 @@ export type PandaSimulationRun = {
 };
 
 const RUN_SEED = 20260724;
-const INITIAL_POSITION_RATIO = 0.2;
+const INITIAL_TOTAL_POSITION_RATIO = 0.2;
 
 const AGENT_RULES: Record<string, AgentRule> = {
   'Mira Chen': {
@@ -113,20 +110,52 @@ const AGENT_RULES: Record<string, AgentRule> = {
 
 /**
  * Replays every visible Panda daily bar in chronological order. No candle after
- * the supplied market snapshot can influence an agent decision or portfolio.
+ * the supplied market snapshots can influence an agent decision or portfolio.
  */
 export function buildPandaSimulationRun(market: DashboardMarket): PandaSimulationRun {
-  if (market.candles.length === 0) {
-    throw new Error(`Panda simulation requires at least one candle for ${market.symbol}.`);
+  return buildPandaSimulationRuns([market])[market.symbol];
+}
+
+/**
+ * Builds one shared portfolio per Agent and a symbol-specific reasoning view for
+ * every supplied market. Selecting a market must never select a different
+ * account, cash balance, NAV, or position collection.
+ */
+export function buildPandaSimulationRuns(
+  markets: DashboardMarket[],
+): Record<string, PandaSimulationRun> {
+  if (markets.length === 0) {
+    throw new Error('Panda simulation requires at least one market.');
+  }
+  for (const market of markets) {
+    if (market.candles.length === 0) {
+      throw new Error(`Panda simulation requires at least one candle for ${market.symbol}.`);
+    }
   }
 
-  const latestFeatures = deriveFeatures(market, market.candles.length - 1);
-  const runId = `panda-${market.symbol.replace(/[^a-z0-9]/gi, '-')}-${latestFeatures.date}-${RUN_SEED}`;
-  const firstPrice = market.candles[0].close;
-  const initialQuantity = Math.floor(
-    (DEFAULT_INITIAL_AGENT_NAV * INITIAL_POSITION_RATIO) / firstPrice,
+  const symbols = markets.map((market) => market.symbol);
+  const initialPositionRatio = INITIAL_TOTAL_POSITION_RATIO / markets.length;
+  const initialPositions = new Map(
+    markets.map((market) => {
+      const firstPrice = market.candles[0].close;
+      return [
+        market.symbol,
+        {
+          quantity: Math.floor((DEFAULT_INITIAL_AGENT_NAV * initialPositionRatio) / firstPrice),
+          averagePrice: firstPrice,
+        },
+      ] as const;
+    }),
   );
-  const initialCash = DEFAULT_INITIAL_AGENT_NAV - initialQuantity * firstPrice;
+  const initialCash =
+    DEFAULT_INITIAL_AGENT_NAV -
+    markets.reduce((sum, market) => {
+      const position = initialPositions.get(market.symbol)!;
+      return sum + position.quantity * position.averagePrice;
+    }, 0);
+  const markPrices = new Map(
+    markets.map((market) => [market.symbol, market.candles[0].close] as const),
+  );
   const executions: DashboardExecution[] = [];
   const states: AgentState[] = TOWN_TRADERS.filter((profile) => profile.kind === 'ai').map(
     (profile) => {
@@ -136,11 +165,10 @@ export function buildPandaSimulationRun(market: DashboardMarket): PandaSimulatio
         profile,
         rule,
         cash: initialCash,
-        quantity: initialQuantity,
-        averagePrice: firstPrice,
-        action: 'HOLD',
-        confidence: 0.52,
-        score: 0,
+        positions: new Map(
+          [...initialPositions].map(([symbol, position]) => [symbol, { ...position }]),
+        ),
+        decisions: new Map(),
         riskRejections: 0,
         orderCount: 0,
         tradeCount: 0,
@@ -148,22 +176,31 @@ export function buildPandaSimulationRun(market: DashboardMarket): PandaSimulatio
     },
   );
 
-  for (let dayIndex = 1; dayIndex < market.candles.length; dayIndex += 1) {
-    const candle = market.candles[dayIndex];
-    const features = deriveFeatures(market, dayIndex);
+  const timeline = markets
+    .flatMap((market) =>
+      market.candles.slice(1).map((candle, candleIndex) => ({
+        market,
+        candle,
+        candleIndex: candleIndex + 1,
+      })),
+    )
+    .sort(
+      (left, right) =>
+        left.candle.time - right.candle.time ||
+        left.market.symbol.localeCompare(right.market.symbol),
+    );
+
+  for (const { market, candle, candleIndex } of timeline) {
+    markPrices.set(market.symbol, candle.close);
+    const features = deriveFeatures(market, candleIndex);
 
     for (const [agentIndex, state] of states.entries()) {
-      const navBefore = state.cash + state.quantity * candle.close;
-      const score = clamp(
-        features.compositeScore * state.rule.multiplier + state.rule.bias,
-        -1,
-        1,
-      );
+      const position = state.positions.get(market.symbol)!;
+      const navBefore = portfolioNav(state, markPrices);
+      const score = clamp(features.compositeScore * state.rule.multiplier + state.rule.bias, -1, 1);
       const action: TradeAction = score > 0.12 ? 'BUY' : score < -0.12 ? 'SELL' : 'HOLD';
       const confidence = round(clamp(0.52 + Math.abs(score) * 1.2, 0.52, 0.92), 3);
-      state.action = action;
-      state.confidence = confidence;
-      state.score = score;
+      state.decisions.set(market.symbol, { action, confidence, score });
       if (action === 'HOLD') continue;
 
       const requestedRatio = clamp(
@@ -176,9 +213,9 @@ export function buildPandaSimulationRun(market: DashboardMarket): PandaSimulatio
         Math.floor((navBefore * requestedRatio) / candle.close),
       );
       const requestedQuantity =
-        action === 'SELL' ? Math.min(state.quantity, unboundedQuantity) : unboundedQuantity;
+        action === 'SELL' ? Math.min(position.quantity, unboundedQuantity) : unboundedQuantity;
       if (requestedQuantity <= 0) {
-        state.action = 'HOLD';
+        state.decisions.set(market.symbol, { action: 'HOLD', confidence, score });
         continue;
       }
 
@@ -187,7 +224,7 @@ export function buildPandaSimulationRun(market: DashboardMarket): PandaSimulatio
         quantity: requestedQuantity,
         limitPrice: candle.close,
         cash: state.cash,
-        currentPosition: state.quantity,
+        currentPosition: position.quantity,
         netAssetValue: navBefore,
         maxOrderNavRatio: 0.04 + state.profile.riskTolerance * 0.08,
         maxPositionNavRatio: 0.28 + state.profile.riskTolerance * 0.15,
@@ -235,15 +272,15 @@ export function buildPandaSimulationRun(market: DashboardMarket): PandaSimulatio
       });
 
       if (action === 'BUY') {
-        const previousCost = state.quantity * state.averagePrice;
+        const previousCost = position.quantity * position.averagePrice;
         state.cash -= requestedQuantity * candle.close;
-        state.quantity += requestedQuantity;
-        state.averagePrice =
-          (previousCost + requestedQuantity * candle.close) / state.quantity;
+        position.quantity += requestedQuantity;
+        position.averagePrice =
+          (previousCost + requestedQuantity * candle.close) / position.quantity;
       } else {
         state.cash += requestedQuantity * candle.close;
-        state.quantity -= requestedQuantity;
-        if (state.quantity === 0) state.averagePrice = 0;
+        position.quantity -= requestedQuantity;
+        if (position.quantity === 0) position.averagePrice = 0;
       }
       state.tradeCount += 1;
 
@@ -265,48 +302,23 @@ export function buildPandaSimulationRun(market: DashboardMarket): PandaSimulatio
     }
   }
 
-  const traders = states.map((state) => buildTrader(state, market, latestFeatures));
-  const buyCount = traders.filter((trader) => trader.action === 'BUY').length;
-  const sellCount = traders.filter((trader) => trader.action === 'SELL').length;
-  const holdCount = traders.length - buyCount - sellCount;
-  const largestCamp = Math.max(buyCount, sellCount, holdCount);
-  const sentiment: PandaSimulationRun['sentiment'] = {
-    bulls: buyCount,
-    bears: sellCount,
-    holds: holdCount,
-    consensus: round((largestCamp / traders.length) * 100, 0),
-    divergence: round(100 - (largestCamp / traders.length) * 100, 0),
-    camp:
-      holdCount === largestCamp
-        ? 'CAUTIOUS'
-        : buyCount > sellCount
-          ? 'BULLISH'
-          : sellCount > buyCount
-            ? 'BEARISH'
-            : 'SPLIT',
-  };
-
-  const latestDate = pandaDate(market.candles[market.candles.length - 1].time);
-  const latestExecutions = executions.filter((execution) =>
-    execution.id.includes(`-${latestDate}-`),
-  );
   const fills = executions.filter((execution) => execution.type === 'fill');
-  const latestFills = latestExecutions.filter((execution) => execution.type === 'fill');
-  const latestRejected = latestExecutions.filter(
-    (execution) => execution.type === 'risk_rejected',
+  const financialTraders = states.map((state) =>
+    buildTrader(state, markets[0], symbols, markPrices),
   );
-  const topTrader = [...traders].sort((left, right) => right.navEnd - left.navEnd)[0];
+  const topTrader = [...financialTraders].sort((left, right) => right.navEnd - left.navEnd)[0];
   const summary: TownSummary = {
     aum: round(
-      traders.reduce((sum, trader) => sum + trader.navEnd, 0),
+      financialTraders.reduce((sum, trader) => sum + trader.navEnd, 0),
       2,
     ),
     totalExposure: round(
-      traders.reduce(
+      financialTraders.reduce(
         (sum, trader) =>
           sum +
           trader.positions.reduce(
-            (positionSum, position) => positionSum + position.quantity * market.lastPrice,
+            (positionSum, position) =>
+              positionSum + position.quantity * (markPrices.get(position.symbol) ?? 0),
             0,
           ),
         0,
@@ -317,61 +329,116 @@ export function buildPandaSimulationRun(market: DashboardMarket): PandaSimulatio
       fills.reduce((sum, execution) => sum + execution.quantity * execution.price, 0),
       2,
     ),
-    profitableAgents: traders.filter((trader) => trader.pnl > 0).length,
+    profitableAgents: financialTraders.filter((trader) => trader.pnl > 0).length,
     topAgent: topTrader.name,
     topReturnPct: round((topTrader.pnl / topTrader.navStart) * 100, 2),
   };
 
-  return {
-    runId,
-    sentiment,
-    traders,
-    executions,
-    events: buildEvents(
-      runId,
-      market,
-      latestFeatures,
-      traders,
-      latestFills,
-      latestRejected,
-    ),
-    social: buildSocial(runId, market, latestFeatures, traders),
-    summary,
-    errors: [],
-  };
+  return Object.fromEntries(
+    markets.map((market) => {
+      const latestFeatures = deriveFeatures(market, market.candles.length - 1);
+      const runId = `panda-multi-${market.symbol.replace(
+        /[^a-z0-9]/gi,
+        '-',
+      )}-${latestFeatures.date}-${RUN_SEED}`;
+      const traders = states.map((state) =>
+        buildTrader(state, market, symbols, markPrices, latestFeatures),
+      );
+      const buyCount = traders.filter((trader) => trader.action === 'BUY').length;
+      const sellCount = traders.filter((trader) => trader.action === 'SELL').length;
+      const holdCount = traders.length - buyCount - sellCount;
+      const largestCamp = Math.max(buyCount, sellCount, holdCount);
+      const sentiment: PandaSimulationRun['sentiment'] = {
+        bulls: buyCount,
+        bears: sellCount,
+        holds: holdCount,
+        consensus: round((largestCamp / traders.length) * 100, 0),
+        divergence: round(100 - (largestCamp / traders.length) * 100, 0),
+        camp:
+          holdCount === largestCamp
+            ? 'CAUTIOUS'
+            : buyCount > sellCount
+              ? 'BULLISH'
+              : sellCount > buyCount
+                ? 'BEARISH'
+                : 'SPLIT',
+      };
+      const latestDate = pandaDate(market.candles[market.candles.length - 1].time);
+      const latestExecutions = executions.filter(
+        (execution) =>
+          execution.symbol === market.symbol && execution.id.includes(`-${latestDate}-`),
+      );
+
+      return [
+        market.symbol,
+        {
+          runId,
+          sentiment,
+          traders,
+          executions,
+          events: buildEvents(
+            runId,
+            market,
+            latestFeatures,
+            traders,
+            latestExecutions.filter((execution) => execution.type === 'fill'),
+            latestExecutions.filter((execution) => execution.type === 'risk_rejected'),
+          ),
+          social: buildSocial(runId, market, latestFeatures, traders),
+          summary,
+          errors: [],
+        } satisfies PandaSimulationRun,
+      ];
+    }),
+  ) as Record<string, PandaSimulationRun>;
+}
+
+function portfolioNav(state: AgentState, markPrices: Map<string, number>) {
+  return (
+    state.cash +
+    [...state.positions].reduce(
+      (sum, [symbol, position]) => sum + position.quantity * (markPrices.get(symbol) ?? 0),
+      0,
+    )
+  );
 }
 
 function buildTrader(
   state: AgentState,
   market: DashboardMarket,
-  features: MarketFeatures,
+  symbols: string[],
+  markPrices: Map<string, number>,
+  features = deriveFeatures(market, market.candles.length - 1),
 ): DashboardTrader {
-  const navEnd = state.cash + state.quantity * market.lastPrice;
-  const positionValue = state.quantity * market.lastPrice;
-  const pnl = navEnd - DEFAULT_INITIAL_AGENT_NAV;
+  const decision = state.decisions.get(market.symbol) ?? {
+    action: 'HOLD' as const,
+    confidence: 0.52,
+    score: 0,
+  };
+  const navEnd = portfolioNav(state, markPrices);
   const actionOutcome =
-    state.action === 'HOLD'
+    decision.action === 'HOLD'
       ? 'does not clear this profile’s decision threshold'
-      : `produces a simulated ${state.action} intent under deterministic risk limits`;
+      : `produces a simulated ${decision.action} intent under deterministic risk limits`;
 
   return {
     ...state.profile,
-    focusSymbols: [market.symbol],
+    focusSymbols: symbols,
     currency: market.quoteCurrency ?? 'CNY',
-    pnl: round(pnl, 2),
+    pnl: round(navEnd - DEFAULT_INITIAL_AGENT_NAV, 2),
     activity:
-      state.action === 'HOLD'
+      decision.action === 'HOLD'
         ? `Holding after ${features.date} Panda close`
-        : `Latest signal: simulated ${state.action}`,
-    action: state.action,
-    confidence: state.confidence,
-    beliefBefore: `${market.displayName} entered this replay day from the prior close; every agent originally received the same 1,000,000 CNY NAV and 20% model allocation.`,
+        : `Latest signal: simulated ${decision.action}`,
+    action: decision.action,
+    confidence: decision.confidence,
+    beliefBefore: `${market.displayName} entered this replay day from the prior close; every agent shares one 1,000,000 CNY portfolio with a 20% initial allocation distributed across ${symbols.length} markets.`,
     beliefAfter: `${state.profile.name} ${state.rule.interpretation}; the current composite signal ${actionOutcome}.`,
     thesis: `${market.displayName} closed ${features.dayReturn >= 0 ? 'up' : 'down'} ${Math.abs(
       features.dayReturn,
     ).toFixed(2)}% at ${market.lastPrice.toFixed(2)}, versus MA20 ${features.ma20.toFixed(
       2,
-    )}. The portfolio reflects only Panda bars through this date.`,
+    )}. The multi-asset portfolio reflects only Panda bars through this date.`,
     evidence: [
       `PANDA:daily_bars:${market.symbol}:${features.date}`,
       `close=${market.lastPrice.toFixed(2)} preClose=${market.referencePrice.toFixed(2)} dayReturn=${features.dayReturn.toFixed(2)}%`,
@@ -381,20 +448,18 @@ function buildTrader(
     navStart: DEFAULT_INITIAL_AGENT_NAV,
     navEnd: round(navEnd, 2),
     cash: round(state.cash, 2),
-    positions:
-      state.quantity > 0
-        ? [
-            {
-              symbol: market.symbol,
-              quantity: state.quantity,
-              weightPct: round((positionValue / navEnd) * 100, 1),
-              pnl: round(
-                state.quantity * (market.lastPrice - state.averagePrice),
-                2,
-              ),
-            },
-          ]
-        : [],
+    positions: [...state.positions]
+      .filter(([, position]) => position.quantity > 0)
+      .map(([symbol, position]) => {
+        const markPrice = markPrices.get(symbol) ?? 0;
+        const positionValue = position.quantity * markPrice;
+        return {
+          symbol,
+          quantity: position.quantity,
+          weightPct: round((positionValue / navEnd) * 100, 1),
+          pnl: round(position.quantity * (markPrice - position.averagePrice), 2),
+        };
+      }),
     riskRejections: state.riskRejections,
     orderCount: state.orderCount,
     tradeCount: state.tradeCount,
@@ -504,7 +569,8 @@ function buildEvents(
       kind: 'chain',
       actor: 'Panda replay simulator',
       title: `${fills.length} paper fill(s) applied today`,
-      detail: 'Agent NAVs were recomputed from paper fills. No A-share or Injective order was submitted.',
+      detail:
+        'Agent NAVs were recomputed from paper fills. No A-share or Injective order was submitted.',
       proof: `paper:${runId}`,
     },
   ];
@@ -516,7 +582,8 @@ function buildEvents(
       occurredAt: occurredAt + 1_000,
       kind: 'news',
       actor: 'Panda replay event detector',
-      title: Math.abs(features.dayReturn) >= 3 ? 'Large daily move detected' : 'Volume spike detected',
+      title:
+        Math.abs(features.dayReturn) >= 3 ? 'Large daily move detected' : 'Volume spike detected',
       detail: `Computed event: return ${signed(features.dayReturn)}%, volume ${features.volumeRatio.toFixed(
         2,
       )}× the trailing average.`,
@@ -583,8 +650,7 @@ function calculateVolatility(returns: number[]) {
   if (returns.length < 2) return 0;
   const average = mean(returns);
   const variance =
-    returns.reduce((sum, value) => sum + (value - average) ** 2, 0) /
-    (returns.length - 1);
+    returns.reduce((sum, value) => sum + (value - average) ** 2, 0) / (returns.length - 1);
   return Math.sqrt(variance) * Math.sqrt(252) * 100;
 }
 

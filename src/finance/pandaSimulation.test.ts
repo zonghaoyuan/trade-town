@@ -1,6 +1,7 @@
 import { DEFAULT_INITIAL_AGENT_NAV } from '../../shared/finance';
+import { buildPandaDayViewDashboards } from './demoData';
 import { buildPandaMarketsAtDay, pandaHistoricalMarket } from './pandaMarket';
-import { buildPandaSimulationRun } from './pandaSimulation';
+import { buildPandaSimulationRun, buildPandaSimulationRuns } from './pandaSimulation';
 
 describe('Panda agent replay', () => {
   const run = buildPandaSimulationRun(pandaHistoricalMarket.market);
@@ -95,5 +96,80 @@ describe('Panda agent replay', () => {
 
     expect(ranking(later)).not.toEqual(ranking(early));
     expect(later.executions.every((execution) => execution.occurredAt !== undefined)).toBe(true);
+  });
+
+  it('keeps one multi-asset portfolio while symbol-specific reasoning changes', () => {
+    const markets = buildPandaMarketsAtDay(100).map((dataset) => dataset.market);
+    const runs = buildPandaSimulationRuns(markets);
+    const selectedTraders = markets.map(
+      (market) => runs[market.symbol].traders.find((trader) => trader.name === 'Mira Chen')!,
+    );
+    const first = selectedTraders[0];
+
+    expect(first.focusSymbols).toEqual(markets.map((market) => market.symbol));
+    expect(first.positions.length).toBeGreaterThan(1);
+    for (const trader of selectedTraders.slice(1)) {
+      expect(trader).toMatchObject({
+        navStart: first.navStart,
+        navEnd: first.navEnd,
+        cash: first.cash,
+        pnl: first.pnl,
+        positions: first.positions,
+        orderCount: first.orderCount,
+        tradeCount: first.tradeCount,
+        riskRejections: first.riskRejections,
+      });
+    }
+    expect(selectedTraders.map((trader) => trader.evidence[0])).toEqual(
+      markets.map((market) => expect.stringContaining(market.symbol)),
+    );
+  });
+
+  it('reconciles shared cash and every marked position to one 1M portfolio', () => {
+    const markets = buildPandaMarketsAtDay(120).map((dataset) => dataset.market);
+    const runs = buildPandaSimulationRuns(markets);
+    const marketPrices = new Map(markets.map((market) => [market.symbol, market.lastPrice]));
+    const run = runs[markets[0].symbol];
+
+    for (const trader of run.traders) {
+      const markedNav =
+        trader.cash +
+        trader.positions.reduce(
+          (sum, position) => sum + position.quantity * marketPrices.get(position.symbol)!,
+          0,
+        );
+      expect(trader.navStart).toBe(DEFAULT_INITIAL_AGENT_NAV);
+      expect(markedNav).toBeCloseTo(trader.navEnd, 2);
+      expect(
+        run.executions.filter(
+          (execution) => execution.agentName === trader.name && execution.type === 'fill',
+        ),
+      ).toHaveLength(trader.tradeCount);
+    }
+    expect(new Set(run.executions.map((execution) => execution.symbol))).toEqual(
+      new Set(markets.map((market) => market.symbol)),
+    );
+  });
+
+  it('keeps the shared financial snapshot when the UI switches dashboards', () => {
+    const dashboards = Object.values(buildPandaDayViewDashboards(100));
+    const traders = dashboards.map(
+      (dashboard) => dashboard.traders.find((trader) => trader.name === 'Mira Chen')!,
+    );
+    const first = traders[0];
+
+    expect(dashboards).toHaveLength(5);
+    expect(first.positions.length).toBeGreaterThan(1);
+    for (const trader of traders.slice(1)) {
+      expect({
+        navEnd: trader.navEnd,
+        cash: trader.cash,
+        positions: trader.positions,
+      }).toEqual({
+        navEnd: first.navEnd,
+        cash: first.cash,
+        positions: first.positions,
+      });
+    }
   });
 });

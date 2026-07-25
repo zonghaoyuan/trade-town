@@ -1,5 +1,5 @@
 import { CREATE_ME_DEFAULT_DRAFT } from '../../shared/createMe';
-import { pandaDayViewDashboard } from './demoData';
+import { pandaDayViewDashboard, pandaDayViewDashboards } from './demoData';
 import {
   augmentDashboardWithMe,
   buildMeSimulation,
@@ -34,13 +34,12 @@ describe('Create ME market simulation', () => {
       kind: 'ai',
       role: 'User financial digital twin',
       avatarUrl: me.textureUrl,
-      focusSymbols: [symbol],
+      focusSymbols: pandaDayViewDashboard.markets.map((market) => market.symbol),
     });
+    expect(user!.positions.length).toBeGreaterThan(1);
     expect(user?.evidence).toContain('profile:me:v3');
     expect(
-      dashboard.events.some(
-        (event) => event.actor === 'Veylor' && event.title.includes('ME'),
-      ),
+      dashboard.events.some((event) => event.actor === 'Veylor' && event.title.includes('ME')),
     ).toBe(true);
   });
 
@@ -52,9 +51,9 @@ describe('Create ME market simulation', () => {
 
     expect(second).toEqual(first);
     expect(fills).toHaveLength(first.trader.tradeCount);
-    expect(
-      first.executions.filter((execution) => execution.type === 'risk_rejected'),
-    ).toHaveLength(first.trader.riskRejections);
+    expect(first.executions.filter((execution) => execution.type === 'risk_rejected')).toHaveLength(
+      first.trader.riskRejections,
+    );
     expect(first.trader.navEnd - first.trader.navStart).toBeCloseTo(first.trader.pnl, 2);
     expect(first.executions.every((execution) => execution.isSimulated)).toBe(true);
   });
@@ -73,5 +72,26 @@ describe('Create ME market simulation', () => {
       2,
     );
     expect(getMeAgentName('Mira Chen', ['Mira Chen'])).toBe('Mira Chen · ME');
+  });
+
+  test('keeps the ME portfolio stable when the selected market changes', () => {
+    const dashboards = Object.entries(pandaDayViewDashboards).map(([selected, dashboard]) =>
+      augmentDashboardWithMe(dashboard, me, selected),
+    );
+    const users = dashboards.map((dashboard) => dashboard.traders.find((trader) => trader.isUser)!);
+    const first = users[0];
+
+    for (const user of users.slice(1)) {
+      expect(user).toMatchObject({
+        navStart: first.navStart,
+        navEnd: first.navEnd,
+        cash: first.cash,
+        pnl: first.pnl,
+        positions: first.positions,
+        orderCount: first.orderCount,
+        tradeCount: first.tradeCount,
+      });
+    }
+    expect(first.navStart).toBeCloseTo(1_000_000, 2);
   });
 });

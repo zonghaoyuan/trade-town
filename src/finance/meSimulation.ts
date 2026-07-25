@@ -3,10 +3,7 @@ import {
   type CreateMeDraft,
   compileMeProfile,
 } from '../../shared/createMe';
-import {
-  assessTradeRisk,
-  DEFAULT_INITIAL_AGENT_NAV,
-} from '../../shared/finance';
+import { assessTradeRisk, DEFAULT_INITIAL_AGENT_NAV } from '../../shared/finance';
 import type {
   CausalEvent,
   DashboardExecution,
@@ -48,16 +45,15 @@ export function augmentDashboardWithMe(
   const market = dashboard.markets.find((candidate) => candidate.symbol === symbol);
   if (!market) return dashboard;
 
-  const result = buildMeSimulation(
-    market,
+  const result = buildMePortfolioSimulation(
+    dashboard.markets,
+    symbol,
     me,
     dashboard.traders.map((trader) => trader.name),
   );
   const traders = [...dashboard.traders.filter((trader) => !trader.isUser), result.trader];
   const executions = [
-    ...dashboard.executions.filter(
-      (execution) => execution.agentName !== result.trader.name,
-    ),
+    ...dashboard.executions.filter((execution) => execution.agentName !== result.trader.name),
     ...result.executions,
   ];
   const sentiment = summarizeSentiment(traders);
@@ -79,30 +75,21 @@ export function buildMeSimulation(
   market: DashboardMarket,
   me: MeSimulationInput,
   reservedNames: readonly string[] = [],
+  initialNav = DEFAULT_INITIAL_AGENT_NAV,
 ): MeSimulationResult {
   const compiled = compileMeProfile(me.draft);
   const features = deriveFeatures(market);
   const name = getMeAgentName(me.draft.displayName, reservedNames);
   const score = decisionScore(me.draft, compiled, market, features);
   const threshold =
-    compiled.tradeFrequency === 'high'
-      ? 0.07
-      : compiled.tradeFrequency === 'low'
-        ? 0.17
-        : 0.11;
+    compiled.tradeFrequency === 'high' ? 0.07 : compiled.tradeFrequency === 'low' ? 0.17 : 0.11;
   const action = score > threshold ? 'BUY' : score < -threshold ? 'SELL' : 'HOLD';
   const confidence = round(
     clamp(0.48 + Math.abs(score) * 0.72 + me.draft.conviction / 500, 0.5, 0.96),
     3,
   );
-  const runKey = [
-    'me',
-    slug(name),
-    market.symbol,
-    features.date,
-    me.version ?? 'local',
-  ].join('-');
-  const navStart = DEFAULT_INITIAL_AGENT_NAV;
+  const runKey = ['me', slug(name), market.symbol, features.date, me.version ?? 'local'].join('-');
+  const navStart = initialNav;
   const initialWeightPct = clamp(compiled.maxPositionPct * 0.45, 4, 13);
   const initialQuantity = Math.max(
     1,
@@ -295,6 +282,52 @@ export function buildMeSimulation(
   return { trader, executions, events, social };
 }
 
+function buildMePortfolioSimulation(
+  markets: DashboardMarket[],
+  selectedSymbol: string,
+  me: MeSimulationInput,
+  reservedNames: readonly string[],
+): MeSimulationResult {
+  const sleeveNav = DEFAULT_INITIAL_AGENT_NAV / Math.max(1, markets.length);
+  const results = markets.map((market) => ({
+    market,
+    result: buildMeSimulation(market, me, reservedNames, sleeveNav),
+  }));
+  const selected = results.find(({ market }) => market.symbol === selectedSymbol) ?? results[0];
+  if (!selected) {
+    throw new Error('ME portfolio simulation requires at least one market.');
+  }
+
+  const navStart = results.reduce((sum, item) => sum + item.result.trader.navStart, 0);
+  const navEnd = results.reduce((sum, item) => sum + item.result.trader.navEnd, 0);
+  const cash = results.reduce((sum, item) => sum + item.result.trader.cash, 0);
+  const positions = results.flatMap(({ market, result }) =>
+    result.trader.positions.map((position) => ({
+      ...position,
+      weightPct: round((position.quantity * market.lastPrice * 100) / Math.max(navEnd, 1), 1),
+    })),
+  );
+  const trader: DashboardTrader = {
+    ...selected.result.trader,
+    focusSymbols: markets.map((market) => market.symbol),
+    pnl: round(navEnd - navStart, 2),
+    navStart: round(navStart, 2),
+    navEnd: round(navEnd, 2),
+    cash: round(cash, 2),
+    positions,
+    riskRejections: results.reduce((sum, item) => sum + item.result.trader.riskRejections, 0),
+    orderCount: results.reduce((sum, item) => sum + item.result.trader.orderCount, 0),
+    tradeCount: results.reduce((sum, item) => sum + item.result.trader.tradeCount, 0),
+  };
+
+  return {
+    trader,
+    executions: results.flatMap((item) => item.result.executions),
+    events: selected.result.events,
+    social: selected.result.social,
+  };
+}
+
 export function getMeAgentName(displayName: string, reservedNames: readonly string[]) {
   const base = displayName.trim().slice(0, 20) || 'ME';
   return reservedNames.includes(base) ? `${base} · ME` : base;
@@ -308,9 +341,7 @@ function decisionScore(
 ) {
   const evidenceWeight = 0.72 + draft.conviction / 500;
   const socialWeight = compiled.socialSignalWeight / 100;
-  let score =
-    features.evidenceSignal * evidenceWeight +
-    features.crowdSignal * socialWeight * 0.32;
+  let score = features.evidenceSignal * evidenceWeight + features.crowdSignal * socialWeight * 0.32;
 
   if (market.changePct < 0 && draft.scenarios.includes('market_crash')) {
     score +=
@@ -354,13 +385,9 @@ function deriveFeatures(market: DashboardMarket): MarketFeatures {
   const rsiScore = clamp((rsi14 - 50) / 50, -1, 1);
   const evidenceSignal = trendScore * 0.5 + dayScore * 0.3 + rsiScore * 0.2;
   const sentiment = market.sentiment;
-  const sentimentTotal = sentiment
-    ? sentiment.bulls + sentiment.bears + (sentiment.holds ?? 0)
-    : 0;
+  const sentimentTotal = sentiment ? sentiment.bulls + sentiment.bears + (sentiment.holds ?? 0) : 0;
   const crowdSignal =
-    sentiment && sentimentTotal > 0
-      ? (sentiment.bulls - sentiment.bears) / sentimentTotal
-      : 0;
+    sentiment && sentimentTotal > 0 ? (sentiment.bulls - sentiment.bears) / sentimentTotal : 0;
 
   return {
     date: new Date((latest?.time ?? 0) * 1000).toISOString().slice(0, 10).replaceAll('-', ''),
@@ -442,7 +469,12 @@ function mean(values: number[]) {
 }
 
 function slug(value: string) {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'user';
+  return (
+    value
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '') || 'user'
+  );
 }
 
 function clamp(value: number, minimum: number, maximum: number) {

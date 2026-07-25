@@ -15,7 +15,7 @@ import {
   PANDA_REPLAY_DAY_COUNT,
   pandaHistoricalMarket,
 } from './pandaMarket';
-import { buildPandaSimulationRun } from './pandaSimulation';
+import { buildPandaSimulationRuns } from './pandaSimulation';
 
 export type DashboardMode = 'panda_dayview' | 'injective_testnet' | 'local_sim';
 export type {
@@ -131,17 +131,15 @@ const injectivePreviewTraders: DashboardTrader[] = TOWN_TRADERS.slice(0, 8).map(
 
 export function buildPandaDayViewDashboards(dayIndex: number) {
   const datasets = buildPandaMarketsAtDay(dayIndex);
-  const simulationRuns = new Map(
-    datasets.map((dataset) => [dataset.market.symbol, buildPandaSimulationRun(dataset.market)]),
-  );
+  const simulationRuns = buildPandaSimulationRuns(datasets.map((dataset) => dataset.market));
   const markets: DashboardMarket[] = datasets.map((dataset) => ({
     ...dataset.market,
-    sentiment: simulationRuns.get(dataset.market.symbol)!.sentiment,
+    sentiment: simulationRuns[dataset.market.symbol].sentiment,
   }));
 
   return Object.fromEntries(
     datasets.map((dataset) => {
-      const run = simulationRuns.get(dataset.market.symbol)!;
+      const run = simulationRuns[dataset.market.symbol];
       return [
         dataset.market.symbol,
         {
