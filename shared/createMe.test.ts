@@ -3,6 +3,7 @@ import {
   buildMeAgentNarrative,
   compileMeProfile,
   getLpcWalkLayers,
+  isApprovedLpcWalkLayerSet,
   sanitizeCreateMeDraft,
 } from './createMe';
 
@@ -110,5 +111,26 @@ describe('Create ME profile compiler', () => {
       creditPath: 'head/heads/human/female/walk.png',
       tint: '#8f6b5d',
     });
+    expect(isApprovedLpcWalkLayerSet(layers)).toBe(true);
+  });
+
+  test('rejects incomplete or off-catalog LPC layer sets', () => {
+    const layers = getLpcWalkLayers({
+      ...CREATE_ME_DEFAULT_DRAFT,
+      appearanceMode: 'custom',
+    });
+
+    expect(isApprovedLpcWalkLayerSet(layers.filter((layer) => layer.category !== 'head'))).toBe(
+      false,
+    );
+    expect(
+      isApprovedLpcWalkLayerSet(
+        layers.map((layer) =>
+          layer.category === 'head'
+            ? { ...layer, url: 'https://unapproved.example/head.png' }
+            : layer,
+        ),
+      ),
+    ).toBe(false);
   });
 });

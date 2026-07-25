@@ -10,6 +10,7 @@ import {
   compileMeProfile,
   getCreateMePreset,
   getLpcWalkLayers,
+  isApprovedLpcWalkLayerSet,
   sanitizeCreateMeDraft,
 } from '../shared/createMe';
 
@@ -237,10 +238,7 @@ export const create = mutation({
     const preset = getCreateMePreset(draft.presetId);
     const customLayers = getLpcWalkLayers(draft);
     if (args.appearanceMode === 'custom') {
-      const validCustomDraft =
-        customLayers.length === 5 &&
-        customLayers.every((layer) => layer.url.includes(LPC_GENERATOR_COMMIT));
-      if (!validCustomDraft) {
+      if (!isApprovedLpcWalkLayerSet(customLayers)) {
         throw new ConvexError('LPC 图层配置不在项目白名单中');
       }
     }

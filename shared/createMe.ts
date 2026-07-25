@@ -186,8 +186,40 @@ export type LpcWalkLayer = {
   creditPath: string;
 };
 
+const LPC_WALK_LAYER_ORDER: readonly LpcWalkLayer['category'][] = [
+  'body',
+  'head',
+  'top',
+  'bottom',
+  'shoes',
+  'hair',
+];
+
+const LPC_WALK_LAYER_PATHS: Record<LpcWalkLayer['category'], ReadonlySet<string>> = {
+  body: new Set(['body/bodies/female/walk.png']),
+  head: new Set(['head/heads/human/female/walk.png']),
+  top: new Set(LPC_TOP_STYLES.map((item) => item.path)),
+  bottom: new Set(LPC_BOTTOM_STYLES.map((item) => item.path)),
+  shoes: new Set(LPC_SHOES_STYLES.map((item) => item.path)),
+  hair: new Set(LPC_HAIR_STYLES.map((item) => item.path)),
+};
+
 function catalogItem<Item extends { id: string }>(items: readonly Item[], id: string) {
   return items.find((item) => item.id === id) ?? items[0];
+}
+
+export function isApprovedLpcWalkLayerSet(layers: readonly LpcWalkLayer[]) {
+  return (
+    layers.length === LPC_WALK_LAYER_ORDER.length &&
+    layers.every((layer, index) => {
+      const category = LPC_WALK_LAYER_ORDER[index];
+      return (
+        layer.category === category &&
+        LPC_WALK_LAYER_PATHS[category].has(layer.creditPath) &&
+        layer.url === `${LPC_RAW_ROOT}/${layer.creditPath}`
+      );
+    })
+  );
 }
 
 export function getLpcWalkLayers(draft: CreateMeDraft): LpcWalkLayer[] {
