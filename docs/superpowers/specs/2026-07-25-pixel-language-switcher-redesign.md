@@ -2,71 +2,66 @@
 
 ## Goal
 
-Replace the current single-label language button with a compact, unambiguous
-pixel-art segmented control that feels native to the INJ Trade Town header.
+Replace the generic language button with a compact, unambiguous pixel-art
+language badge that feels native to the INJ Trade Town header.
 The control must remain directly accessible on desktop, tablet, portrait
 mobile, and short landscape layouts.
 
 ## Chosen Direction
 
-Use a persistent two-segment `EN | 中` selector.
+Use one persistent target-language badge.
 
-- Both supported languages are visible at all times.
-- The current locale is the selected segment and uses the town's gold surface
-  with dark text.
-- The other locale uses the slate surface with cream text.
+- The English interface displays `中`, indicating that the next action switches
+  to Chinese.
+- The Chinese interface displays `EN`, indicating that the next action switches
+  to English.
 - The control uses the same hard edges, integer-pixel borders, inset bevel, and
-  offset shadow as the surrounding HUD.
+  offset shadow as the surrounding HUD, without inheriting the visually heavy
+  generic action-button frame.
 - Do not use national flags. Flags identify countries rather than languages.
-- Do not open a dropdown. Two choices are faster and clearer as direct actions.
+- Do not open a dropdown. With two languages, a single reversible action is
+  faster and occupies less header space.
 
-This adapts a conventional segmented control to the project's pixel interface:
-the pattern makes closely related exclusive choices visible, while the styling
-keeps it visually subordinate to Create ME and the town-view action.
+The badge stays visually subordinate to Create ME and the town-view action.
+Its tooltip and accessible name state the full destination action.
 
 ## Component and Semantics
 
-`LanguageSwitcher` becomes a labelled group containing two native buttons:
+`LanguageSwitcher` remains one native button:
 
-- English button: visible label `EN`, `lang="en"`.
-- Chinese button: visible label `中`, `lang="zh-CN"`.
-- Each button exposes its selected state through `aria-pressed`.
-- The group receives a localized accessible name through
-  `language.selector`.
-- Selecting the active locale is a harmless no-op.
-- Selecting the other locale continues to use the existing `setLocale`
-  function, browser persistence, and document-language update.
-
-The selected state must never depend on color alone. It also receives a
-recessed/pressed treatment and a centered 3-by-3-pixel square marker along its
-bottom edge.
+- Its visible glyph is the destination locale's short label.
+- The glyph receives the destination `lang` attribute.
+- Its localized accessible name and tooltip read “Switch to Chinese” or
+  “切换至英文”.
+- A `data-target-locale` attribute exposes the destination for deterministic
+  browser testing.
+- Activation continues to use the existing `setLocale` function, browser
+  persistence, and document-language update.
 
 ## Visual Specification
 
 ### Desktop
 
-- Overall size: 68 by 42 CSS pixels.
-- Two equal segments separated by a 2-pixel dark divider.
-- Outer border and shadow align with adjacent header controls.
-- Selected segment: gold background, night text, inset lower-right shadow.
-- Unselected segment: slate background, cream text.
-- Hover affects only the available segment.
+- Overall size: 42 by 42 CSS pixels.
+- A three-pixel night frame surrounds a slate terminal-like face.
+- Gold type, four pixel-corner details, a bottom status line, inset lighting,
+  and a three-by-four-pixel outer shadow create the badge treatment.
+- Hover brightens the face and glyph; press moves the badge down by two pixels.
 
 ### Compact layouts
 
-- Overall size reduces to 60 by 42 CSS pixels.
-- Each segment remains at least 28 pixels wide and 42 pixels high.
-- Labels stay `EN` and `中`; neither is replaced by a globe, flag, or tooltip-
-  only icon.
+- Overall size reduces to 40 by 42 CSS pixels.
+- The pointer target remains larger than the WCAG 2.2 minimum.
+- The visible label stays `EN` or `中`; it is never replaced by a globe, flag,
+  or tooltip-only icon.
 - The selector participates in the existing header-action gap and must not
   overlap replay, Create ME, town-view, help, or Injective status controls.
 
 ### Motion and focus
 
-- State changes use an immediate pixel-style press, without sliding or blurred
+- State changes use an immediate pixel-style press without sliding or blurred
   animation.
-- Keyboard focus uses a high-contrast two-pixel outline and remains visible
-  around the focused segment.
+- Keyboard focus uses a high-contrast two-pixel blue outline.
 - Reduced-motion mode requires no special fallback because the design has no
   essential animation.
 
@@ -78,13 +73,13 @@ bottom edge.
   remain overflow-free.
 - The 667 by 375 short-landscape header must retain its single-row compact
   replay layout.
-- The 390 by 844 mobile header must keep both language segments visible.
+- The 390 by 844 mobile header must keep the language badge visible.
 
 ## Testing
 
-- Update the existing locale end-to-end test to select explicit `EN` and `中`
-  segments.
-- Assert the selected segment's `aria-pressed` state before and after a switch.
+- Update the existing locale end-to-end test to select the target-language
+  badge.
+- Assert `data-target-locale` before and after a switch.
 - Preserve browser-language detection and reload-persistence coverage.
 - Run unit tests, TypeScript/build, lint, and the full responsive Playwright
   suite.
@@ -99,9 +94,6 @@ bottom edge.
 - GOV.UK guidance recommends avoiding a select when a small set of choices can
   be presented directly:
   https://design-system.service.gov.uk/components/select/
-- Apple segmented controls describe the pattern as a quick switch between
-  closely related choices:
-  https://developer.apple.com/design/human-interface-guidelines/segmented-controls
 
 ## Out of Scope
 
