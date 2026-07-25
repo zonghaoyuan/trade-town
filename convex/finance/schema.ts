@@ -138,7 +138,8 @@ export const financeTables = {
   })
     .index('by_intent_id', ['intentId'])
     .index('by_state', ['state', 'createdAt'])
-    .index('by_agent', ['agentName', 'createdAt']),
+    .index('by_agent', ['agentName', 'createdAt'])
+    .index('by_updated_at', ['updatedAt']),
 
   chainTransactions: defineTable({
     txHash: v.string(),
@@ -199,7 +200,8 @@ export const financeTables = {
   })
     .index('by_trade_id', ['tradeId'])
     .index('by_agent', ['agentName', 'executedAt'])
-    .index('by_market', ['marketSymbol', 'executedAt']),
+    .index('by_market', ['marketSymbol', 'executedAt'])
+    .index('by_executed_at', ['executedAt']),
 
   portfolioSnapshots: defineTable({
     agentName: v.string(),
