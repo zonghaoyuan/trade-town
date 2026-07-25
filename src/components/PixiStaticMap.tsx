@@ -7,6 +7,8 @@ import * as gentlewaterfall from '../../data/animations/gentlewaterfall.json';
 import * as gentlesplash from '../../data/animations/gentlesplash.json';
 import * as windmill from '../../data/animations/windmill.json';
 import { buildings as urbanBuildings, tilesetpath as urbanTilesetPath } from '../../data/urban';
+import { localizeMapLabel } from '../i18n/domain';
+import type { Locale } from '../i18n';
 
 const animations = {
   'campfire.json': { spritesheet: campfire, url: '/assets/spritesheets/campfire.png' },
@@ -26,7 +28,7 @@ const animations = {
 };
 
 export const PixiStaticMap = PixiComponent('StaticMap', {
-  create: (props: { map: WorldMap; [k: string]: any }) => {
+  create: (props: { map: WorldMap; locale: Locale; [k: string]: any }) => {
     const map = props.map;
     const numxtiles = Math.floor(map.tileSetDimX / map.tileDim);
     const numytiles = Math.floor(map.tileSetDimY / map.tileDim);
@@ -71,12 +73,17 @@ export const PixiStaticMap = PixiComponent('StaticMap', {
     if (map.tileSetUrl === urbanTilesetPath) {
       for (const building of urbanBuildings) {
         if (!building.mapLabel) continue;
+        const mapLabel = localizeMapLabel(
+          props.locale,
+          building.id,
+          building.mapLabel,
+        );
         const labelContainer = new PIXI.Container();
         labelContainer.eventMode = 'none';
         const isLandmark = building.labelProminence === 'landmark';
         const isQuiet = building.labelProminence === 'quiet';
 
-        const label = new PIXI.Text(building.mapLabel, {
+        const label = new PIXI.Text(mapLabel, {
           align: 'center',
           fill: isLandmark ? 0xffe8a6 : isQuiet ? 0xd9e0cf : 0xf4e2b7,
           fontFamily: '"PingFang SC", "Microsoft YaHei", sans-serif',

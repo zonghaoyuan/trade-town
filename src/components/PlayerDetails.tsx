@@ -10,6 +10,8 @@ import { GameId } from '../../convex/aiTown/ids';
 import { ServerGame } from '../hooks/serverGame';
 import { TOWN_TRADERS } from '../../shared/finance';
 import PixelAvatar from './finance/PixelAvatar';
+import { useI18n } from '../i18n';
+import { localizeTraderRole, localizeTraderStyle } from '../i18n/domain';
 
 export default function PlayerDetails({
   worldId,
@@ -26,6 +28,7 @@ export default function PlayerDetails({
   setSelectedElement: SelectElement;
   scrollViewRef: React.RefObject<HTMLDivElement>;
 }) {
+  const { locale, t } = useI18n();
   const humanTokenIdentifier = useQuery(api.world.userStatus, { worldId });
 
   const players = [...game.world.players.values()];
@@ -57,7 +60,7 @@ export default function PlayerDetails({
   if (!playerId) {
     return (
       <div className="h-full text-xl flex text-center items-center p-4">
-        Click on an agent on the map to see chat history.
+        {t('player.clickAgent')}
       </div>
     );
   }
@@ -136,33 +139,41 @@ export default function PlayerDetails({
     TOWN_TRADERS.findIndex((candidate) => candidate.name === playerDescription?.name),
   );
   const status = inConversationWithMe
-    ? { label: 'In conversation', tone: 'is-live' }
+    ? { label: t('player.status.inConversation'), tone: 'is-live' }
     : haveInvite
-      ? { label: 'Invitation received', tone: 'is-alert' }
+      ? { label: t('player.status.invitation'), tone: 'is-alert' }
       : waitingForAccept
-        ? { label: 'Waiting for reply', tone: 'is-waiting' }
+        ? { label: t('player.status.waiting'), tone: 'is-waiting' }
         : waitingForNearby
-          ? { label: 'Walking over', tone: 'is-waiting' }
+          ? { label: t('player.status.walking'), tone: 'is-waiting' }
           : playerConversation
-            ? { label: 'In conversation', tone: 'is-busy' }
+            ? { label: t('player.status.inConversation'), tone: 'is-busy' }
             : canInvite
-              ? { label: 'Available', tone: 'is-live' }
+              ? { label: t('player.status.available'), tone: 'is-live' }
               : isMe
-                ? { label: 'This is you', tone: 'is-neutral' }
-                : { label: 'Town citizen', tone: 'is-neutral' };
+                ? { label: t('player.status.you'), tone: 'is-neutral' }
+                : { label: t('player.status.citizen'), tone: 'is-neutral' };
   const showActiveConversation =
     !isMe && playerConversation && playerStatus?.kind === 'participating';
   const profileDescription = isMe
-    ? 'Your character in Convex Town.'
-    : (financeProfile?.style ?? playerDescription?.description);
+    ? t('player.yourCharacter')
+    : financeProfile
+      ? localizeTraderStyle(locale, financeProfile.name, financeProfile.style)
+      : playerDescription?.description;
 
   return (
     <section className="town-dialog-panel">
       <header className="town-dialog-header">
         <PixelAvatar index={avatarIndex} />
         <div className="town-dialog-identity">
-          <h2>{playerDescription?.name ?? 'Unknown citizen'}</h2>
-          <p>{financeProfile?.role ?? (isMe ? 'Town resident' : 'AI citizen')}</p>
+          <h2>{playerDescription?.name ?? t('player.unknown')}</h2>
+          <p>
+            {financeProfile
+              ? localizeTraderRole(locale, financeProfile.name, financeProfile.role)
+              : isMe
+                ? t('player.resident')
+                : t('player.aiCitizen')}
+          </p>
           <span className={`town-dialog-status ${status.tone}`}>
             <i aria-hidden="true" />
             {status.label}
@@ -171,16 +182,16 @@ export default function PlayerDetails({
         <button
           type="button"
           className="town-dialog-close"
-          aria-label="Close citizen details"
+          aria-label={t('player.closeDetails')}
           onClick={() => setSelectedElement(undefined)}
         >
           <img src={closeImg} alt="" />
         </button>
       </header>
 
-      <section className="town-dialog-profile" aria-label="Citizen profile">
+      <section className="town-dialog-profile" aria-label={t('player.profileAria')}>
         <div className="town-dialog-profile-title">
-          <strong>Profile</strong>
+          <strong>{t('player.profile')}</strong>
           {!!financeProfile?.focusSymbols.length && (
             <span className="town-dialog-tags">
               {financeProfile.focusSymbols.map((symbol) => (
@@ -206,31 +217,31 @@ export default function PlayerDetails({
         <div className="town-dialog-actions">
           {canInvite && (
             <button type="button" className="is-primary" onClick={onStartConversation}>
-              Start conversation
+              {t('player.startConversation')}
             </button>
           )}
           {waitingForAccept && (
             <button type="button" disabled>
-              Waiting for reply...
+              {t('player.waitingReply')}
             </button>
           )}
           {waitingForNearby && (
             <button type="button" disabled>
-              Walking over...
+              {t('player.walkingOver')}
             </button>
           )}
           {inConversationWithMe && (
             <button type="button" className="is-secondary" onClick={onLeaveConversation}>
-              Leave conversation
+              {t('player.leaveConversation')}
             </button>
           )}
           {haveInvite && (
             <>
               <button type="button" className="is-primary" onClick={onAcceptInvite}>
-                Accept
+                {t('player.accept')}
               </button>
               <button type="button" className="is-secondary" onClick={onRejectInvite}>
-                Reject
+                {t('player.decline')}
               </button>
             </>
           )}
@@ -261,11 +272,11 @@ export default function PlayerDetails({
         {!showActiveConversation && !(!playerConversation && previousConversation) && (
           <div className="town-dialog-empty">
             <span aria-hidden="true">···</span>
-            <strong>No conversation yet</strong>
+            <strong>{t('player.noConversation')}</strong>
             <p>
               {canInvite
-                ? 'Start a conversation to hear this citizen’s latest market view.'
-                : 'Conversation history will appear here when it becomes available.'}
+                ? t('player.startLatest')
+                : t('player.historyFuture')}
             </p>
           </div>
         )}

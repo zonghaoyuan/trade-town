@@ -10,17 +10,19 @@ import type { CausalEvent, DashboardExecution } from '../../finance/demoData';
 import PixelAvatar from './PixelAvatar';
 import { groupConsecutiveMessages } from './townActivityMessages';
 import { mergeTransactions } from './townActivityTransactions';
+import { useI18n } from '../../i18n';
+import type { MessageKey } from '../../i18n';
 
 type ActivityTab = 'talk' | 'trades' | 'events';
 
 const tabs: Array<{
   id: ActivityTab;
   icon: string;
-  label: string;
+  labelKey: MessageKey;
 }> = [
-  { id: 'talk', icon: '“', label: 'Agent Talk' },
-  { id: 'trades', icon: '↕', label: 'Live Trades' },
-  { id: 'events', icon: '!', label: 'Event History' },
+  { id: 'talk', icon: '“', labelKey: 'activity.agentTalk' },
+  { id: 'trades', icon: '↕', labelKey: 'activity.liveTrades' },
+  { id: 'events', icon: '!', labelKey: 'activity.eventHistory' },
 ];
 
 export default function TownActivityPanel({
@@ -36,6 +38,7 @@ export default function TownActivityPanel({
   contextAsOf?: number;
   drawer?: boolean;
 }) {
+  const { t } = useI18n();
   const [tab, setTab] = useState<ActivityTab>('talk');
   const events = useMemo(
     () => mergeEvents(activity.events, contextEvents),
@@ -54,7 +57,11 @@ export default function TownActivityPanel({
   return (
     <section className={`pixel-activity-panel ${drawer ? 'is-drawer' : ''}`}>
       <header className="pixel-activity-header">
-        <div className="pixel-activity-tabs" role="tablist" aria-label="Activity sections">
+        <div
+          className="pixel-activity-tabs"
+          role="tablist"
+          aria-label={t('activity.sections')}
+        >
           {tabs.map((item) => (
             <button
               type="button"
@@ -68,7 +75,7 @@ export default function TownActivityPanel({
             >
               <i aria-hidden="true">{item.icon}</i>
               <span>
-                <strong>{item.label}</strong>
+                <strong>{t(item.labelKey)}</strong>
               </span>
               <b>{counts[item.id]}</b>
             </button>
@@ -110,20 +117,21 @@ export default function TownActivityPanel({
 }
 
 function TalkFeed({ activity }: { activity: TownActivityFeed }) {
+  const { t, formatDateTime } = useI18n();
   const groupedMessages = useMemo(
     () => groupConsecutiveMessages(activity.messages),
     [activity.messages],
   );
 
   if (activity.loading && activity.messages.length === 0) {
-    return <ActivityLoading label="Listening for agent conversations…" />;
+    return <ActivityLoading label={t('activity.listening')} />;
   }
   if (activity.messages.length === 0) {
     return (
       <ActivityEmpty
         icon="“"
-        title="The town is quiet right now"
-        detail="New agent-to-agent messages will appear here automatically—no citizen click required."
+        title={t('activity.quietTitle')}
+        detail={t('activity.quietDetail')}
       />
     );
   }
@@ -131,7 +139,10 @@ function TalkFeed({ activity }: { activity: TownActivityFeed }) {
   return (
     <>
       {activity.liveConversations.length > 0 && (
-        <div className="pixel-live-conversations" aria-label="Live conversations">
+        <div
+          className="pixel-live-conversations"
+          aria-label={t('activity.liveConversations')}
+        >
           {activity.liveConversations.map((conversation) => {
             const typing = conversation.typing;
             const other = typing
@@ -143,8 +154,17 @@ function TalkFeed({ activity }: { activity: TownActivityFeed }) {
               <span key={conversation.id}>
                 <i aria-hidden="true" />
                 {typing
-                  ? `${typing.name} is replying${other ? ` to ${other.name}` : ''}…`
-                  : `${conversation.participants.map((participant) => participant.name).join(' ↔ ')} · live`}
+                  ? other
+                    ? t('activity.replyingTo', {
+                        name: typing.name,
+                        other: other.name,
+                      })
+                    : t('activity.replying', { name: typing.name })
+                  : t('activity.liveSuffix', {
+                      names: conversation.participants
+                        .map((participant) => participant.name)
+                        .join(' ↔ '),
+                    })}
               </span>
             );
           })}
@@ -167,13 +187,13 @@ function TalkFeed({ activity }: { activity: TownActivityFeed }) {
                 {repeatCount > 1 && (
                   <span
                     className="pixel-talk-repeat"
-                    title={`${repeatCount} consecutive matching messages in this conversation`}
+                    title={t('activity.repeatTitle', { count: repeatCount })}
                   >
                     ×{repeatCount}
                   </span>
                 )}
                 <time dateTime={new Date(message.createdAt).toISOString()}>
-                  {formatTime(message.createdAt)}
+                  {formatDateTime(message.createdAt, timeOptions)}
                 </time>
               </header>
               <ExpandableMessage message={message} />
@@ -186,6 +206,7 @@ function TalkFeed({ activity }: { activity: TownActivityFeed }) {
 }
 
 function ExpandableMessage({ message }: { message: TownSpeechMessage }) {
+  const { t } = useI18n();
   const [expanded, setExpanded] = useState(false);
   const [canExpand, setCanExpand] = useState(false);
   const copyRef = useRef<HTMLParagraphElement>(null);
@@ -217,10 +238,13 @@ function ExpandableMessage({ message }: { message: TownSpeechMessage }) {
         <button
           type="button"
           aria-expanded={expanded}
-          aria-label={`${expanded ? 'Collapse' : 'Expand'} message from ${message.author.name}`}
+          aria-label={t(
+            expanded ? 'activity.collapseMessage' : 'activity.expandMessage',
+            { name: message.author.name },
+          )}
           onClick={() => setExpanded((current) => !current)}
         >
-          {expanded ? 'Show less' : 'Read more'}
+          {expanded ? t('activity.showLess') : t('activity.readMore')}
         </button>
       )}
     </div>
@@ -234,15 +258,16 @@ function TradeFeed({
   loading: boolean;
   transactions: TownTransactionRecord[];
 }) {
+  const { t } = useI18n();
   if (loading && transactions.length === 0) {
-    return <ActivityLoading label="Connecting to the execution ledger…" />;
+    return <ActivityLoading label={t('activity.connectingLedger')} />;
   }
   if (transactions.length === 0) {
     return (
       <ActivityEmpty
         icon="↕"
-        title="No trading activity yet"
-        detail="Panda paper fills and confirmed Injective fills will appear here as the replay advances."
+        title={t('activity.noTradesTitle')}
+        detail={t('activity.noTradesDetail')}
       />
     );
   }
@@ -250,11 +275,11 @@ function TradeFeed({
   return (
     <div className="pixel-trade-ledger">
       <div className="pixel-trade-columns" aria-hidden="true">
-        <span>Time / agent</span>
-        <span>Order</span>
-        <span>Price</span>
-        <span>Status</span>
-        <span>Proof</span>
+        <span>{t('activity.timeAgent')}</span>
+        <span>{t('activity.order')}</span>
+        <span>{t('common.price')}</span>
+        <span>{t('common.status')}</span>
+        <span>{t('common.proof')}</span>
       </div>
       {transactions.map((transaction) => (
         <TransactionRow transaction={transaction} key={transaction.id} />
@@ -264,6 +289,7 @@ function TradeFeed({
 }
 
 function TransactionRow({ transaction }: { transaction: TownTransactionRecord }) {
+  const { t, formatDateTime, formatNumber } = useI18n();
   const verified = transaction.source === 'injective';
   const paper = transaction.source === 'paper';
   return (
@@ -273,8 +299,8 @@ function TransactionRow({ transaction }: { transaction: TownTransactionRecord })
         <span>
           <time dateTime={new Date(transaction.occurredAt).toISOString()}>
             {paper
-              ? formatReplayTradeTime(transaction.occurredAt)
-              : formatTime(transaction.occurredAt)}
+              ? formatDateTime(transaction.occurredAt, replayTradeTimeOptions)
+              : formatDateTime(transaction.occurredAt, timeOptions)}
           </time>
           <strong>{transaction.agentName}</strong>
         </span>
@@ -282,18 +308,26 @@ function TransactionRow({ transaction }: { transaction: TownTransactionRecord })
       <div className={`pixel-trade-order side-${transaction.side}`}>
         <b>{transaction.side.toUpperCase()}</b>
         <span>
-          {formatQuantity(transaction.quantity)} {transaction.symbol}
+          {formatNumber(transaction.quantity, quantityOptions)} {transaction.symbol}
         </span>
       </div>
       <div className="pixel-trade-price">
         <strong>
-          {transaction.price === undefined ? 'MARKET' : formatPrice(transaction.price)}
+          {transaction.price === undefined
+            ? t('activity.market')
+            : formatNumber(transaction.price, priceOptions(transaction.price))}
         </strong>
-        <small>{verified ? 'INJ' : paper ? 'CNY' : 'LIMIT'}</small>
+        <small>{verified ? 'INJ' : paper ? 'CNY' : t('activity.limit')}</small>
       </div>
       <div className="pixel-trade-state">
-        <strong>{formatTransactionState(transaction.state)}</strong>
-        <small>{verified ? '◆ CHAIN' : paper ? '◇ PAPER' : '◇ TOWN FLOW'}</small>
+        <strong>{t(transactionStateKeys[transaction.state])}</strong>
+        <small>
+          {verified
+            ? t('activity.chain')
+            : paper
+              ? t('activity.paper')
+              : t('activity.townFlow')}
+        </small>
       </div>
       <div className="pixel-trade-proof">
         {transaction.txHash ? (
@@ -301,20 +335,23 @@ function TransactionRow({ transaction }: { transaction: TownTransactionRecord })
             href={explorerUrl(transaction.txHash)}
             target="_blank"
             rel="noreferrer"
-            aria-label={`Open Injective transaction ${shortReference(transaction.txHash)}`}
+            aria-label={t('activity.openTransaction', {
+              reference: shortReference(transaction.txHash),
+            })}
           >
-            Explorer ↗<small>{shortReference(transaction.txHash)}</small>
+            {t('activity.explorer')}
+            <small>{shortReference(transaction.txHash)}</small>
           </a>
         ) : (
           <span title={transaction.detail}>
             {transaction.state === 'risk_rejected'
-              ? 'Risk log'
+              ? t('activity.riskLog')
               : paper
-                ? 'Replay log'
-                : 'Pending'}
+                ? t('activity.replayLog')
+                : t('activity.pending')}
             <small>
               {transaction.detail ??
-                (paper ? 'Panda replay · no chain transaction' : 'No chain proof yet')}
+                (paper ? t('activity.noChainReplay') : t('activity.noChainProof'))}
             </small>
           </span>
         )}
@@ -328,15 +365,16 @@ type DisplayEvent =
   | { source: 'panda'; record: CausalEvent };
 
 function EventFeed({ activity, events }: { activity: TownActivityFeed; events: DisplayEvent[] }) {
+  const { t, formatDateTime, formatNumber } = useI18n();
   if (activity.loading && events.length === 0) {
-    return <ActivityLoading label="Loading town history…" />;
+    return <ActivityLoading label={t('activity.loadingHistory')} />;
   }
   if (events.length === 0) {
     return (
       <ActivityEmpty
         icon="!"
-        title="No recorded events yet"
-        detail="Factual PandaAI data updates and town market events will be preserved here."
+        title={t('activity.noEventsTitle')}
+        detail={t('activity.noEventsDetail')}
       />
     );
   }
@@ -356,27 +394,35 @@ function EventFeed({ activity, events }: { activity: TownActivityFeed; events: D
             </div>
             <div className="pixel-history-copy">
               <header>
-                <b>{formatEventKind(kind)}</b>
+                <b>{t(eventKindKeys[kind])}</b>
                 <time>
                   {live
-                    ? formatTime(record.occurredAt)
+                    ? formatDateTime(record.occurredAt, timeOptions)
                     : record.occurredAt
-                      ? formatReplayTime(record.occurredAt)
+                      ? formatDateTime(record.occurredAt, replayTimeOptions)
                       : record.time}
                 </time>
-                <span>{source === 'panda' ? '◇ PANDAAI' : txHash ? '◆ VERIFIED' : '◇ TOWN'}</span>
+                <span>
+                  {source === 'panda'
+                    ? t('activity.sourcePanda')
+                    : txHash
+                      ? t('activity.sourceVerified')
+                      : t('activity.sourceTown')}
+                </span>
               </header>
               <strong>{record.title}</strong>
               <small>
                 {record.actor}
                 {live && record.symbols.length > 0 ? ` · ${record.symbols.join(', ')}` : ''}
-                {blockHeight ? ` · #${blockHeight.toLocaleString()}` : ''}
+                {blockHeight ? ` · #${formatNumber(blockHeight)}` : ''}
               </small>
               <p>{record.detail}</p>
               {txHash &&
                 (live && record.txHash ? (
                   <a href={explorerUrl(record.txHash)} target="_blank" rel="noreferrer">
-                    Explorer ↗ · {shortReference(record.txHash)}
+                    {t('intelligence.explorer', {
+                      reference: shortReference(record.txHash),
+                    })}
                   </a>
                 ) : (
                   <code>{shortReference(txHash)}</code>
@@ -427,69 +473,66 @@ function avatarIndex(name: string) {
   );
 }
 
-function formatTime(value: number) {
-  return new Intl.DateTimeFormat('en-GB', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  }).format(value);
+const timeOptions: Intl.DateTimeFormatOptions = {
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hour12: false,
+};
+
+const replayTimeOptions: Intl.DateTimeFormatOptions = {
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+  timeZone: 'Asia/Shanghai',
+};
+
+const replayTradeTimeOptions: Intl.DateTimeFormatOptions = {
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+  timeZone: 'Asia/Shanghai',
+};
+
+const quantityOptions: Intl.NumberFormatOptions = {
+  maximumFractionDigits: 4,
+};
+
+function priceOptions(value: number): Intl.NumberFormatOptions {
+  return { maximumFractionDigits: Math.abs(value) < 1 ? 6 : 2 };
 }
 
-function formatReplayTime(value: number) {
-  return new Intl.DateTimeFormat('en-CA', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-    timeZone: 'Asia/Shanghai',
-  }).format(value);
-}
+const transactionStateKeys = {
+  proposed: 'activity.state.proposed',
+  risk_rejected: 'activity.state.riskRejected',
+  queued: 'activity.state.queued',
+  submitting: 'activity.state.submitting',
+  submitted: 'activity.state.submitted',
+  confirmed: 'activity.state.confirmed',
+  cancelled: 'activity.state.cancelled',
+  failed: 'activity.state.failed',
+  filled: 'activity.state.filled',
+} satisfies Record<TownTransactionRecord['state'], MessageKey>;
 
-function formatReplayTradeTime(value: number) {
-  return new Intl.DateTimeFormat('en-CA', {
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-    timeZone: 'Asia/Shanghai',
-  }).format(value);
-}
-
-function formatPrice(value: number) {
-  return new Intl.NumberFormat('en-US', {
-    maximumFractionDigits: Math.abs(value) < 1 ? 6 : 2,
-  }).format(value);
-}
-
-function formatQuantity(value: number) {
-  return new Intl.NumberFormat('en-US', {
-    maximumFractionDigits: 4,
-  }).format(value);
-}
-
-function formatTransactionState(state: TownTransactionRecord['state']) {
-  return (
-    {
-      proposed: 'INTENT',
-      risk_rejected: 'RISK BLOCKED',
-      queued: 'QUEUED',
-      submitting: 'SUBMITTING',
-      submitted: 'SUBMITTED',
-      confirmed: 'CONFIRMED',
-      cancelled: 'CANCELLED',
-      failed: 'FAILED',
-      filled: 'FILLED',
-    } satisfies Record<TownTransactionRecord['state'], string>
-  )[state];
-}
-
-function formatEventKind(kind: CausalEvent['kind'] | TownEventRecord['kind']) {
-  return kind.replace('_', ' ').toUpperCase();
-}
+const eventKindKeys = {
+  policy: 'activity.event.policy',
+  news: 'activity.event.news',
+  belief: 'activity.event.belief',
+  conversation: 'activity.event.conversation',
+  intent: 'activity.event.intent',
+  risk: 'activity.event.risk',
+  chain: 'activity.event.chain',
+  post: 'activity.event.post',
+  interaction: 'activity.event.interaction',
+  error: 'activity.event.error',
+  order: 'activity.event.order',
+  fill: 'activity.event.fill',
+} satisfies Record<CausalEvent['kind'] | TownEventRecord['kind'], MessageKey>;
 
 function eventIcon(kind: CausalEvent['kind'] | TownEventRecord['kind']) {
   if (kind === 'fill' || kind === 'chain') return '◆';

@@ -7,6 +7,7 @@ import {
 } from 'lightweight-charts';
 import { useEffect, useMemo, useRef } from 'react';
 import type { DashboardCandle } from '../../finance/demoData';
+import { useI18n } from '../../i18n';
 
 export default function PixelCandles({
   values,
@@ -19,6 +20,7 @@ export default function PixelCandles({
   periodLabel: string;
   sourceLabel: string;
 }) {
+  const { t } = useI18n();
   const containerRef = useRef<HTMLDivElement>(null);
   const candles = useMemo<CandlestickData<UTCTimestamp>[]>(
     () =>
@@ -98,7 +100,7 @@ export default function PixelCandles({
       <div
         ref={containerRef}
         className="pixel-candle-chart"
-        aria-label={`${symbol} candlestick chart`}
+        aria-label={t('chart.candles', { symbol })}
       />
     </div>
   );

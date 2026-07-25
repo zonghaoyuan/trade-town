@@ -25,7 +25,12 @@ export default function DemoApp() {
         status: pandaReplay.isPlaying ? 'replaying' : 'paused',
         controller: pandaReplay,
       }}
-      town={({ focusedCitizen }) => <TownPreview focusedCitizen={focusedCitizen} />}
+      town={({ focusedCitizen, hudInspectorOpen }) => (
+        <TownPreview
+          focusedCitizen={focusedCitizen}
+          hudInspectorOpen={hudInspectorOpen}
+        />
+      )}
       townMode="preview"
     />
   );

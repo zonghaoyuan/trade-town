@@ -13,8 +13,10 @@ import InteractButton from './components/buttons/InteractButton';
 import { getAnonymousOwnerId } from './features/create-me/storage';
 import { sanitizeCreateMeDraft } from '../shared/createMe';
 import { useTownActivityFeed } from './hooks/useTownActivityFeed';
+import { useI18n } from './i18n';
 
 export default function Home() {
+  const { t } = useI18n();
   const [ownerId] = useState(getAnonymousOwnerId);
   const financeState = useQuery((api as any).finance.dashboard);
   const replayBundle = useQuery((api as any).townReplay.currentDashboardBundle);
@@ -95,7 +97,7 @@ export default function Home() {
           headers: { 'Content-Type': 'image/png' },
           body: composedWalkSheet,
         });
-        if (!uploadResponse.ok) throw new Error('LPC 行走图上传失败');
+        if (!uploadResponse.ok) throw new Error(t('create.uploadFailed'));
         const uploaded = (await uploadResponse.json()) as { storageId: Id<'_storage'> };
         storageId = uploaded.storageId;
       }
@@ -120,7 +122,9 @@ export default function Home() {
         dayViewDashboards={replayDayViewDashboards}
         replay={replay}
         activityFeed={activityFeed}
-        town={({ focusedCitizen }) => <Game focusedCitizen={focusedCitizen} />}
+        town={({ focusedCitizen, hudInspectorOpen }) => (
+          <Game focusedCitizen={focusedCitizen} hudInspectorOpen={hudInspectorOpen} />
+        )}
         townMode="live"
         currentMe={currentMe}
         onCreateMe={submitCreateMe}
