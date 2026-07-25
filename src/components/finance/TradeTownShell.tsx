@@ -294,16 +294,12 @@ export default function TradeTownShell({
                 {townControls}
               </div>
             )}
-            <span className="pixel-preview-note">
-              {dataWarningCount > 0 && (
-                <>
-                  <strong className="is-warning">{dataWarningCount}</strong> data warning
-                  {dataWarningCount === 1 ? '' : 's'} ·{' '}
-                </>
-              )}
-              <strong className="is-online">{activeDashboard.traders.length}</strong> agents
-              online
-            </span>
+            {dataWarningCount > 0 && (
+              <span className="pixel-preview-note">
+                <strong className="is-warning">{dataWarningCount}</strong> data warning
+                {dataWarningCount === 1 ? '' : 's'}
+              </span>
+            )}
           </div>
 
           <TownSummary testnetDashboard={dashboard} dayViewDashboard={activeDashboard} />
@@ -558,18 +554,8 @@ function MarketBoard({
 
   return (
     <div className="pixel-board pixel-unified-market-board">
-      <div className="pixel-board-title pixel-board-title-sourced">
-        <div>
-          <span>Historical context + chain execution</span>
-          <h2>Markets</h2>
-        </div>
-        <div className="pixel-dual-badges" aria-label="Market sources">
-          <SourceBadge dashboard={dayViewDashboard} label="◇ PANDA · SIM" />
-          <SourceBadge
-            dashboard={testnetDashboard}
-            label={testnetDashboard.source === 'injective' ? '◆ VERIFIED' : '◈ PREVIEW'}
-          />
-        </div>
+      <div className="pixel-board-title pixel-board-title-compact">
+        <h2>Markets</h2>
       </div>
       <div className={`pixel-market-hero source-focus-${pandaMode ? 'panda' : 'injective'}`}>
         <span>
@@ -795,24 +781,19 @@ function AgentBoard({
 
   return (
     <div className="pixel-board pixel-unified-agent-board">
-      <div className="pixel-board-title pixel-board-title-sourced">
-        <div>
-          <span>{dayViewDashboard.traders.length} agents · dual-source state</span>
-          <h2>Citizens</h2>
-        </div>
-        <div className="pixel-dual-badges" aria-label="Citizen state sources">
-          <SourceBadge dashboard={dayViewDashboard} label="◇ SIM" />
-          <SourceBadge
-            dashboard={testnetDashboard}
-            label={testnetDashboard.source === 'injective' ? '◆ CHAIN' : '◈ PREVIEW'}
-          />
-        </div>
+      <div className="pixel-board-title pixel-board-title-compact">
+        <h2>Citizens</h2>
+        <span>{dayViewDashboard.traders.length} agents online</span>
       </div>
       <div className="pixel-agent-list">
         {dayViewDashboard.traders.map((agent, index) => {
           const chainAgent = testnetDashboard.traders.find(
             (candidate) => candidate.name === agent.name,
           );
+          const hasChainActivity =
+            testnetDashboard.source === 'injective' &&
+            chainAgent &&
+            (chainAgent.tradeCount > 0 || chainAgent.riskRejections > 0);
           return (
             <button
               type="button"
@@ -824,34 +805,28 @@ function AgentBoard({
               <PixelAvatar index={index} textureUrl={agent.avatarUrl} />
               <span className="pixel-agent-identity">
                 <strong>{agent.name}</strong>
-                <small>{agent.role}</small>
+                <small title={agent.role}>{agent.role}</small>
               </span>
-              <span className="pixel-agent-dual-state">
-                <span className="source-panda">
-                  <small>◇ Panda · sim</small>
-                  <strong>
-                    {agent.action} · {formatSignedCompact(agent.pnl)} {agent.currency ?? 'CNY'}
-                  </strong>
-                </span>
-                <span className={`source-${testnetDashboard.source}`}>
-                  <small>
-                    {testnetDashboard.source === 'injective' ? '◆' : '◈'} Testnet ·{' '}
-                    {testnetDashboard.source === 'injective' ? 'verified' : 'preview'}
+              <span className="pixel-agent-scan-state">
+                <em className={`pixel-action action-${agent.action.toLowerCase()}`}>
+                  {agent.action}
+                </em>
+                <strong className={agent.pnl >= 0 ? 'pixel-up' : 'pixel-down'}>
+                  {formatSignedCompact(agent.pnl)} {agent.currency ?? 'CNY'}
+                </strong>
+                {hasChainActivity && (
+                  <small className="pixel-agent-chain-activity">
+                    {chainAgent.tradeCount > 0
+                      ? `◆ ${chainAgent.tradeCount} fill${chainAgent.tradeCount === 1 ? '' : 's'}`
+                      : `! ${chainAgent.riskRejections} blocked`}
                   </small>
-                  <strong>{formatTestnetAgentState(chainAgent, testnetDashboard)}</strong>
-                </span>
+                )}
               </span>
             </button>
           );
         })}
       </div>
       <article className="pixel-agent-card">
-        <div className="pixel-agent-card-top">
-          <span>Selected agent</span>
-          <span>
-            ◇ SIM + {testnetDashboard.source === 'injective' ? '◆ VERIFIED' : '◈ PREVIEW'}
-          </span>
-        </div>
         <div className="pixel-agent-card-identity">
           <PixelAvatar index={traderIndex} textureUrl={pandaTrader.avatarUrl} />
           <div>
@@ -1379,33 +1354,6 @@ function AgentDetailDrawer({
         </div>
       </aside>
     </div>
-  );
-}
-
-function SourceBadge({
-  dashboard,
-  label,
-  source,
-  title,
-}: {
-  dashboard: TradeTownDashboard;
-  label?: string;
-  source?: TradeTownDashboard['source'];
-  title?: string;
-}) {
-  const resolvedSource = source ?? dashboard.source;
-  return (
-    <span
-      className={`pixel-source-badge source-${resolvedSource}`}
-      title={title ?? dashboard.sourceLabel}
-    >
-      {label ??
-        (resolvedSource === 'panda'
-          ? 'PANDA'
-          : resolvedSource === 'injective'
-            ? 'CHAIN'
-            : 'PREVIEW')}
-    </span>
   );
 }
 

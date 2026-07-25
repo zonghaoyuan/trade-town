@@ -1928,21 +1928,6 @@ textarea {
   color: var(--town-paper);
 }
 
-.pixel-agent-card-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  color: var(--town-mist);
-  font-size: var(--town-text-micro);
-  text-transform: uppercase;
-}
-
-.pixel-agent-card-top strong {
-  font-size: var(--town-text-caption);
-  font-weight: 400;
-}
-
 .pixel-agent-card h3 {
   margin: 8px 0 5px;
   color: var(--town-gold);
@@ -3583,36 +3568,20 @@ textarea {
   outline-offset: 2px;
 }
 
-.pixel-board-title-sourced {
+.pixel-board-title-compact {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 7px;
 }
 
-.pixel-board-title-sourced > div {
-  min-width: 0;
+.pixel-board-title-compact h2 {
+  margin: 0;
 }
 
-.pixel-source-badge {
-  flex: 0 0 auto;
-  padding: 4px 5px;
-  border: 2px solid var(--town-night);
+.pixel-board-title-compact > span {
+  margin-left: auto;
   color: var(--town-mist);
-  background: var(--town-plum);
   font-size: var(--town-text-micro);
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
-}
-
-.pixel-source-badge.source-panda {
-  color: var(--town-night);
-  background: var(--town-gold);
-}
-
-.pixel-source-badge.source-injective {
-  color: var(--town-night);
-  background: var(--town-green);
+  white-space: nowrap;
 }
 
 .pixel-market-hero {
@@ -5254,18 +5223,6 @@ textarea {
   color: var(--town-orange);
 }
 
-.pixel-dual-badges {
-  display: flex;
-  align-items: flex-end;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.pixel-dual-badges .pixel-source-badge {
-  padding: 3px 5px;
-  font-size: 8px;
-}
-
 .pixel-market-hero.source-focus-panda {
   box-shadow: inset 4px 0 0 var(--town-gold);
 }
@@ -5394,8 +5351,8 @@ textarea {
 }
 
 .pixel-unified-agent-board .pixel-agent-list button {
-  min-height: 78px;
-  grid-template-columns: 40px minmax(66px, 0.8fr) minmax(118px, 1.2fr);
+  min-height: 64px;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
   align-items: center;
 }
 
@@ -5403,24 +5360,21 @@ textarea {
   min-width: 0;
 }
 
-.pixel-agent-dual-state {
-  min-width: 0;
-  display: grid;
+.pixel-agent-scan-state {
+  min-width: 88px;
+  display: flex;
+  align-items: flex-end;
+  flex-direction: column;
   gap: 4px;
 }
 
-.pixel-agent-dual-state > span {
-  min-width: 0;
-  padding: 3px 4px;
-  border: 2px solid var(--town-night);
-  background: #262b44;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+.pixel-agent-scan-state > .pixel-action {
+  padding: 3px 5px;
 }
 
-.pixel-agent-dual-state small,
-.pixel-agent-dual-state strong {
+.pixel-agent-scan-state > strong,
+.pixel-agent-chain-activity {
+  max-width: 96px;
   overflow: hidden;
   font-size: 8px;
   font-weight: 400;
@@ -5429,17 +5383,9 @@ textarea {
   white-space: nowrap;
 }
 
-.pixel-agent-dual-state .source-panda small {
-  color: var(--town-gold);
-}
-
-.pixel-agent-dual-state .source-injective small,
-.pixel-agent-dual-state .source-injective strong {
+.pixel-agent-chain-activity {
   color: var(--town-green);
-}
-
-.pixel-agent-dual-state .source-preview small {
-  color: var(--town-orange);
+  text-transform: uppercase;
 }
 
 .pixel-selected-source-state {
@@ -5677,7 +5623,6 @@ textarea {
   }
 
   .pixel-unified-agent-board .pixel-agent-list button {
-    grid-template-columns: 38px minmax(62px, 0.75fr) minmax(108px, 1.25fr);
     padding-inline: 5px;
   }
 }
