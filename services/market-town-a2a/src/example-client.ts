@@ -29,6 +29,11 @@ async function main() {
   });
   const client = await new ClientFactory(options).createFromUrl(baseUrl);
 
+  const agentId = process.env.TOWN_EXAMPLE_AGENT_ID;
+  if (agentId) {
+    prompts.unshift(`调取 agentId=${agentId} 的 30 个交易日数据。`);
+  }
+
   for (const prompt of prompts) {
     const response = await client.sendMessage({
       tenant: '',

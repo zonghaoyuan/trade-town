@@ -11,11 +11,18 @@ signer.
 - A2A 1.0 with the official SDK's v0.3 compatibility layer
 - blocking, polling, and streaming task flows
 - `Task` persistence in Convex when configured, with an in-memory local fallback
-- four whitelisted skills:
+- five whitelisted skills:
+  - `town-agent-history`
   - `panda-market-replay`
   - `rate-shock-experiment`
   - `rumor-propagation-analysis`
   - `user-behavior-review`
+
+`town-agent-history` is the read-only interface for the active 30-trading-day replay. A structured
+request supplies `agentId` and may supply `symbol`; the returned JSON artifact contains that one
+Agent's daily beliefs, five-symbol views, account, positions, posts, intents, risk results,
+simulated fills and backend errors. It reads only validated `translation-cache/v2` English text and
+fails the task when any day or translation proof is missing.
 
 `panda-market-replay` reads the authorized PandaAI daily-bar datasets for `002594.SZ`, `300750.SZ`,
 `600519.SH`, `601318.SH`, and `688981.SH` (`2024-10-08`–`2025-12-31`) through the shared market
@@ -28,6 +35,15 @@ rejected because these are historical datasets, not a real-time feed.
 
 ```bash
 npm run a2a:dev
+```
+
+For the connected 30-day Agent data skill, configure:
+
+```bash
+TOWN_BACKEND_URL=http://127.0.0.1:8000
+TOWN_RUN_ID=<completed-30-day-run-id>
+TOWN_REPLAY_TOTAL_DAYS=30
+TOWN_TRANSLATION_CACHE_DIR=<runtime-translation-cache-directory>
 ```
 
 In another terminal:
@@ -56,6 +72,19 @@ Structured messages may use:
 {
   "skillId": "panda-market-replay",
   "input": {
+    "symbol": "002594.SZ",
+    "dataMode": "verified-replay"
+  }
+}
+```
+
+To retrieve one Agent:
+
+```json
+{
+  "skillId": "town-agent-history",
+  "input": {
+    "agentId": "<agent-id>",
     "symbol": "002594.SZ",
     "dataMode": "verified-replay"
   }

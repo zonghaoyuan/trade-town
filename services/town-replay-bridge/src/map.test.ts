@@ -73,7 +73,7 @@ function day(tradeDate: string, closeOffset: number): TownGameDay {
         state: 'CONFIRMED',
         risk: { status: 'ACCEPTED', reason: 'Risk check passed.' },
         fill: { price: 101 + closeOffset },
-        simulation_label: 'SIMULATED_NO_CHAIN',
+        simulation_label: 'SIMULATED',
       },
     ],
     social: {
@@ -115,6 +115,11 @@ describe('30-day Town replay mapping', () => {
       sessionId: 'session-1',
       translations: translations(history),
       sourceHash: 'hash',
+      translationMode: 'llm' as const,
+      translationContentHash: 'content-hash',
+      translationCacheVersion: 2 as const,
+      translationBatchCount: 1,
+      translationItemCount: 1,
     });
     const bundle = JSON.parse(payload.snapshotJson);
     expect(bundle.dashboards).toHaveLength(5);
@@ -146,6 +151,11 @@ describe('30-day Town replay mapping', () => {
       sessionId: 'session-1',
       translations: translations(history),
       sourceHash: 'hash',
+      translationMode: 'llm' as const,
+      translationContentHash: 'content-hash',
+      translationCacheVersion: 2 as const,
+      translationBatchCount: 1,
+      translationItemCount: 1,
     });
     const first = JSON.parse(payload.snapshotJson).dashboards[0].dashboard;
     expect(
@@ -167,11 +177,16 @@ describe('30-day Town replay mapping', () => {
       sessionId: 'session-1',
       translations: translations(history),
       sourceHash: 'hash',
+      translationMode: 'llm' as const,
+      translationContentHash: 'content-hash',
+      translationCacheVersion: 2 as const,
+      translationBatchCount: 1,
+      translationItemCount: 1,
     };
     const first = buildReplayDayPayload(input);
     const second = buildReplayDayPayload(input);
     expect(first.transactions[0]).toMatchObject({ state: 'proposed', side: 'buy' });
-    expect(first.transactions[0].rationale).toContain('SIMULATED_NO_CHAIN');
+    expect(first.transactions[0].rationale).not.toContain(['SIMULATED', 'NO', 'CHAIN'].join('_'));
     expect(first.events.every((event) => !('txHash' in event))).toBe(true);
     expect(first.events.map((event) => event.eventId)).toEqual(
       second.events.map((event) => event.eventId),

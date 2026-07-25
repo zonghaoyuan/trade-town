@@ -31,6 +31,11 @@ export function buildReplayDayPayload(args: {
   sessionId: string;
   translations: TranslationMap;
   sourceHash: string;
+  translationMode: 'llm' | 'already_english';
+  translationContentHash: string;
+  translationCacheVersion: 2;
+  translationBatchCount: number;
+  translationItemCount: number;
 }): ReplayDayPayload {
   const { bootstrap, history, dayIndex, totalDays, publishedAt, sessionId, translations } = args;
   const day = history[history.length - 1];
@@ -62,6 +67,12 @@ export function buildReplayDayPayload(args: {
     dayIndex,
     totalDays,
     sourceHash: args.sourceHash,
+    translationMode: args.translationMode,
+    translationSourceHash: args.sourceHash,
+    translationContentHash: args.translationContentHash,
+    translationCacheVersion: args.translationCacheVersion,
+    translationBatchCount: args.translationBatchCount,
+    translationItemCount: args.translationItemCount,
     snapshotJson: JSON.stringify(bundle),
     publishedAt,
     transactions,
@@ -120,7 +131,7 @@ function buildDashboardBundle(args: {
         priceUnit: 'CNY',
         state: transaction.fill ? 'SIMULATED FILLED' : (transaction.state ?? 'SIMULATED'),
         isSimulated: true,
-        reason: `${translated(translations, `risk:${transaction.intent_id}`, 'Simulated risk check completed.')} · SIMULATED_NO_CHAIN`,
+        reason: translated(translations, `risk:${transaction.intent_id}`, 'Simulated risk check completed.'),
       },
     ];
   });
@@ -332,7 +343,7 @@ function mapTrader(args: {
     evidence: [
       `Panda daily bar · ${symbol}`,
       `LLM confidence · ${Math.round(confidence * 100)}%`,
-      'SIMULATED_NO_CHAIN',
+      'Simulated execution',
     ],
     navStart,
     navEnd,
@@ -376,7 +387,7 @@ function mapTransactions(
         side: side as 'buy' | 'sell',
         quantity,
         limitPrice: finite(item.fill?.price),
-        rationale: `${label} · ${translated(translations, `risk:${item.intent_id}`, 'Simulated risk check completed.')} · SIMULATED_NO_CHAIN`,
+        rationale: `${label} · ${translated(translations, `risk:${item.intent_id}`, 'Simulated risk check completed.')}`,
         state,
         riskCode: rejected ? 'simulated_risk_rejected' : undefined,
       },

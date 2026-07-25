@@ -20,6 +20,7 @@ describe('Market Town A2A server', () => {
       maxTaskMs: 5_000,
       maxPromptChars: 8_000,
       rateLimitPerMinute: 100,
+      replayTotalDays: 30,
     };
     server = createA2AApp(config).listen(port, '127.0.0.1');
     await new Promise<void>((resolve, reject) => {
@@ -46,7 +47,7 @@ describe('Market Town A2A server', () => {
     expect(v1Card.supportedInterfaces.map((item) => item.protocolVersion)).toEqual(
       expect.arrayContaining(['1.0', '0.3']),
     );
-    expect(v1Card.skills).toHaveLength(4);
+    expect(v1Card.skills).toHaveLength(5);
 
     const legacy = await fetch(`${baseUrl}/.well-known/agent-card.json`);
     expect(legacy.status).toBe(200);

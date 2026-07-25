@@ -110,7 +110,7 @@ describe('town activity feed', () => {
           quantity: 20,
           limitPrice: 101,
           state: 'proposed',
-          rationale: 'Day 1/30 · simulated fill · SIMULATED_NO_CHAIN',
+          rationale: 'Day 1/30 · simulated fill',
         },
       ],
       [],

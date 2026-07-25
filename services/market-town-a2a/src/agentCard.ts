@@ -50,6 +50,17 @@ export function buildAgentCard(config: A2AConfig): AgentCard {
     defaultOutputModes: ['text/plain', 'application/json'],
     skills: [
       {
+        id: 'town-agent-history',
+        name: '30 交易日 Agent 数据',
+        description:
+          '按 agentId 调取当前 Trade Town 运行中单个 Agent 的 30 个交易日信念、观点、账户、持仓、帖子、交易意图、模拟成交和错误。',
+        tags: ['A2A', 'Agent 数据', '30 交易日', '只读', 'PandaAI'],
+        examples: ['调取 agentId=agent-01 的 30 个交易日完整数据。'],
+        inputModes: ['text/plain', 'application/json'],
+        outputModes: ['text/plain', 'application/json'],
+        securityRequirements,
+      },
+      {
         id: 'panda-market-replay',
         name: 'PandaAI 真实历史行情回放',
         description:

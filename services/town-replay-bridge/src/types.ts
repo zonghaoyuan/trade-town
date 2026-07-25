@@ -167,6 +167,12 @@ export type ReplayDayPayload = {
   dayIndex: number;
   totalDays: number;
   sourceHash: string;
+  translationMode: 'llm' | 'already_english';
+  translationSourceHash: string;
+  translationContentHash: string;
+  translationCacheVersion: 2;
+  translationBatchCount: number;
+  translationItemCount: number;
   snapshotJson: string;
   publishedAt: number;
   transactions: ReplayTransaction[];

@@ -52,7 +52,6 @@ export function buildTransactionFeed(
   const intentRecords: TownTransactionRecord[] = intents.map((intent) => {
     const isPaperReplay =
       intent.intentId.startsWith('replay:') ||
-      intent.rationale.includes('SIMULATED_NO_CHAIN') ||
       intent.riskCode?.startsWith('simulated_');
     return {
       id: `intent:${intent.intentId}`,

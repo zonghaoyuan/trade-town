@@ -10,6 +10,7 @@ import {
 } from '@a2a-js/sdk';
 import { AgentEvent, AgentExecutor, ExecutionEventBus, RequestContext } from '@a2a-js/sdk/server';
 import { A2AConfig } from './config';
+import { loadTownAgentHistory } from './agentHistory';
 import { DeepSeekReasoner } from './reasoner';
 import { parseSkillRequest, runSkill } from './skills';
 
@@ -62,11 +63,16 @@ export class MarketTownAgentExecutor implements AgentExecutor {
     try {
       this.publishWorking(taskId, contextId, eventBus);
       const request = parseSkillRequest(userMessage, this.config.maxPromptChars);
-      const result = runSkill(request, this.config.executionMode);
-      const report = await withTimeout(
-        this.reasoner.completeReport(result, startedAt),
-        this.config.maxTaskMs,
-      );
+      const report =
+        request.skillId === 'town-agent-history'
+          ? await withTimeout(loadTownAgentHistory(request, this.config), this.config.maxTaskMs)
+          : await withTimeout(
+              this.reasoner.completeReport(
+                runSkill(request, this.config.executionMode),
+                startedAt,
+              ),
+              this.config.maxTaskMs,
+            );
       if (this.canceled.has(taskId)) {
         return;
       }
@@ -74,12 +80,12 @@ export class MarketTownAgentExecutor implements AgentExecutor {
       const artifact: Artifact = {
         artifactId: randomUUID(),
         name: 'MarketTownReport',
-        description: `${report.title}的结构化、可解释结果`,
+        description: `${report.title}的结构化只读结果`,
         parts: [
           {
             content: {
               $case: 'text',
-              value: `${report.title}\n\n${report.model.analysis}\n\n风险结论：${report.riskConclusion}`,
+              value: `${report.title}\n\n${report.model.analysis}\n\n数据边界：${report.riskConclusion}`,
             },
             metadata: { language: 'zh-CN' },
             filename: '',
@@ -95,7 +101,10 @@ export class MarketTownAgentExecutor implements AgentExecutor {
               isSimulated: report.execution.isSimulated,
               marketDataIsReal: report.marketData?.isReal ?? false,
             },
-            filename: 'market-town-report.json',
+            filename:
+              report.skillId === 'town-agent-history'
+                ? 'town-agent-history.json'
+                : 'market-town-report.json',
             mediaType: 'application/json',
           },
         ],
@@ -141,7 +150,7 @@ export class MarketTownAgentExecutor implements AgentExecutor {
         message: agentMessage(
           taskId,
           contextId,
-          '正在校验任务、运行确定性金融规则并生成可解释报告。',
+          '正在校验任务并读取结构化金融小镇数据。',
         ),
       },
       metadata: { stage: 'financial-analysis' },
