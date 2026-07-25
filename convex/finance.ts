@@ -20,20 +20,39 @@ export const dashboard = query({
       .query('financeConfig')
       .withIndex('by_key', (q) => q.eq('key', DEFAULT_CONFIG_KEY))
       .unique();
-    const [markets, traders, events, intents] = await Promise.all([
-      ctx.db.query('marketCatalog').collect(),
-      ctx.db.query('traderProfiles').collect(),
-      ctx.db.query('marketEvents').withIndex('by_time').order('desc').take(24),
-      ctx.db.query('tradeIntents').withIndex('by_state').take(24),
-    ]);
+    const [markets, traders, events, intents, chainMarkets, chainAccounts, chainOrders, fills] =
+      await Promise.all([
+        ctx.db.query('marketCatalog').collect(),
+        ctx.db.query('traderProfiles').collect(),
+        ctx.db.query('marketEvents').withIndex('by_time').order('desc').take(24),
+        ctx.db.query('tradeIntents').withIndex('by_state').take(24),
+        ctx.db.query('chainMarketSnapshots').collect(),
+        ctx.db.query('chainAccountSnapshots').collect(),
+        ctx.db.query('chainOrders').order('desc').take(40),
+        ctx.db.query('fills').withIndex('by_executed_at').order('desc').take(40),
+      ]);
+    const chainFresh =
+      config?.lastIndexerSyncAt !== undefined && Date.now() - config.lastIndexerSyncAt < 2 * 60_000;
+    const freshChainMarkets = chainMarkets.filter(
+      (market) => Date.now() - market.observedAt < 2 * 60_000,
+    );
+    const freshChainAccounts = chainAccounts.filter(
+      (account) => Date.now() - account.observedAt < 2 * 60_000,
+    );
     return {
       source:
-        config?.gatewayStatus === 'signing' || config?.gatewayStatus === 'read_only'
+        chainFresh &&
+        freshChainMarkets.length > 0 &&
+        (config?.gatewayStatus === 'signing' || config?.gatewayStatus === 'read_only')
           ? ('injective' as const)
           : ('preview' as const),
       config,
       markets,
       traders,
+      chainMarkets: freshChainMarkets,
+      chainAccounts: freshChainAccounts,
+      chainOrders,
+      fills,
       events,
       intents: intents.sort((a, b) => b.createdAt - a.createdAt),
     };
@@ -181,6 +200,7 @@ async function migrateLegacySeedCapital(ctx: MutationCtx) {
 
 export const proposeTrade = mutation({
   args: {
+    gatewaySecret: v.string(),
     intentId: v.string(),
     agentName: v.string(),
     symbol: v.string(),
@@ -191,6 +211,7 @@ export const proposeTrade = mutation({
     beliefEventId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    assertGatewaySecret(args.gatewaySecret);
     const previous = await ctx.db
       .query('tradeIntents')
       .withIndex('by_intent_id', (q) => q.eq('intentId', args.intentId))
@@ -212,33 +233,94 @@ export const proposeTrade = mutation({
     if (!market) {
       throw new ConvexError('Unknown market.');
     }
-    const portfolio = await ctx.db
-      .query('portfolioSnapshots')
-      .withIndex('by_agent', (q) => q.eq('agentName', args.agentName))
-      .order('desc')
-      .first();
-    if (!portfolio) {
-      throw new ConvexError('No confirmed portfolio snapshot is available.');
+    const config = await ctx.db
+      .query('financeConfig')
+      .withIndex('by_key', (q) => q.eq('key', DEFAULT_CONFIG_KEY))
+      .unique();
+    if (config?.gatewayStatus !== 'signing') {
+      throw new ConvexError('Injective signing is not enabled.');
     }
-    const currentPosition =
-      portfolio.positions.find((position) => position.symbol === args.symbol)?.quantity ?? 0;
-    const risk = assessTradeRisk({
+    const [account, chainMarket] = await Promise.all([
+      ctx.db
+        .query('chainAccountSnapshots')
+        .withIndex('by_agent_market', (q) =>
+          q.eq('agentName', args.agentName).eq('marketSymbol', args.symbol),
+        )
+        .unique(),
+      ctx.db
+        .query('chainMarketSnapshots')
+        .withIndex('by_symbol', (q) => q.eq('marketSymbol', args.symbol))
+        .unique(),
+    ]);
+    if (!account || !chainMarket) {
+      throw new ConvexError('No fresh Injective account and market snapshot is available.');
+    }
+    if (!String(chainMarket.status).toLowerCase().includes('active')) {
+      throw new ConvexError(`Injective market ${args.symbol} is not active.`);
+    }
+    if (
+      Date.now() - account.observedAt > 2 * 60_000 ||
+      Date.now() - chainMarket.observedAt > 2 * 60_000
+    ) {
+      throw new ConvexError('Injective account or market data is stale.');
+    }
+    const notional = args.quantity * args.limitPrice;
+    if (
+      !Number.isFinite(args.quantity) ||
+      !Number.isFinite(args.limitPrice) ||
+      args.quantity <= 0 ||
+      args.limitPrice <= 0
+    ) {
+      throw new ConvexError('Quantity and price must be positive finite values.');
+    }
+    if (notional + Number.EPSILON < chainMarket.minNotional) {
+      throw new ConvexError(
+        `Order notional must be at least ${chainMarket.minNotional} ${chainMarket.quoteDenom}.`,
+      );
+    }
+    if (!isTickAligned(args.quantity, chainMarket.minQuantityTick)) {
+      throw new ConvexError(
+        `Quantity must align to the ${chainMarket.minQuantityTick} minimum quantity tick.`,
+      );
+    }
+    if (!isTickAligned(args.limitPrice, chainMarket.minPriceTick)) {
+      throw new ConvexError(
+        `Price must align to the ${chainMarket.minPriceTick} minimum price tick.`,
+      );
+    }
+    const markPrice =
+      chainMarket.lastPrice ??
+      (chainMarket.bestBid !== undefined && chainMarket.bestAsk !== undefined
+        ? (chainMarket.bestBid + chainMarket.bestAsk) / 2
+        : args.limitPrice);
+    const netAssetValue = account.quoteTotal + account.baseTotal * markPrice;
+    let risk = assessTradeRisk({
       side: args.side,
       quantity: args.quantity,
       limitPrice: args.limitPrice,
-      cash: portfolio.townUsdAvailable,
-      currentPosition,
-      netAssetValue: portfolio.netAssetValue,
+      cash: account.quoteAvailable,
+      currentPosition: account.baseTotal,
+      netAssetValue,
       maxOrderNavRatio: 0.04 + trader.riskTolerance * 0.12,
       maxPositionNavRatio: 0.16 + trader.riskTolerance * 0.22,
     });
+    if (args.side === 'sell' && args.quantity > account.baseAvailable) {
+      risk = {
+        accepted: false,
+        code: 'insufficient_cash',
+        reason: `Available ${args.symbol} balance is insufficient.`,
+        notional: args.quantity * args.limitPrice,
+      };
+    }
     const now = Date.now();
     const cid = makeOrderCid(trader.subaccountNonce, args.intentId);
     const state = risk.accepted ? ('queued' as const) : ('risk_rejected' as const);
+    const { gatewaySecret: _gatewaySecret, ...intent } = args;
     const id = await ctx.db.insert('tradeIntents', {
-      ...args,
+      ...intent,
       subaccountNonce: trader.subaccountNonce,
       orderType: 'limit',
+      executionMode: 'injective',
       state,
       riskCode: risk.code,
       cid,
@@ -253,7 +335,7 @@ export const proposeTrade = mutation({
         ? `${args.agentName} queued a ${args.side} intent`
         : `${args.agentName}'s order was blocked`,
       summary: risk.accepted ? args.rationale : risk.reason,
-      severity: Math.min(1, risk.notional / Math.max(1, portfolio.netAssetValue)),
+      severity: Math.min(1, risk.notional / Math.max(1, netAssetValue)),
       symbols: [args.symbol],
       parentEventId: args.beliefEventId,
       occurredAt: now,
@@ -272,7 +354,9 @@ export const pendingIntents = query({
     const limit = Math.max(1, Math.min(args.limit ?? 25, 100));
     return await ctx.db
       .query('tradeIntents')
-      .withIndex('by_state', (q) => q.eq('state', 'queued'))
+      .withIndex('by_execution_state', (q) =>
+        q.eq('executionMode', 'injective').eq('state', 'queued'),
+      )
       .order('asc')
       .take(limit);
   },
@@ -284,6 +368,8 @@ export const recordSubmission = mutation({
     intentId: v.string(),
     txHash: v.string(),
     orderHash: v.optional(v.string()),
+    blockHeight: v.optional(v.number()),
+    rawLog: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     assertGatewaySecret(args.gatewaySecret);
@@ -310,8 +396,18 @@ export const recordSubmission = mutation({
         txHash: args.txHash,
         intentId: args.intentId,
         purpose: `spot-order:${intent.symbol}`,
-        state: 'broadcast',
+        state: args.blockHeight === undefined ? 'broadcast' : 'included',
+        blockHeight: args.blockHeight,
+        rawLog: args.rawLog?.slice(0, 2_000),
         createdAt: now,
+        confirmedAt: args.blockHeight === undefined ? undefined : now,
+      });
+    } else if (args.blockHeight !== undefined) {
+      await ctx.db.patch(existingTx._id, {
+        state: 'included',
+        blockHeight: args.blockHeight,
+        rawLog: args.rawLog?.slice(0, 2_000),
+        confirmedAt: now,
       });
     }
   },
@@ -351,6 +447,7 @@ export const updateGatewayStatus = mutation({
     ),
     operatorAddress: v.optional(v.string()),
     blockHeight: v.optional(v.number()),
+    error: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     assertGatewaySecret(args.gatewaySecret);
@@ -367,15 +464,185 @@ export const updateGatewayStatus = mutation({
       operatorAddress: args.operatorAddress,
       lastChainHeight: args.blockHeight,
       lastChainSyncAt: args.blockHeight === undefined ? config.lastChainSyncAt : now,
+      lastGatewayError: args.error?.slice(0, 500),
       updatedAt: now,
     });
+  },
+});
+
+export const recordMarketSnapshot = mutation({
+  args: {
+    gatewaySecret: v.string(),
+    marketSymbol: v.string(),
+    marketId: v.string(),
+    ticker: v.string(),
+    status: v.string(),
+    baseDenom: v.string(),
+    quoteDenom: v.string(),
+    baseDecimals: v.number(),
+    quoteDecimals: v.number(),
+    minPriceTick: v.number(),
+    minQuantityTick: v.number(),
+    minNotional: v.number(),
+    bestBid: v.optional(v.number()),
+    bestAsk: v.optional(v.number()),
+    lastPrice: v.optional(v.number()),
+    recentVolume: v.number(),
+    orderbookSequence: v.optional(v.number()),
+    observedAt: v.number(),
+  },
+  handler: async (ctx, args) => {
+    assertGatewaySecret(args.gatewaySecret);
+    const { gatewaySecret: _gatewaySecret, ...snapshot } = args;
+    const previous = await ctx.db
+      .query('chainMarketSnapshots')
+      .withIndex('by_symbol', (q) => q.eq('marketSymbol', args.marketSymbol))
+      .unique();
+    if (previous) {
+      await ctx.db.patch(previous._id, snapshot);
+    } else {
+      await ctx.db.insert('chainMarketSnapshots', snapshot);
+    }
+    const config = await ctx.db
+      .query('financeConfig')
+      .withIndex('by_key', (q) => q.eq('key', DEFAULT_CONFIG_KEY))
+      .unique();
+    if (config) {
+      await ctx.db.patch(config._id, {
+        lastIndexerSyncAt: args.observedAt,
+        lastGatewayError: undefined,
+        updatedAt: args.observedAt,
+      });
+    }
+    return previous?._id;
+  },
+});
+
+export const recordAccountSnapshot = mutation({
+  args: {
+    gatewaySecret: v.string(),
+    agentName: v.string(),
+    subaccountNonce: v.number(),
+    subaccountId: v.string(),
+    marketSymbol: v.string(),
+    quoteDenom: v.string(),
+    quoteAvailable: v.number(),
+    quoteTotal: v.number(),
+    baseDenom: v.string(),
+    baseAvailable: v.number(),
+    baseTotal: v.number(),
+    blockHeight: v.optional(v.number()),
+    observedAt: v.number(),
+  },
+  handler: async (ctx, args) => {
+    assertGatewaySecret(args.gatewaySecret);
+    const { gatewaySecret: _gatewaySecret, ...snapshot } = args;
+    const previous = await ctx.db
+      .query('chainAccountSnapshots')
+      .withIndex('by_agent_market', (q) =>
+        q.eq('agentName', args.agentName).eq('marketSymbol', args.marketSymbol),
+      )
+      .unique();
+    if (previous) {
+      await ctx.db.patch(previous._id, snapshot);
+    } else {
+      await ctx.db.insert('chainAccountSnapshots', snapshot);
+    }
+    const trader = await ctx.db
+      .query('traderProfiles')
+      .withIndex('by_name', (q) => q.eq('agentName', args.agentName))
+      .unique();
+    if (trader && trader.subaccountId !== args.subaccountId) {
+      await ctx.db.patch(trader._id, {
+        subaccountId: args.subaccountId,
+        updatedAt: args.observedAt,
+      });
+    }
+    return previous?._id;
+  },
+});
+
+export const recordOrder = mutation({
+  args: {
+    gatewaySecret: v.string(),
+    cid: v.string(),
+    orderHash: v.optional(v.string()),
+    agentName: v.optional(v.string()),
+    marketSymbol: v.string(),
+    marketId: v.string(),
+    subaccountId: v.string(),
+    side: v.union(v.literal('buy'), v.literal('sell')),
+    price: v.number(),
+    quantity: v.number(),
+    filledQuantity: v.optional(v.number()),
+    state: v.union(
+      v.literal('booked'),
+      v.literal('partial'),
+      v.literal('filled'),
+      v.literal('cancelled'),
+      v.literal('failed'),
+    ),
+    createdAt: v.optional(v.number()),
+    updatedAt: v.number(),
+  },
+  handler: async (ctx, args) => {
+    assertGatewaySecret(args.gatewaySecret);
+    const cid = args.cid;
+    const orderHash = args.orderHash;
+    const intent = cid
+      ? await ctx.db
+          .query('tradeIntents')
+          .withIndex('by_cid', (q) => q.eq('cid', cid))
+          .unique()
+      : null;
+    const byHash = orderHash
+      ? await ctx.db
+          .query('chainOrders')
+          .withIndex('by_order_hash', (q) => q.eq('orderHash', orderHash))
+          .unique()
+      : null;
+    const previous =
+      byHash ??
+      (await ctx.db
+        .query('chainOrders')
+        .withIndex('by_cid', (q) => q.eq('cid', cid))
+        .unique());
+    const { gatewaySecret: _gatewaySecret, ...order } = args;
+    const value = {
+      ...order,
+      intentId: intent?.intentId,
+      txHash: intent?.txHash,
+    };
+    if (previous) {
+      await ctx.db.patch(previous._id, value);
+    } else {
+      await ctx.db.insert('chainOrders', value);
+    }
+    if (intent) {
+      const intentState =
+        args.state === 'cancelled'
+          ? ('cancelled' as const)
+          : args.state === 'failed'
+            ? ('failed' as const)
+            : ('confirmed' as const);
+      await ctx.db.patch(intent._id, {
+        state: intentState,
+        orderHash: args.orderHash ?? intent.orderHash,
+        updatedAt: args.updatedAt,
+      });
+    }
+    return previous?._id;
   },
 });
 
 export const recordFill = mutation({
   args: {
     gatewaySecret: v.string(),
+    fillKey: v.string(),
     tradeId: v.string(),
+    orderHash: v.optional(v.string()),
+    cid: v.optional(v.string()),
+    executionSide: v.optional(v.string()),
     marketSymbol: v.string(),
     marketId: v.string(),
     agentName: v.string(),
@@ -384,48 +651,86 @@ export const recordFill = mutation({
     price: v.number(),
     quantity: v.number(),
     fee: v.number(),
-    txHash: v.string(),
-    blockHeight: v.number(),
+    txHash: v.optional(v.string()),
+    blockHeight: v.optional(v.number()),
     executedAt: v.number(),
   },
   handler: async (ctx, args) => {
     assertGatewaySecret(args.gatewaySecret);
     const existing = await ctx.db
       .query('fills')
-      .withIndex('by_trade_id', (q) => q.eq('tradeId', args.tradeId))
+      .withIndex('by_fill_key', (q) => q.eq('fillKey', args.fillKey))
       .unique();
     if (existing) {
       return existing._id;
     }
-    const { gatewaySecret: _gatewaySecret, ...fill } = args;
+    const cid = args.cid;
+    const orderHash = args.orderHash;
+    const intentByCid = cid
+      ? await ctx.db
+          .query('tradeIntents')
+          .withIndex('by_cid', (q) => q.eq('cid', cid))
+          .unique()
+      : null;
+    const intent =
+      intentByCid ??
+      (orderHash
+        ? await ctx.db
+            .query('tradeIntents')
+            .withIndex('by_order_hash', (q) => q.eq('orderHash', orderHash))
+            .unique()
+        : null);
+    const submission = intent?.txHash
+      ? await ctx.db
+          .query('chainTransactions')
+          .withIndex('by_hash', (q) => q.eq('txHash', intent.txHash as string))
+          .unique()
+      : null;
+    const { gatewaySecret: _gatewaySecret, ...rawFill } = args;
+    const fill = {
+      ...rawFill,
+      intentId: intent?.intentId,
+      txHash: args.txHash ?? intent?.txHash,
+      blockHeight: args.blockHeight ?? submission?.blockHeight,
+    };
     const fillId = await ctx.db.insert('fills', fill);
-    const market = await ctx.db
-      .query('marketCatalog')
-      .withIndex('by_symbol', (q) => q.eq('symbol', args.marketSymbol))
-      .unique();
-    if (market) {
-      const volume = args.price * args.quantity;
-      await ctx.db.patch(market._id, {
-        marketId: args.marketId,
-        status: 'active',
-        lastPrice: args.price,
-        change24h: ((args.price - market.referencePrice) / market.referencePrice) * 100,
-        volume24h: (market.volume24h ?? 0) + volume,
-        updatedAt: Date.now(),
+    if (intent) {
+      await ctx.db.patch(intent._id, {
+        state: 'confirmed',
+        orderHash: args.orderHash ?? intent.orderHash,
+        updatedAt: args.executedAt,
+      });
+    }
+    const order = orderHash
+      ? await ctx.db
+          .query('chainOrders')
+          .withIndex('by_order_hash', (q) => q.eq('orderHash', orderHash))
+          .unique()
+      : cid
+        ? await ctx.db
+            .query('chainOrders')
+            .withIndex('by_cid', (q) => q.eq('cid', cid))
+            .unique()
+        : null;
+    if (order) {
+      await ctx.db.patch(order._id, {
+        state: 'filled',
+        filledQuantity: Math.min(order.quantity, (order.filledQuantity ?? 0) + args.quantity),
+        updatedAt: args.executedAt,
       });
     }
     await ctx.db.insert('marketEvents', {
-      eventId: `fill-${args.tradeId}`,
+      eventId: `fill-${args.fillKey}`,
       kind: 'fill',
       source: args.agentName,
       headline: `${args.agentName} filled ${args.side.toUpperCase()} ${args.quantity} ${
         args.marketSymbol
       }`,
-      summary: `Confirmed at ${args.price} TOWNUSD on Injective Testnet.`,
+      summary: `Confirmed at ${args.price} INJ on Injective Testnet · trade ${args.tradeId}.`,
       severity: 0.5,
       symbols: [args.marketSymbol],
-      txHash: args.txHash,
-      blockHeight: args.blockHeight,
+      txHash: fill.txHash,
+      blockHeight: fill.blockHeight,
       occurredAt: args.executedAt,
     });
     return fillId;
@@ -466,4 +771,12 @@ function assertGatewaySecret(provided: string) {
   if (!expected || provided !== expected) {
     throw new ConvexError('Gateway authentication failed.');
   }
+}
+
+function isTickAligned(value: number, tick: number) {
+  if (!Number.isFinite(tick) || tick <= 0) {
+    return false;
+  }
+  const tickCount = value / tick;
+  return Math.abs(tickCount - Math.round(tickCount)) <= 1e-8;
 }

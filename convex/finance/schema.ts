@@ -70,6 +70,8 @@ export const financeTables = {
     marketMakerCount: v.number(),
     lastChainHeight: v.optional(v.number()),
     lastChainSyncAt: v.optional(v.number()),
+    lastIndexerSyncAt: v.optional(v.number()),
+    lastGatewayError: v.optional(v.string()),
     updatedAt: v.number(),
   }).index('by_key', ['key']),
 
@@ -169,6 +171,7 @@ export const financeTables = {
     limitPrice: v.optional(v.number()),
     rationale: v.string(),
     beliefEventId: v.optional(v.string()),
+    executionMode: v.optional(v.union(v.literal('simulated'), v.literal('injective'))),
     state: orderState,
     riskCode: v.optional(v.string()),
     cid: v.string(),
@@ -179,7 +182,10 @@ export const financeTables = {
     updatedAt: v.number(),
   })
     .index('by_intent_id', ['intentId'])
+    .index('by_cid', ['cid'])
+    .index('by_order_hash', ['orderHash'])
     .index('by_state', ['state', 'createdAt'])
+    .index('by_execution_state', ['executionMode', 'state', 'createdAt'])
     .index('by_agent', ['agentName', 'createdAt'])
     .index('by_updated_at', ['updatedAt']),
 
@@ -204,13 +210,15 @@ export const financeTables = {
   chainOrders: defineTable({
     cid: v.string(),
     orderHash: v.optional(v.string()),
-    intentId: v.string(),
+    intentId: v.optional(v.string()),
+    agentName: v.optional(v.string()),
     marketSymbol: v.string(),
     marketId: v.string(),
     subaccountId: v.string(),
     side: tradeSide,
     price: v.number(),
     quantity: v.number(),
+    filledQuantity: v.optional(v.number()),
     state: v.union(
       v.literal('booked'),
       v.literal('partial'),
@@ -219,15 +227,22 @@ export const financeTables = {
       v.literal('failed'),
     ),
     txHash: v.optional(v.string()),
+    createdAt: v.optional(v.number()),
     updatedAt: v.number(),
   })
     .index('by_cid', ['cid'])
+    .index('by_order_hash', ['orderHash'])
     .index('by_intent', ['intentId'])
+    .index('by_subaccount', ['subaccountId', 'updatedAt'])
     .index('by_market', ['marketSymbol', 'updatedAt']),
 
   fills: defineTable({
+    fillKey: v.optional(v.string()),
     tradeId: v.string(),
     intentId: v.optional(v.string()),
+    orderHash: v.optional(v.string()),
+    cid: v.optional(v.string()),
+    executionSide: v.optional(v.string()),
     marketSymbol: v.string(),
     marketId: v.string(),
     agentName: v.string(),
@@ -236,14 +251,56 @@ export const financeTables = {
     price: v.number(),
     quantity: v.number(),
     fee: v.number(),
-    txHash: v.string(),
-    blockHeight: v.number(),
+    txHash: v.optional(v.string()),
+    blockHeight: v.optional(v.number()),
     executedAt: v.number(),
   })
+    .index('by_fill_key', ['fillKey'])
     .index('by_trade_id', ['tradeId'])
     .index('by_agent', ['agentName', 'executedAt'])
     .index('by_market', ['marketSymbol', 'executedAt'])
     .index('by_executed_at', ['executedAt']),
+
+  chainMarketSnapshots: defineTable({
+    marketSymbol: v.string(),
+    marketId: v.string(),
+    ticker: v.string(),
+    status: v.string(),
+    baseDenom: v.string(),
+    quoteDenom: v.string(),
+    baseDecimals: v.number(),
+    quoteDecimals: v.number(),
+    minPriceTick: v.number(),
+    minQuantityTick: v.number(),
+    minNotional: v.number(),
+    bestBid: v.optional(v.number()),
+    bestAsk: v.optional(v.number()),
+    lastPrice: v.optional(v.number()),
+    recentVolume: v.number(),
+    orderbookSequence: v.optional(v.number()),
+    observedAt: v.number(),
+  })
+    .index('by_symbol', ['marketSymbol'])
+    .index('by_market_id', ['marketId']),
+
+  chainAccountSnapshots: defineTable({
+    agentName: v.string(),
+    subaccountNonce: v.number(),
+    subaccountId: v.string(),
+    marketSymbol: v.string(),
+    quoteDenom: v.string(),
+    quoteAvailable: v.number(),
+    quoteTotal: v.number(),
+    baseDenom: v.string(),
+    baseAvailable: v.number(),
+    baseTotal: v.number(),
+    blockHeight: v.optional(v.number()),
+    observedAt: v.number(),
+  })
+    .index('by_agent', ['agentName'])
+    .index('by_agent_market', ['agentName', 'marketSymbol'])
+    .index('by_subaccount', ['subaccountId'])
+    .index('by_observed_at', ['observedAt']),
 
   portfolioSnapshots: defineTable({
     agentName: v.string(),

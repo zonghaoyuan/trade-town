@@ -45,6 +45,31 @@ export type DashboardPosition = {
   pnl: number;
 };
 
+export type InjectiveAccountView = {
+  subaccountId: string;
+  subaccountNonce: number;
+  quoteDenom: string;
+  quoteAvailable: number;
+  quoteTotal: number;
+  baseDenom: string;
+  baseAvailable: number;
+  baseTotal: number;
+  openOrderCount: number;
+  fillCount: number;
+  observedAt: number;
+  blockHeight?: number;
+  lastAction?: {
+    side: 'BUY' | 'SELL';
+    quantity: number;
+    price: number;
+    state: string;
+    occurredAt: number;
+    txHash?: string;
+    orderHash?: string;
+    tradeId?: string;
+  };
+};
+
 export type DashboardTrader = {
   name: string;
   kind: 'ai' | 'market_maker';
@@ -71,6 +96,7 @@ export type DashboardTrader = {
   riskRejections: number;
   orderCount: number;
   tradeCount: number;
+  injectiveAccount?: InjectiveAccountView;
 };
 
 export type CausalEvent = {

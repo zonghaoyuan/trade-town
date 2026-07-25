@@ -401,6 +401,7 @@ npm run a2a:dev              # Start the local A2A service
 npm run a2a:examples         # Run the A2A example client
 npm run gateway:check        # Read-only Injective Testnet check
 npm run gateway:dev          # Start the Injective Gateway
+npm run gateway:queue        # Preview or queue one Agent testnet order
 npm run provision:plan       # Preview the testnet provisioning plan
 npm run cf:deploy            # Deploy the Cloudflare Worker
 ```

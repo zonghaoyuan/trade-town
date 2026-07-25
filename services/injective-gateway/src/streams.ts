@@ -13,11 +13,7 @@ export class InjectiveStreams {
   );
   private readonly managers: StreamManagerV2<unknown>[] = [];
 
-  start(args: {
-    marketIds: string[];
-    subaccountIds?: string[];
-    onEvent: (event: StreamEvent) => void;
-  }) {
+  start(args: { marketIds: string[]; onEvent: (event: StreamEvent) => void }) {
     if (args.marketIds.length === 0) {
       return;
     }
@@ -38,24 +34,10 @@ export class InjectiveStreams {
     tradeManager.start();
     this.managers.push(tradeManager);
 
-    for (const subaccountId of args.subaccountIds ?? []) {
-      const orderManager: StreamManagerV2<unknown> = new StreamManagerV2<unknown>({
-        id: `trade-town-orders-${subaccountId.slice(-8)}`,
-        streamFactory: () =>
-          this.stream.streamOrders({
-            subaccountId,
-            callback: (response: unknown) => orderManager.emit('data', response),
-          }),
-        onData: (payload: unknown) =>
-          args.onEvent({ stream: 'orders', payload, receivedAt: Date.now() }),
-        retryConfig: { enabled: true },
-      });
-      orderManager.on('error', (error: unknown) => {
-        console.error('[stream:orders]', safeError(error));
-      });
-      orderManager.start();
-      this.managers.push(orderManager);
-    }
+    // Orders are reconciled by the authoritative projection poll. Opening one
+    // stream per Agent exhausts public testnet connection limits and makes the
+    // cache less reliable; the market trade stream still provides a low-latency
+    // invalidation signal for fills.
   }
 
   stop() {

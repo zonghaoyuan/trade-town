@@ -261,13 +261,17 @@ export function assessTradeRisk(input: RiskCheckInput): RiskCheck {
     return {
       accepted: false,
       code: 'insufficient_cash',
-      reason: 'Confirmed TOWNUSD balance is insufficient.',
+      reason: 'Confirmed quote-asset balance is insufficient.',
       notional,
     };
   }
   const signedQuantity = input.side === 'buy' ? input.quantity : -input.quantity;
+  const currentExposure = Math.abs(input.currentPosition * input.limitPrice);
   const resultingExposure = Math.abs((input.currentPosition + signedQuantity) * input.limitPrice);
-  if (resultingExposure > input.netAssetValue * maxPositionNavRatio) {
+  if (
+    resultingExposure > input.netAssetValue * maxPositionNavRatio &&
+    resultingExposure >= currentExposure
+  ) {
     return {
       accepted: false,
       code: 'position_limit',

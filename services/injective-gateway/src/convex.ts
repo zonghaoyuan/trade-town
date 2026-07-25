@@ -1,6 +1,7 @@
 import { ConvexHttpClient } from 'convex/browser';
 import { api } from '../../../convex/_generated/api';
 import { GatewayConfig } from './config';
+import type { ChainAccountSnapshot, ChainFill, ChainMarketSnapshot, ChainOrder } from './injective';
 
 type PendingIntent = {
   intentId: string;
@@ -10,21 +11,6 @@ type PendingIntent = {
   quantity: number;
   limitPrice?: number;
   subaccountNonce: number;
-};
-
-type ConfirmedFill = {
-  tradeId: string;
-  marketSymbol: string;
-  marketId: string;
-  agentName: string;
-  subaccountId: string;
-  side: 'buy' | 'sell';
-  price: number;
-  quantity: number;
-  fee: number;
-  txHash: string;
-  blockHeight: number;
-  executedAt: number;
 };
 
 export class FinanceCacheClient {
@@ -52,14 +38,17 @@ export class FinanceCacheClient {
     })) as PendingIntent[];
   }
 
-  async recordSubmission(intentId: string, txHash: string) {
+  async recordSubmission(
+    intentId: string,
+    submission: { txHash: string; blockHeight?: number; rawLog?: string },
+  ) {
     if (!this.client || !this.secret) {
       return;
     }
     await this.client.mutation((api as any).finance.recordSubmission, {
       gatewaySecret: this.secret,
       intentId,
-      txHash,
+      ...submission,
     });
   }
 
@@ -78,6 +67,7 @@ export class FinanceCacheClient {
     status: 'read_only' | 'signing' | 'degraded' | 'unconfigured';
     operatorAddress?: string;
     blockHeight?: number;
+    error?: string;
   }) {
     if (!this.client || !this.secret) {
       return;
@@ -88,7 +78,37 @@ export class FinanceCacheClient {
     });
   }
 
-  async recordFill(fill: ConfirmedFill) {
+  async recordMarketSnapshot(snapshot: ChainMarketSnapshot) {
+    if (!this.client || !this.secret) {
+      return;
+    }
+    await this.client.mutation((api as any).finance.recordMarketSnapshot, {
+      gatewaySecret: this.secret,
+      ...snapshot,
+    });
+  }
+
+  async recordAccountSnapshot(snapshot: ChainAccountSnapshot) {
+    if (!this.client || !this.secret) {
+      return;
+    }
+    await this.client.mutation((api as any).finance.recordAccountSnapshot, {
+      gatewaySecret: this.secret,
+      ...snapshot,
+    });
+  }
+
+  async recordOrder(order: ChainOrder) {
+    if (!this.client || !this.secret) {
+      return;
+    }
+    await this.client.mutation((api as any).finance.recordOrder, {
+      gatewaySecret: this.secret,
+      ...order,
+    });
+  }
+
+  async recordFill(fill: ChainFill) {
     if (!this.client || !this.secret) {
       return;
     }

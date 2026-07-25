@@ -26,4 +26,20 @@ describe('Injective finance primitives', () => {
     expect(result.accepted).toBe(false);
     expect(result.code).toBe('order_too_large');
   });
+
+  test('allows a sell that reduces an already concentrated position', () => {
+    const result = assessTradeRisk({
+      side: 'sell',
+      quantity: 100,
+      limitPrice: 0.01,
+      cash: 10,
+      currentPosition: 2_000,
+      netAssetValue: 30,
+      maxOrderNavRatio: 0.1,
+      maxPositionNavRatio: 0.25,
+    });
+
+    expect(result.accepted).toBe(true);
+    expect(result.code).toBe('ok');
+  });
 });

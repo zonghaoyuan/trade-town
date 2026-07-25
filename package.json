@@ -15,6 +15,7 @@
     "test": "NODE_OPTIONS=--experimental-vm-modules jest --verbose",
     "gateway:dev": "tsx services/injective-gateway/src/index.ts",
     "gateway:check": "GATEWAY_MODE=read-only tsx services/injective-gateway/src/index.ts --once",
+    "gateway:queue": "tsx services/injective-gateway/src/queueOrder.ts",
     "a2a:dev": "tsx services/market-town-a2a/src/index.ts",
     "a2a:examples": "tsx services/market-town-a2a/src/example-client.ts",
     "a2a:test": "NODE_OPTIONS=--experimental-vm-modules jest --verbose services/market-town-a2a",

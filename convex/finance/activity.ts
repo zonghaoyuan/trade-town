@@ -20,6 +20,7 @@ type ActivityIntent = {
 };
 
 type ActivityFill = {
+  fillKey?: string;
   tradeId: string;
   executedAt: number;
   agentName: string;
@@ -27,8 +28,9 @@ type ActivityFill = {
   side: 'buy' | 'sell';
   quantity: number;
   price: number;
-  txHash: string;
-  blockHeight: number;
+  txHash?: string;
+  blockHeight?: number;
+  orderHash?: string;
   fee: number;
 };
 
@@ -51,8 +53,7 @@ export function buildTransactionFeed(
 ): TownTransactionRecord[] {
   const intentRecords: TownTransactionRecord[] = intents.map((intent) => {
     const isPaperReplay =
-      intent.intentId.startsWith('replay:') ||
-      intent.riskCode?.startsWith('simulated_');
+      intent.intentId.startsWith('replay:') || intent.riskCode?.startsWith('simulated_');
     return {
       id: `intent:${intent.intentId}`,
       occurredAt: intent.updatedAt,
@@ -68,7 +69,7 @@ export function buildTransactionFeed(
     };
   });
   const fillRecords: TownTransactionRecord[] = fills.map((fill) => ({
-    id: `fill:${fill.tradeId}`,
+    id: `fill:${fill.fillKey ?? `${fill.tradeId}:${fill.agentName}:${fill.side}`}`,
     occurredAt: fill.executedAt,
     agentName: fill.agentName,
     symbol: fill.marketSymbol,
@@ -80,12 +81,16 @@ export function buildTransactionFeed(
     txHash: fill.txHash,
     blockHeight: fill.blockHeight,
     fee: fill.fee,
-    detail: `Confirmed on Injective Testnet · fee ${fill.fee}`,
+    detail: `Confirmed on Injective Testnet · trade ${shortReference(fill.tradeId)} · fee ${fill.fee}`,
   }));
 
   return [...intentRecords, ...fillRecords]
     .sort((left, right) => right.occurredAt - left.occurredAt)
     .slice(0, limit);
+}
+
+function shortReference(value: string) {
+  return value.length <= 18 ? value : `${value.slice(0, 10)}…${value.slice(-6)}`;
 }
 
 export function buildEventFeed(events: ActivityEvent[]): TownEventRecord[] {

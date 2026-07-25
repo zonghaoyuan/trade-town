@@ -1,3 +1,4 @@
+import dotenv from 'dotenv';
 import {
   ChainGrpcExchangeApi,
   IndexerGrpcSpotApi,
@@ -17,6 +18,8 @@ import {
   PROVISION_QUOTE_ASSET,
   PROVISION_TOKENS,
 } from './provisionConfig';
+
+dotenv.config({ path: process.env.GATEWAY_ENV_FILE ?? '.env.local' });
 
 type ProvisionStage = 'tokens' | 'markets' | 'funding';
 

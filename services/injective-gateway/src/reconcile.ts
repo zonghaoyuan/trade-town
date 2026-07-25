@@ -1,15 +1,19 @@
 import { TradeSide } from '../../../shared/finance';
 
 export type NormalizedFill = {
+  fillKey: string;
   tradeId: string;
+  orderHash?: string;
+  cid?: string;
+  executionSide?: string;
   marketId: string;
   subaccountId: string;
   side: TradeSide;
   price: number;
   quantity: number;
   fee: number;
-  txHash: string;
-  blockHeight: number;
+  txHash?: string;
+  blockHeight?: number;
   executedAt: number;
 };
 
@@ -31,9 +35,10 @@ export function normalizeSpotFills(payload: unknown, fallbackHeight: number): No
     const txHash = readString(value, ['txHash', 'tx_hash', 'executionTxHash']);
     const price = readNumber(value, ['price', 'executionPrice']);
     const quantity = readNumber(value, ['quantity', 'executionQuantity']);
-    if (!marketId || !subaccountId || !tradeId || !txHash || !price || !quantity) {
+    if (!marketId || !subaccountId || !tradeId || !price || !quantity) {
       return [];
     }
+    const executionSide = readString(value, ['executionSide', 'execution_side']);
     const direction = readString(value, [
       'tradeDirection',
       'direction',
@@ -44,7 +49,11 @@ export function normalizeSpotFills(payload: unknown, fallbackHeight: number): No
     const executedAt = normalizeTimestamp(timestamp);
     return [
       {
+        fillKey: `${tradeId}:${subaccountId.toLowerCase()}:${executionSide ?? ''}`,
         tradeId,
+        orderHash: readString(value, ['orderHash', 'order_hash']),
+        cid: readString(value, ['cid']),
+        executionSide,
         marketId,
         subaccountId,
         side,
@@ -52,7 +61,9 @@ export function normalizeSpotFills(payload: unknown, fallbackHeight: number): No
         quantity,
         fee: readNumber(value, ['fee', 'executionFee']) ?? 0,
         txHash,
-        blockHeight: readNumber(value, ['blockHeight', 'block_height']) ?? fallbackHeight,
+        blockHeight:
+          readNumber(value, ['blockHeight', 'block_height']) ??
+          (fallbackHeight > 0 ? fallbackHeight : undefined),
         executedAt,
       },
     ];
@@ -65,6 +76,9 @@ function unwrapRecords(payload: unknown): Record<string, unknown>[] {
   }
   if (!isRecord(payload)) {
     return [];
+  }
+  if (isRecord(payload.trade)) {
+    return [payload.trade];
   }
   for (const key of ['trades', 'spotTrades', 'data']) {
     const nested = payload[key];

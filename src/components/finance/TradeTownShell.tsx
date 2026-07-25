@@ -638,6 +638,13 @@ function MarketBoard({
       <div className="pixel-board-title">
         <h2>Markets</h2>
       </div>
+      <div className="pixel-injective-market-status" aria-label="Injective Testnet connected">
+        <span>
+          <i aria-hidden="true" />
+          Injective Testnet
+        </span>
+        <strong>Connected</strong>
+      </div>
       <div className="pixel-market-hero">
         <h3>{market.symbol}</h3>
         <div>
@@ -1086,6 +1093,9 @@ function AgentDetailDrawer({
             {reasoningTrader.action}
           </em>
         </header>
+        {financialTrader.injectiveAccount && (
+          <InjectiveAccountCard account={financialTrader.injectiveAccount} />
+        )}
         <nav className="pixel-agent-tabs" role="tablist" aria-label="Agent details">
           {(['belief', 'portfolio', 'risk', 'trades'] as AgentTab[]).map((item) => (
             <button
@@ -1246,6 +1256,57 @@ function AgentDetailDrawer({
         </div>
       </aside>
     </div>
+  );
+}
+
+function InjectiveAccountCard({
+  account,
+}: {
+  account: NonNullable<DashboardTrader['injectiveAccount']>;
+}) {
+  const proof = account.lastAction?.txHash;
+  const secondaryProof = account.lastAction?.orderHash ?? account.lastAction?.tradeId;
+  return (
+    <section className="pixel-injective-account" aria-label="Verified Injective account">
+      <header>
+        <span>◆ Injective account · verified</span>
+        <code>{formatReference(account.subaccountId)}</code>
+      </header>
+      <div>
+        <p>
+          <span>Balance</span>
+          <strong>
+            {formatPrice(account.quoteAvailable)} INJ · {formatCompact(account.baseAvailable)} ACME
+          </strong>
+        </p>
+        <p>
+          <span>Activity</span>
+          <strong>
+            {account.openOrderCount} open · {account.fillCount} fill
+            {account.fillCount === 1 ? '' : 's'}
+          </strong>
+        </p>
+      </div>
+      {account.lastAction && (
+        <footer>
+          <span>
+            {account.lastAction.state} · {account.lastAction.side} {account.lastAction.quantity}{' '}
+            ACME @ {formatPrice(account.lastAction.price)} INJ
+          </span>
+          {proof ? (
+            <a
+              href={`https://testnet.explorer.injective.network/transaction/${proof}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Explorer ↗ · {formatReference(proof)}
+            </a>
+          ) : secondaryProof ? (
+            <code>{formatReference(secondaryProof)}</code>
+          ) : null}
+        </footer>
+      )}
+    </section>
   );
 }
 

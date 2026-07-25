@@ -31,6 +31,7 @@ describe('town activity feed', () => {
       ],
       [
         {
+          fillKey: 'fill-1:sora:maker',
           tradeId: 'fill-1',
           executedAt: 200,
           agentName: 'Sora Vale',
@@ -48,7 +49,7 @@ describe('town activity feed', () => {
 
     expect(transactions.map((record) => record.id)).toEqual([
       'intent:intent-2',
-      'fill:fill-1',
+      'fill:fill-1:sora:maker',
       'intent:intent-1',
     ]);
     expect(transactions[0]).toMatchObject({

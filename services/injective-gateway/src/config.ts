@@ -12,15 +12,20 @@ export type GatewayConfig = {
   gatewaySecret?: string;
   marketIds: Record<string, string>;
   pollIntervalMs: number;
+  syncIntervalMs: number;
   once: boolean;
 };
 
 export function loadGatewayConfig(argv = process.argv.slice(2)): GatewayConfig {
   const mode = readMode(process.env.GATEWAY_MODE);
-  const privateKey = optionalEnv('INJECTIVE_PRIVATE_KEY');
+  const configuredPrivateKey = optionalEnv('INJECTIVE_PRIVATE_KEY');
+  const privateKey = mode === 'signing' ? configuredPrivateKey : undefined;
   const operatorAddress = optionalEnv('INJECTIVE_OPERATOR_ADDRESS');
-  const convexUrl = optionalEnv('CONVEX_URL');
+  const explicitConvexUrl = optionalEnv('CONVEX_URL');
   const gatewaySecret = optionalEnv('GATEWAY_SHARED_SECRET');
+  const convexUrl = gatewaySecret
+    ? (explicitConvexUrl ?? optionalEnv('VITE_CONVEX_URL'))
+    : explicitConvexUrl;
   const marketIds = Object.fromEntries(
     PROVISION_MARKETS.flatMap((market) => {
       const marketId = optionalEnv(`INJECTIVE_MARKET_${market.symbol}`);
@@ -28,11 +33,12 @@ export function loadGatewayConfig(argv = process.argv.slice(2)): GatewayConfig {
     }),
   );
   const pollIntervalMs = readPositiveNumber(process.env.GATEWAY_POLL_INTERVAL_MS, 5_000);
+  const syncIntervalMs = readPositiveNumber(process.env.GATEWAY_SYNC_INTERVAL_MS, 15_000);
 
-  if (mode === 'signing' && !privateKey) {
+  if (mode === 'signing' && !configuredPrivateKey) {
     throw new Error('GATEWAY_MODE=signing requires INJECTIVE_PRIVATE_KEY.');
   }
-  if ((convexUrl && !gatewaySecret) || (!convexUrl && gatewaySecret)) {
+  if ((explicitConvexUrl && !gatewaySecret) || (!convexUrl && gatewaySecret)) {
     throw new Error('CONVEX_URL and GATEWAY_SHARED_SECRET must be configured together.');
   }
   if (privateKey && !/^0x[0-9a-fA-F]{64}$/.test(privateKey)) {
@@ -51,6 +57,7 @@ export function loadGatewayConfig(argv = process.argv.slice(2)): GatewayConfig {
     gatewaySecret,
     marketIds,
     pollIntervalMs,
+    syncIntervalMs,
     once: argv.includes('--once'),
   };
 }

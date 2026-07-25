@@ -187,6 +187,44 @@ textarea {
   display: none;
 }
 
+.pixel-injective-market-status {
+  margin: 7px 6px 0;
+  padding: 6px 7px;
+  border: 2px solid var(--town-shadow);
+  color: var(--town-green);
+  background: #263f38;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  box-shadow: 2px 2px 0 var(--town-shadow);
+  font-size: 8px;
+  line-height: 1;
+  letter-spacing: 0.45px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.pixel-injective-market-status > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.pixel-injective-market-status i {
+  width: 6px;
+  height: 6px;
+  background: var(--town-green);
+  display: block;
+  box-shadow: 0 0 0 1px #182e29;
+}
+
+.pixel-injective-market-status strong {
+  color: var(--town-paper);
+  font-size: inherit;
+  font-weight: 400;
+}
+
 .pixel-network {
   min-width: 288px;
   padding: 9px 13px 8px 12px;
@@ -3953,6 +3991,8 @@ textarea {
   color: var(--town-paper);
   background: var(--town-plum);
   box-shadow: -10px 0 0 rgba(18, 15, 28, 0.5);
+  display: flex;
+  flex-direction: column;
   animation: pixel-agent-drawer-in 180ms steps(4, end) both;
 }
 
@@ -4020,8 +4060,77 @@ textarea {
   background: var(--town-gold);
 }
 
+.pixel-injective-account {
+  margin-top: 10px;
+  padding: 9px 10px;
+  border: 4px solid var(--town-night);
+  color: var(--town-paper);
+  background: #203b3a;
+}
+
+.pixel-injective-account > header,
+.pixel-injective-account > footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.pixel-injective-account > header span {
+  color: var(--town-green);
+  font-size: var(--town-text-micro);
+  text-transform: uppercase;
+}
+
+.pixel-injective-account code,
+.pixel-injective-account a {
+  color: var(--town-mist);
+  font-family: inherit;
+  font-size: var(--town-text-micro);
+}
+
+.pixel-injective-account > div {
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.pixel-injective-account p {
+  min-width: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.pixel-injective-account p span {
+  color: var(--town-mist);
+  font-size: var(--town-text-micro);
+  text-transform: uppercase;
+}
+
+.pixel-injective-account p strong,
+.pixel-injective-account > footer span {
+  color: var(--town-cream);
+  font-size: var(--town-text-caption);
+  font-weight: 400;
+}
+
+.pixel-injective-account > footer {
+  margin-top: 8px;
+  padding-top: 7px;
+  border-top: 2px solid var(--town-slate);
+}
+
+.pixel-injective-account > footer a {
+  color: var(--town-green);
+  white-space: nowrap;
+}
+
 .pixel-agent-drawer-content {
-  height: calc(100% - 145px);
+  min-height: 0;
+  flex: 1;
   margin-top: 10px;
   overflow-y: auto;
   scrollbar-color: var(--town-wine) var(--town-night);

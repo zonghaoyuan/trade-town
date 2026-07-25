@@ -259,7 +259,8 @@ export const markWaiting = mutation({
       await ctx.db.patch(existing._id, value);
       return existing._id;
     }
-    if (args.dayIndex !== 0) throw new ConvexError('Unknown replay session cannot wait after day 0.');
+    if (args.dayIndex !== 0)
+      throw new ConvexError('Unknown replay session cannot wait after day 0.');
     const activeSessions = await ctx.db
       .query('townReplaySessions')
       .withIndex('by_active', (q) => q.eq('active', true))
@@ -285,6 +286,7 @@ async function writeTransactions(ctx: any, args: any) {
       quantity: transaction.quantity,
       limitPrice: transaction.limitPrice,
       rationale: bounded(transaction.rationale, 800),
+      executionMode: 'simulated' as const,
       state: transaction.state,
       riskCode: transaction.riskCode ? bounded(transaction.riskCode, 100) : undefined,
       cid: makeReplayCid(transaction.intentId, transaction.subaccountNonce),
@@ -406,7 +408,10 @@ function validateTranslationProof(args: {
   if (args.translationSourceHash !== args.sourceHash) {
     throw new ConvexError('Replay translation source proof does not match the source payload.');
   }
-  if (!/^[a-f0-9]{64}$/.test(args.translationSourceHash) || !/^[a-f0-9]{64}$/.test(args.translationContentHash)) {
+  if (
+    !/^[a-f0-9]{64}$/.test(args.translationSourceHash) ||
+    !/^[a-f0-9]{64}$/.test(args.translationContentHash)
+  ) {
     throw new ConvexError('Replay translation proof hashes are invalid.');
   }
   if (!Number.isInteger(args.translationBatchCount) || args.translationBatchCount < 0) {
@@ -455,7 +460,8 @@ function parseSnapshot(value: string): any {
 
 function assertReplaySecret(provided: string) {
   const expected = process.env.TOWN_REPLAY_SHARED_SECRET;
-  if (!expected || provided !== expected) throw new ConvexError('Town replay authentication failed.');
+  if (!expected || provided !== expected)
+    throw new ConvexError('Town replay authentication failed.');
 }
 
 function assertEnglish(value: string) {
@@ -469,6 +475,9 @@ function bounded(value: string, maxLength: number) {
 }
 
 function makeReplayCid(intentId: string, nonce: number) {
-  const suffix = intentId.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(-20);
+  const suffix = intentId
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, '')
+    .slice(-20);
   return `replay-${nonce}-${suffix}`.slice(0, 36);
 }
