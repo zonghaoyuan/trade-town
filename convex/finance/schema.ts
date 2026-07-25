@@ -59,6 +59,7 @@ export const financeTables = {
     key: v.string(),
     currentDayIndex: v.number(),
     isPlaying: v.boolean(),
+    isLooping: v.optional(v.boolean()),
     speedMs: v.number(),
     generation: v.number(),
     updatedAt: v.number(),

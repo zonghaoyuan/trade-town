@@ -1,11 +1,6 @@
 import { v } from 'convex/values';
 import { internal } from './_generated/api';
-import {
-  internalMutation,
-  MutationCtx,
-  mutation,
-  query,
-} from './_generated/server';
+import { internalMutation, MutationCtx, mutation, query } from './_generated/server';
 
 const REPLAY_KEY = 'panda-daily-v1';
 const FINAL_DAY_INDEX = 303;
@@ -42,9 +37,7 @@ export const setPlaying = mutation({
     const replay = await ensureReplayState(ctx);
     const generation = replay.generation + 1;
     const currentDayIndex =
-      args.isPlaying && replay.currentDayIndex >= FINAL_DAY_INDEX
-        ? 0
-        : replay.currentDayIndex;
+      args.isPlaying && replay.currentDayIndex >= FINAL_DAY_INDEX ? 0 : replay.currentDayIndex;
     await ctx.db.patch(replay._id, {
       currentDayIndex,
       isPlaying: args.isPlaying,
@@ -52,6 +45,17 @@ export const setPlaying = mutation({
       updatedAt: Date.now(),
     });
     if (args.isPlaying) await scheduleAdvance(ctx, generation, replay.speedMs);
+  },
+});
+
+export const setLooping = mutation({
+  args: { isLooping: v.boolean() },
+  handler: async (ctx, args) => {
+    const replay = await ensureReplayState(ctx);
+    await ctx.db.patch(replay._id, {
+      isLooping: args.isLooping,
+      updatedAt: Date.now(),
+    });
   },
 });
 
@@ -105,10 +109,18 @@ export const advance = internalMutation({
     if (!replay || !replay.isPlaying || replay.generation !== args.generation) return;
 
     if (replay.currentDayIndex >= FINAL_DAY_INDEX) {
+      if (!(replay.isLooping ?? true)) {
+        await ctx.db.patch(replay._id, {
+          isPlaying: false,
+          updatedAt: Date.now(),
+        });
+        return;
+      }
       await ctx.db.patch(replay._id, {
-        isPlaying: false,
+        currentDayIndex: 0,
         updatedAt: Date.now(),
       });
+      await scheduleAdvance(ctx, replay.generation, replay.speedMs);
       return;
     }
 
@@ -141,6 +153,7 @@ function defaultState(updatedAt = Date.now()) {
     key: REPLAY_KEY,
     currentDayIndex: 0,
     isPlaying: true,
+    isLooping: true,
     speedMs: DEFAULT_SPEED_MS,
     generation: 1,
     updatedAt,

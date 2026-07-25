@@ -7,6 +7,7 @@ import { type PandaReplayController, usePandaReplay } from './usePandaReplay';
 type SyncedReplayState = {
   currentDayIndex: number;
   isPlaying: boolean;
+  isLooping?: boolean;
   speedMs: number;
   updatedAt: number;
 };
@@ -20,6 +21,7 @@ export function useSyncedPandaReplay(enabled = true): PandaReplayController {
     | SyncedReplayState
     | undefined;
   const setPlayingMutation = useMutation((api as any).pandaReplay.setPlaying);
+  const setLoopingMutation = useMutation((api as any).pandaReplay.setLooping);
   const bootstrapMutation = useMutation((api as any).pandaReplay.bootstrap);
   const stepMutation = useMutation((api as any).pandaReplay.step);
   const resetMutation = useMutation((api as any).pandaReplay.reset);
@@ -38,9 +40,13 @@ export function useSyncedPandaReplay(enabled = true): PandaReplayController {
       dayCount: PANDA_REPLAY_DAY_COUNT,
       currentDate: pandaReplayDates[dayIndex] ?? '',
       isPlaying: remote.isPlaying,
+      isLooping: remote.isLooping ?? true,
       speedMs: remote.speedMs,
       togglePlaying: () => {
         void setPlayingMutation({ isPlaying: !remote.isPlaying });
+      },
+      toggleLooping: () => {
+        void setLoopingMutation({ isLooping: !(remote.isLooping ?? true) });
       },
       step: (delta: number) => {
         void stepMutation({ delta });
@@ -52,5 +58,13 @@ export function useSyncedPandaReplay(enabled = true): PandaReplayController {
         void setSpeedMutation({ speedMs });
       },
     };
-  }, [local, remote, resetMutation, setPlayingMutation, setSpeedMutation, stepMutation]);
+  }, [
+    local,
+    remote,
+    resetMutation,
+    setLoopingMutation,
+    setPlayingMutation,
+    setSpeedMutation,
+    stepMutation,
+  ]);
 }

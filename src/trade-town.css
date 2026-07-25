@@ -6688,6 +6688,62 @@ textarea {
   min-width: 46px;
 }
 
+.pixel-replay-loop {
+  position: relative;
+  height: 28px;
+  margin-left: 2px;
+  color: var(--town-mist);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.pixel-replay-loop > input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.pixel-replay-loop > span {
+  width: 24px;
+  height: 14px;
+  padding: 2px;
+  border: 2px solid var(--town-night);
+  background: var(--town-clay);
+  display: flex;
+  align-items: center;
+  box-shadow: inset 0 0 0 1px var(--town-shadow);
+}
+
+.pixel-replay-loop > span i {
+  width: 6px;
+  height: 6px;
+  background: var(--town-mist);
+  display: block;
+  transition: transform 120ms steps(2, end);
+}
+
+.pixel-replay-loop > input:checked + span {
+  background: #315b4a;
+}
+
+.pixel-replay-loop > input:checked + span i {
+  background: var(--town-green);
+  transform: translateX(10px);
+}
+
+.pixel-replay-loop > input:focus-visible + span {
+  outline: 2px solid var(--town-gold);
+  outline-offset: 1px;
+}
+
+.pixel-replay-loop > em {
+  font-size: 7px;
+  font-style: normal;
+}
+
 .pixel-header-actions,
 .pixel-town-shell.is-immersive .pixel-header-actions {
   grid-column: 3;

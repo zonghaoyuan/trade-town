@@ -569,7 +569,7 @@ function ReplayStatus({ replay }: { replay: ReplayDisplayState }) {
             aria-label={controller.isPlaying ? 'Pause replay' : 'Play replay'}
             onClick={controller.togglePlaying}
           >
-            {controller.isPlaying ? 'Ⅱ' : atEnd ? '↺' : '▶'}
+            {controller.isPlaying ? 'Ⅱ' : '▶'}
           </button>
           <button
             type="button"
@@ -591,6 +591,17 @@ function ReplayStatus({ replay }: { replay: ReplayDisplayState }) {
               </option>
             ))}
           </select>
+          <label className="pixel-replay-loop" title="Automatically restart after the last day">
+            <input
+              type="checkbox"
+              checked={controller.isLooping}
+              onChange={controller.toggleLooping}
+            />
+            <span aria-hidden="true">
+              <i />
+            </span>
+            <em>LOOP</em>
+          </label>
         </div>
       )}
     </section>
@@ -696,9 +707,9 @@ function MarketBoard({
           >
             <PixelMarketIcon symbol={item.symbol} accent={item.accent} />
             <span className="pixel-market-copy">
-              <strong>{item.symbol}</strong>
+              <strong>{item.displayName}</strong>
               <small>
-                {formatPrice(item.lastPrice)} {item.quoteCurrency ?? 'CNY'} · {item.displayName}
+                {formatPrice(item.lastPrice)} {item.quoteCurrency ?? 'CNY'} · {item.symbol}
               </small>
             </span>
             <span className={item.changePct >= 0 ? 'pixel-up' : 'pixel-down'}>
