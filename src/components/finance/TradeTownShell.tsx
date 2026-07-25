@@ -743,9 +743,8 @@ function AgentBoard({
 
   return (
     <div className="pixel-board pixel-unified-agent-board">
-      <div className="pixel-board-title pixel-board-title-compact">
-        <h2>Agent NAV Ranking</h2>
-        <span>same 1M CNY start · live replay</span>
+      <div className="pixel-board-title">
+        <h2>Citizens</h2>
       </div>
       <div className="pixel-agent-list">
         {rankedTraders.map((agent, index) => (
