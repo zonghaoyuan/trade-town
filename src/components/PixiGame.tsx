@@ -101,17 +101,6 @@ export const PixiGame = (props: {
       )
     : undefined;
 
-  // Zoom on the user’s avatar when it is created
-  useEffect(() => {
-    if (!viewportRef.current || humanPlayerId === undefined) return;
-
-    const humanPlayer = props.game.world.players.get(humanPlayerId)!;
-    viewportRef.current.animate({
-      position: new PIXI.Point(humanPlayer.position.x * tileDim, humanPlayer.position.y * tileDim),
-      scale: 1.5,
-    });
-  }, [humanPlayerId]);
-
   return (
     <PixiViewport
       app={pixiApp}
