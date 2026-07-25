@@ -93,6 +93,24 @@ The live simulation calls the configured chat model while agents converse. Use t
 **Freeze** control when you are not actively testing so a metered API quota is not consumed in the
 background.
 
+## Cloudflare Worker and A2A
+
+The production Cloudflare Worker can serve both the Vite frontend and the A2A Remote Agent. Static
+frontend routes are served from `dist`; `/.well-known/*`, `/a2a/*`, `/healthz`, and `/docs` are
+handled by the Worker runtime. Convex persists A2A tasks, while DeepSeek calls originate from the
+Worker.
+
+Before deploying, make the top-level `name` in `wrangler.jsonc` match the existing frontend Worker.
+Then configure the Worker runtime variables and secrets described in
+[docs/CLOUDFLARE_WORKER_DEPLOYMENT.md](docs/CLOUDFLARE_WORKER_DEPLOYMENT.md) and deploy with:
+
+```bash
+npm run cf:deploy
+```
+
+`.env.local` remains a frontend/build-time configuration source. Never expose `LLM_API_KEY`,
+`A2A_API_KEY`, or `A2A_CONVEX_SHARED_SECRET` as `VITE_*` variables.
+
 ## Injective Testnet
 
 Check current testnet connectivity without a key:

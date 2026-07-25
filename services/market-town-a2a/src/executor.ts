@@ -63,16 +63,33 @@ export class MarketTownAgentExecutor implements AgentExecutor {
     try {
       this.publishWorking(taskId, contextId, eventBus);
       const request = parseSkillRequest(userMessage, this.config.maxPromptChars);
-      const report =
-        request.skillId === 'town-agent-history'
-          ? await withTimeout(loadTownAgentHistory(request, this.config), this.config.maxTaskMs)
-          : await withTimeout(
-              this.reasoner.completeReport(
-                runSkill(request, this.config.executionMode),
-                startedAt,
-              ),
-              this.config.maxTaskMs,
-            );
+      let report;
+      if (request.skillId === 'town-agent-history') {
+        report = await withTimeout(
+          loadTownAgentHistory(request, this.config),
+          this.config.maxTaskMs,
+        );
+      } else {
+        const plan = await withTimeout(
+          this.reasoner.planRequest(userMessage),
+          this.config.maxTaskMs,
+        );
+        const skillResult = runSkill(plan.request, this.config.executionMode);
+        const result = {
+          ...skillResult,
+          execution: {
+            ...skillResult.execution,
+            steps: [
+              `${plan.usedModel ? 'DeepSeek V4 Pro' : '本地确定性路由'}完成任务规划：${plan.rationale}`,
+              ...skillResult.execution.steps,
+            ],
+          },
+        };
+        report = await withTimeout(
+          this.reasoner.completeReport(result, startedAt, plan),
+          this.config.maxTaskMs,
+        );
+      }
       if (this.canceled.has(taskId)) {
         return;
       }

@@ -88,6 +88,12 @@ export async function loadTownAgentHistory(
       requiredModel: 'DeepSeek V4 Pro',
       configuredModel: config.deepseekModel ?? null,
       used: false,
+      stages: {
+        taskPlanning: false,
+        reportSynthesis: false,
+      },
+      planningRationale:
+        'Agent history uses deterministic routing and source retrieval without generating a new interpretation.',
       analysis: 'This skill performs source retrieval and deterministic filtering; it does not generate a new model interpretation.',
     },
     marketData: null,

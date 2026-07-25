@@ -188,7 +188,9 @@ export default function TradeTownShell({
 
   return (
     <main
-      className={`pixel-town-shell ${immersive ? 'is-immersive' : 'is-overview'}`}
+      className={`pixel-town-shell ${immersive ? 'is-immersive' : 'is-overview'}${
+        immersive && drawer ? ' has-hud-drawer' : ''
+      }`}
       onPointerDownCapture={(event) => {
         if (!focusRequest) return;
         const target = event.target;
