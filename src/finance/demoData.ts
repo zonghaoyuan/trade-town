@@ -1,44 +1,153 @@
-import { TOWN_TRADERS } from '../../shared/finance';
-import type {
-  CausalEvent,
-  DashboardCandle,
-  DashboardError,
-  DashboardExecution,
-  DashboardMarket,
-  DashboardTrader,
-  SocialActivity,
-  TownSummary,
-} from '../../shared/pandaTypes';
-import { pandaHistoricalMarket, pandaHistoricalMarkets } from './pandaMarket';
-import { buildPandaSimulationRun } from './pandaSimulation';
+import { TOWN_MARKETS, TOWN_TRADERS } from '../../shared/finance';
+import { pandaHistoricalMarket } from './pandaMarket';
 
-export type DashboardMode = 'panda_dayview' | 'injective_testnet' | 'local_sim';
-export type {
-  CausalEvent,
-  DashboardCandle,
-  DashboardError,
-  DashboardExecution,
-  DashboardMarket,
-  DashboardPosition,
-  DashboardTrader,
-  SocialActivity,
-  TownSummary,
-  TradeAction,
-  Tone,
-} from '../../shared/pandaTypes';
+export type DashboardMode = 'panda_market' | 'injective_testnet';
+export type TradeAction = 'BUY' | 'SELL' | 'HOLD';
+export type Tone = 'positive' | 'negative' | 'neutral';
+
+export type DashboardCandle = {
+  time: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+};
+
+export type DashboardMarket = {
+  symbol: string;
+  displayName: string;
+  assetClass: 'company' | 'commodity';
+  lastPrice: number;
+  referencePrice?: number;
+  changePct?: number;
+  volume?: number;
+  status: 'planned' | 'launching' | 'active' | 'paused';
+  accent: string;
+  quoteCurrency?: string;
+  priceTick?: number;
+  candles: DashboardCandle[];
+  indicators: Array<{
+    label: string;
+    value: string;
+    tone: Tone;
+  }>;
+  sentiment?: {
+    bulls: number;
+    bears: number;
+    holds?: number;
+    consensus: number;
+    divergence: number;
+    camp: string;
+  };
+};
+
+export type DashboardPosition = {
+  symbol: string;
+  quantity: number;
+  weightPct: number;
+  pnl: number;
+};
+
+export type DashboardTrader = {
+  name: string;
+  kind: 'ai';
+  role: string;
+  style: string;
+  riskTolerance: number;
+  subaccountNonce: number;
+  focusSymbols: readonly string[];
+  financialState: 'profile_only' | 'verified';
+  currency?: string;
+  pnl: number;
+  activity: string;
+  action: TradeAction;
+  confidence: number;
+  beliefBefore: string;
+  beliefAfter: string;
+  thesis: string;
+  evidence: string[];
+  navStart: number;
+  navEnd: number;
+  cash: number;
+  positions: DashboardPosition[];
+  riskRejections: number;
+  orderCount: number;
+  tradeCount: number;
+};
+
+export type CausalEvent = {
+  id: string;
+  time: string;
+  kind:
+    | 'policy'
+    | 'news'
+    | 'belief'
+    | 'conversation'
+    | 'intent'
+    | 'risk'
+    | 'chain'
+    | 'post'
+    | 'interaction'
+    | 'error';
+  actor: string;
+  title: string;
+  detail: string;
+  proof?: string;
+};
+
+export type SocialActivity = {
+  id: string;
+  time: string;
+  actor: string;
+  type: 'post' | 'reply' | 'repost' | 'graph';
+  title: string;
+  detail: string;
+  impact: string;
+};
+
+export type DashboardExecution = {
+  id: string;
+  time: string;
+  agentName: string;
+  symbol: string;
+  type: 'risk_rejected' | 'order' | 'fill';
+  side: 'BUY' | 'SELL';
+  quantity: number;
+  price: number;
+  priceUnit?: string;
+  state: string;
+  reference?: string;
+  reason?: string;
+};
+
+export type DashboardError = {
+  id: string;
+  time: string;
+  scope: string;
+  message: string;
+  recovered: boolean;
+};
+
+export type TownSummary = {
+  aum?: number;
+  totalExposure?: number;
+  volume?: number;
+  profitableAgents?: number;
+  topAgent?: string;
+  topReturnPct?: number;
+};
 
 export type TradeTownDashboard = {
   dataMode: DashboardMode;
   source: 'preview' | 'panda' | 'injective';
   sourceLabel: string;
-  runId?: string;
   asOf: number;
   gatewayStatus: 'unconfigured' | 'read_only' | 'signing' | 'degraded';
   blockHeight?: number;
   operatorAddress?: string;
   markets: DashboardMarket[];
   traders: DashboardTrader[];
-  marketMakers: DashboardTrader[];
   events: CausalEvent[];
   social: SocialActivity[];
   executions: DashboardExecution[];
@@ -46,209 +155,199 @@ export type TradeTownDashboard = {
   errors: DashboardError[];
 };
 
-const DAY_START = Math.floor(Date.UTC(2026, 6, 24, 1, 30, 0) / 1000);
-
-function makeCandles(closes: number[], start = DAY_START, interval = 30 * 60): DashboardCandle[] {
-  return closes.map((close, index) => {
-    const open = index === 0 ? close * 0.994 : closes[index - 1];
-    const spread = Math.max(close * (0.004 + (index % 3) * 0.0014), 0.02);
-    return {
-      time: start + index * interval,
-      open,
-      high: Math.max(open, close) + spread,
-      low: Math.max(0, Math.min(open, close) - spread * 0.86),
-      close,
-      volume: 68_000 + index * 8_400 + (index % 4) * 18_000,
-    };
-  });
+function profileOnlyTrader(
+  trader: (typeof TOWN_TRADERS)[number],
+  currency: string,
+): DashboardTrader {
+  return {
+    ...trader,
+    financialState: 'profile_only',
+    currency,
+    pnl: 0,
+    activity: 'Monitoring sourced market data',
+    action: 'HOLD',
+    confidence: 0,
+    beliefBefore: 'No generated financial belief is loaded.',
+    beliefAfter: 'Waiting for a verified agent decision.',
+    thesis: 'Market observations are available; no synthetic trading conclusion was generated.',
+    evidence: [],
+    navStart: 0,
+    navEnd: 0,
+    cash: 0,
+    positions: [],
+    riskRejections: 0,
+    orderCount: 0,
+    tradeCount: 0,
+  };
 }
 
-const pandaSimulationRuns = new Map(
-  pandaHistoricalMarkets.map((dataset) => [
-    dataset.market.symbol,
-    buildPandaSimulationRun(dataset.market),
-  ]),
-);
-const pandaMarkets: DashboardMarket[] = pandaHistoricalMarkets.map((dataset) => ({
-  ...dataset.market,
-  sentiment: pandaSimulationRuns.get(dataset.market.symbol)!.sentiment,
-}));
+const pandaTraders = TOWN_TRADERS.map((trader) => {
+  const profile = profileOnlyTrader(trader, 'CNY');
+  return {
+    ...profile,
+    focusSymbols: [pandaHistoricalMarket.market.symbol],
+    activity: `Monitoring ${pandaHistoricalMarket.market.symbol} from PandaAI`,
+    evidence: [
+      `PANDA:get_stock_daily:${pandaHistoricalMarket.market.symbol}:${formatDataDate(
+        pandaHistoricalMarket.asOf,
+      )}`,
+    ],
+  };
+});
 
-const injectivePreviewMarket: DashboardMarket = {
-  symbol: 'ACME',
-  displayName: 'Acme Industries',
-  assetClass: 'company',
-  lastPrice: 0.0964,
-  referencePrice: 0.1,
-  changePct: -3.58,
-  volume: 14_208,
-  status: 'active',
-  accent: '#ffb84d',
-  quoteCurrency: 'INJ',
-  priceTick: 0.0001,
-  candles: makeCandles([
-    0.1001, 0.1008, 0.0999, 0.0992, 0.0987, 0.0991, 0.0978, 0.0972, 0.0968, 0.0964,
-  ]),
-  indicators: [
-    { label: 'RUN Δ', value: '-3.58%', tone: 'negative' },
-    { label: 'LAST', value: '0.0964', tone: 'neutral' },
-    { label: 'VOLUME', value: '14.2K', tone: 'neutral' },
-  ],
+const pandaMarketEvent: CausalEvent = {
+  id: `panda-${pandaHistoricalMarket.market.symbol}-${formatDataDate(pandaHistoricalMarket.asOf)}`,
+  time: '15:00:00',
+  kind: 'news',
+  actor: 'PandaAI Data Service',
+  title: `${pandaHistoricalMarket.market.symbol} daily market data loaded`,
+  detail: `${pandaHistoricalMarket.market.candles.length} sourced daily bars are available through ${formatDataDate(
+    pandaHistoricalMarket.asOf,
+  )}. No orders, positions, P&L or sentiment were generated.`,
+  proof: `PANDA:get_stock_daily:${pandaHistoricalMarket.market.symbol}:${formatDataDate(
+    pandaHistoricalMarket.asOf,
+  )}`,
 };
 
-const marketMakers: DashboardTrader[] = TOWN_TRADERS.slice(8).map((trader) => ({
-  ...trader,
-  currency: 'INJ',
-  pnl: trader.name === 'Delta-7' ? 0.0386 : 0.0244,
-  activity: trader.name === 'Delta-7' ? 'Quoting ACME · NOVA' : 'Quoting LUMA · FORGE',
-  action: 'HOLD',
-  confidence: 1,
-  beliefBefore: 'Deterministic quoting policy active.',
-  beliefAfter: 'Inventory skew remains inside limits.',
-  thesis: 'Provide two-sided liquidity within the configured loss limit.',
-  evidence: ['maker-policy-v1'],
-  navStart: 10,
-  navEnd: trader.name === 'Delta-7' ? 10.0386 : 10.0244,
-  cash: 5,
-  positions: [],
-  riskRejections: 0,
-  orderCount: 12,
-  tradeCount: 5,
-}));
+export const pandaDayViewDashboard: TradeTownDashboard = {
+  dataMode: 'panda_market',
+  source: 'panda',
+  sourceLabel: `PANDAAI DAILY · SOURCED EXPORT · ${pandaHistoricalMarket.exportedAt}`,
+  asOf: pandaHistoricalMarket.asOf,
+  gatewayStatus: 'read_only',
+  markets: [pandaHistoricalMarket.market],
+  traders: pandaTraders,
+  events: [pandaMarketEvent],
+  social: [],
+  executions: [],
+  summary: {
+    volume: pandaHistoricalMarket.market.volume,
+  },
+  errors: [],
+};
 
-const injectivePreviewTraders: DashboardTrader[] = TOWN_TRADERS.slice(0, 8).map((trader) => ({
-  ...trader,
-  currency: 'INJ',
-  pnl: 0,
-  activity: 'Awaiting confirmed testnet state',
-  action: 'HOLD',
-  confidence: 0,
-  beliefBefore: 'No chain-backed market observation yet.',
-  beliefAfter: 'Waiting for the Injective gateway and confirmed fills.',
-  thesis: 'Do not infer portfolio state from Panda simulation data.',
-  evidence: ['injective-gateway-unconfigured'],
-  navStart: 10,
-  navEnd: 10,
-  cash: 10,
-  positions: [],
-  riskRejections: 0,
-  orderCount: 0,
-  tradeCount: 0,
-}));
-
-export const pandaDayViewDashboards = Object.fromEntries(
-  pandaHistoricalMarkets.map((dataset) => {
-    const run = pandaSimulationRuns.get(dataset.market.symbol)!;
-    return [
-      dataset.market.symbol,
-      {
-        dataMode: 'panda_dayview',
-        source: 'panda',
-        sourceLabel: 'PANDA DAILY · GENERATED REPLAY',
-        runId: run.runId,
-        asOf: dataset.asOf,
-        gatewayStatus: 'read_only',
-        markets: pandaMarkets,
-        traders: run.traders,
-        marketMakers: [],
-        events: run.events,
-        social: run.social,
-        executions: run.executions,
-        summary: run.summary,
-        errors: run.errors,
-      } satisfies TradeTownDashboard,
-    ];
-  }),
-) as Record<string, TradeTownDashboard>;
-
-export const pandaDayViewDashboard = pandaDayViewDashboards[pandaHistoricalMarket.market.symbol];
+const injectiveProfiles = TOWN_TRADERS.map((trader) => profileOnlyTrader(trader, 'INJ'));
 
 export const injectivePreviewDashboard: TradeTownDashboard = {
   dataMode: 'injective_testnet',
   source: 'preview',
-  sourceLabel: 'INJECTIVE TESTNET · PREVIEW',
-  asOf: DAY_START,
+  sourceLabel: 'INJECTIVE TESTNET · NO VERIFIED MARKET SNAPSHOT',
+  asOf: Date.now(),
   gatewayStatus: 'unconfigured',
-  markets: [injectivePreviewMarket],
-  traders: injectivePreviewTraders,
-  marketMakers,
+  markets: [],
+  traders: injectiveProfiles,
   events: [],
   social: [],
   executions: [],
-  summary: {
-    aum: 80,
-    totalExposure: 0,
-    volume: 0,
-    profitableAgents: 0,
-    topAgent: 'No confirmed fills',
-    topReturnPct: 0,
-  },
+  summary: {},
   errors: [
     {
-      id: 'error-chain-01',
-      time: '09:29:58',
+      id: 'injective-unavailable',
+      time: '--:--',
       scope: 'Injective Gateway',
-      message: 'Signing is not configured. Testnet values are preview-only.',
+      message: 'No verified chain snapshot is connected. Preview financial values are disabled.',
       recovered: false,
     },
   ],
 };
 
-// Kept for the existing offline town preview.
 export const previewDashboard = pandaDayViewDashboard;
 
 export function mergeLiveDashboard(value: any): TradeTownDashboard {
-  if (!value?.config || value.markets?.length === 0) {
+  if (!value?.config || value.source !== 'injective') {
     return injectivePreviewDashboard;
   }
 
-  const liveAcme = value.markets.find((market: any) => market.symbol === 'ACME');
-  const markets = injectivePreviewDashboard.markets.map((preview) =>
-    liveAcme
+  const markets: DashboardMarket[] = (value.markets ?? [])
+    .filter((market: any) => Number.isFinite(market.lastPrice))
+    .map((market: any): DashboardMarket => {
+      const catalog = TOWN_MARKETS.find((candidate) => candidate.symbol === market.symbol);
+      const lastPrice = Number(market.lastPrice);
+      const observedAt = Number(market.updatedAt ?? value.config.lastChainSyncAt ?? Date.now());
+      const volume = Number.isFinite(market.volume24h) ? Number(market.volume24h) : undefined;
+      return {
+        symbol: market.symbol,
+        displayName: market.displayName,
+        assetClass: market.assetClass,
+        lastPrice,
+        volume,
+        status: market.status,
+        accent: catalog?.accent ?? '#00d2ff',
+        quoteCurrency: 'INJ',
+        priceTick: Number.parseFloat(market.minPriceTick || '0.0001'),
+        candles: [
+          {
+            time: Math.floor(observedAt / 1000),
+            open: lastPrice,
+            high: lastPrice,
+            low: lastPrice,
+            close: lastPrice,
+            volume: volume ?? 0,
+          },
+        ],
+        indicators: [
+          { label: 'CHAIN LAST', value: formatIndicator(lastPrice), tone: 'neutral' },
+          {
+            label: 'FILLED VALUE',
+            value: volume === undefined ? '—' : formatIndicator(volume),
+            tone: 'neutral',
+          },
+        ],
+      };
+    });
+
+  const traders = injectiveProfiles.map((profile) => {
+    const live = value.traders?.find((trader: any) => trader.agentName === profile.name);
+    return live
       ? {
-          ...preview,
-          status: liveAcme.status,
-          lastPrice: liveAcme.lastPrice ?? preview.lastPrice,
-          changePct: liveAcme.change24h ?? preview.changePct,
-          volume: liveAcme.volume24h ?? preview.volume,
+          ...profile,
+          role: live.role,
+          style: live.style,
+          riskTolerance: live.riskTolerance,
+          subaccountNonce: live.subaccountNonce,
         }
-      : preview,
-  );
+      : profile;
+  });
+
+  const events = (value.events ?? [])
+    .filter((event: any) => event.txHash || event.blockHeight)
+    .map(
+      (event: any): CausalEvent => ({
+        id: event.eventId,
+        time: new Date(event.occurredAt).toLocaleTimeString('en-GB', { hour12: false }),
+        kind: 'chain',
+        actor: event.source,
+        title: event.headline,
+        detail: event.summary,
+        proof: event.txHash ?? undefined,
+      }),
+    );
 
   return {
     ...injectivePreviewDashboard,
-    source: value.source,
-    sourceLabel:
-      value.source === 'injective'
-        ? 'INJECTIVE TESTNET · CHAIN DATA'
-        : 'INJECTIVE TESTNET · PREVIEW',
+    source: 'injective',
+    sourceLabel: 'INJECTIVE TESTNET · VERIFIED CHAIN DATA',
+    asOf: value.config.lastChainSyncAt ?? Date.now(),
     gatewayStatus: value.config.gatewayStatus,
     blockHeight: value.config.lastChainHeight,
     operatorAddress: value.config.operatorAddress,
     markets,
-    traders: injectivePreviewDashboard.traders.map((preview) => {
-      const live = value.traders?.find((trader: any) => trader.agentName === preview.name);
-      return live
-        ? {
-            ...preview,
-            role: live.role,
-            style: live.style,
-            riskTolerance: live.riskTolerance,
-            subaccountNonce: live.subaccountNonce,
-          }
-        : preview;
-    }),
-    events:
-      value.events?.length > 0
-        ? value.events.map((event: any) => ({
-            id: event.eventId,
-            time: new Date(event.occurredAt).toLocaleTimeString('en-GB', { hour12: false }),
-            kind: event.kind === 'fill' || event.kind === 'order' ? 'chain' : event.kind,
-            actor: event.source,
-            title: event.headline,
-            detail: event.summary,
-            proof: event.txHash ?? undefined,
-          }))
-        : injectivePreviewDashboard.events,
+    traders,
+    events,
+    summary: {
+      volume: markets.reduce((sum, market) => sum + (market.volume ?? 0), 0),
+    },
+    errors: [],
   };
+}
+
+function formatDataDate(value: number) {
+  return new Date(value).toISOString().slice(0, 10).replaceAll('-', '');
+}
+
+function formatIndicator(value: number) {
+  return new Intl.NumberFormat('en-US', {
+    notation: Math.abs(value) >= 1000 ? 'compact' : 'standard',
+    maximumFractionDigits: 4,
+  }).format(value);
 }

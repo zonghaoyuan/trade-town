@@ -216,7 +216,7 @@ function runRateShock(
     }),
   );
 
-  const decisions = TOWN_TRADERS.filter((trader) => trader.kind === 'ai').map((trader, index) => {
+  const decisions = TOWN_TRADERS.map((trader, index) => {
     const symbol = trader.focusSymbols[index % trader.focusSymbols.length];
     const market = TOWN_MARKETS.find((candidate) => candidate.symbol === symbol)!;
     const impact = clamp((marketImpact[symbol] as number) + (rng() - 0.5) * 0.12, -1, 1);
@@ -328,7 +328,7 @@ function runRumorAnalysis(
 ): SkillResult {
   const symbol = normalizeSymbol(readString(request.input.symbol) ?? readSymbol(request.prompt));
   const rng = seededRandom(request.seed);
-  const traders = TOWN_TRADERS.filter((trader) => trader.kind === 'ai');
+  const traders = TOWN_TRADERS;
   const source = 'Sora Vale';
   const initialCredibility = clamp(readNumber(request.input.credibility) ?? 0.68, 0, 1);
   const correctionStrength = clamp(readNumber(request.input.correctionStrength) ?? 0.75, 0, 1);

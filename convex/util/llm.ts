@@ -84,7 +84,7 @@ export function getLLMConfig(): LLMConfig {
     };
   }
   if (process.env.LLM_API_URL) {
-    const apiKey = process.env.LLM_API_KEY;
+    const apiKey = process.env.LLM_API_KEY ?? process.env.ARK_API_KEY;
     const url = normalizeApiBaseUrl(process.env.LLM_API_URL);
     const chatModel = process.env.LLM_MODEL;
     if (!chatModel) throw new Error('LLM_MODEL is required');

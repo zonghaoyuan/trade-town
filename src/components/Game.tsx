@@ -104,7 +104,7 @@ https://github.com/michalochman/react-pixi-fiber/issues/145#issuecomment-5315492
                 <strong>{focusedCitizen.name}</strong>
                 <small>{focusedCitizen.role}</small>
                 <em className={focusedCitizen.pnl >= 0 ? 'pixel-up' : 'pixel-down'}>
-                  {focusedCitizen.pnlSource === 'simulated' ? 'SIM ' : 'VERIFIED '}P&amp;L{' '}
+                  {focusedCitizen.pnlSource === 'simulated' ? 'SIMULATED ' : 'RECORDED '}P&amp;L{' '}
                   {formatSignedCompact(focusedCitizen.pnl)}
                 </em>
               </span>

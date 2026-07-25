@@ -10,7 +10,7 @@ export const INJECTIVE_TESTNET = {
 export type AssetClass = 'company' | 'commodity';
 export type MarketStatus = 'planned' | 'launching' | 'active' | 'paused';
 export type TradeSide = 'buy' | 'sell';
-export type TraderKind = 'ai' | 'market_maker';
+export type TraderKind = 'ai';
 
 export type TownMarket = {
   symbol: string;
@@ -169,29 +169,10 @@ export const TOWN_TRADERS: readonly TraderProfileSeed[] = [
     subaccountNonce: 8,
     focusSymbols: ['ACME', 'NOVA', 'AURUM', 'CRUDE'],
   },
-  {
-    name: 'Delta-7',
-    kind: 'market_maker',
-    role: 'Company market maker',
-    style: 'Deterministic two-sided quoting with inventory-skew and a hard loss limit.',
-    riskTolerance: 0.3,
-    subaccountNonce: 9,
-    focusSymbols: ['ACME', 'NOVA'],
-  },
-  {
-    name: 'Sigma-2',
-    kind: 'market_maker',
-    role: 'Commodity market maker',
-    style: 'Deterministic two-sided quoting with wider spreads during event shocks.',
-    riskTolerance: 0.3,
-    subaccountNonce: 10,
-    focusSymbols: ['AURUM', 'CRUDE'],
-  },
 ] as const;
 
 export const DEFAULT_VISIBLE_AI_AGENTS = 8;
-export const DEFAULT_MARKET_MAKERS = 2;
-export const DEFAULT_AGENT_COUNT = DEFAULT_VISIBLE_AI_AGENTS + DEFAULT_MARKET_MAKERS;
+export const DEFAULT_AGENT_COUNT = DEFAULT_VISIBLE_AI_AGENTS;
 export const MAX_AGENT_COUNT = 32;
 
 export function deriveSubaccountId(ethereumAddress: string, nonce: number): string {

@@ -25,7 +25,9 @@ export const financeTables = {
     ),
     operatorAddress: v.optional(v.string()),
     visibleAgentCount: v.number(),
-    marketMakerCount: v.number(),
+    // Transitional: old deployments may still have this field until the
+    // retirement migration runs. New documents never write it.
+    marketMakerCount: v.optional(v.number()),
     lastChainHeight: v.optional(v.number()),
     lastChainSyncAt: v.optional(v.number()),
     updatedAt: v.number(),
@@ -63,7 +65,9 @@ export const financeTables = {
     agentName: v.string(),
     playerId: v.optional(v.string()),
     agentId: v.optional(v.string()),
-    kind: v.union(v.literal('ai'), v.literal('market_maker')),
+    // Keep string-compatible validation for one migration window so documents
+    // created by older deployments can be deleted before tightening to "ai".
+    kind: v.string(),
     role: v.string(),
     style: v.string(),
     riskTolerance: v.number(),
@@ -138,7 +142,8 @@ export const financeTables = {
   })
     .index('by_intent_id', ['intentId'])
     .index('by_state', ['state', 'createdAt'])
-    .index('by_agent', ['agentName', 'createdAt']),
+    .index('by_agent', ['agentName', 'createdAt'])
+    .index('by_updated_at', ['updatedAt']),
 
   chainTransactions: defineTable({
     txHash: v.string(),
@@ -199,7 +204,8 @@ export const financeTables = {
   })
     .index('by_trade_id', ['tradeId'])
     .index('by_agent', ['agentName', 'executedAt'])
-    .index('by_market', ['marketSymbol', 'executedAt']),
+    .index('by_market', ['marketSymbol', 'executedAt'])
+    .index('by_executed_at', ['executedAt']),
 
   portfolioSnapshots: defineTable({
     agentName: v.string(),

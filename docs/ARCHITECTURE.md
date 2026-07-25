@@ -65,9 +65,9 @@ inclusion remain the authoritative verification layer; the Indexer is never trea
 
 | Table                | Purpose                                                      |
 | -------------------- | ------------------------------------------------------------ |
-| `financeConfig`      | network, Gateway status, operator, counts, last chain height |
+| `financeConfig`      | network, Gateway status, operator, agent count, chain height |
 | `marketCatalog`      | local TOWNUSD pairs plus live denoms, market IDs, and ticks  |
-| `traderProfiles`     | AI/MM role, risk, focus, nonce, subaccount                   |
+| `traderProfiles`     | AI role, risk, focus, nonce, subaccount                      |
 | `agentBeliefs`       | symbol thesis, sentiment, confidence, evidence links         |
 | `marketEvents`       | policy → news → conversation → intent → fill causal graph    |
 | `tradeIntents`       | explainable pre-trade workflow and stable CID                |
@@ -80,7 +80,7 @@ inclusion remain the authoritative verification layer; the Indexer is never trea
 ## Wallet and subaccounts
 
 The operator uses one dedicated testnet wallet. Agent slot `n` maps to subaccount nonce `n`, so the
-initial population uses nonces 1 through 10. The subaccount ID is:
+initial population uses nonces 1 through 8. The subaccount ID is:
 
 ```text
 0x + 20-byte Ethereum address + 12-byte big-endian nonce
