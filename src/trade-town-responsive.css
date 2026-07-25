@@ -402,3 +402,101 @@
     width: calc(100vw - 16px);
   }
 }
+
+/* Activity feed occupies the existing intelligence row without changing the
+ * established three-row overview or header geometry. */
+.pixel-town-shell.is-overview .pixel-activity-panel {
+  height: 426px;
+}
+
+.pixel-town-shell.is-immersive .pixel-world-column > .pixel-activity-panel {
+  display: none;
+}
+
+.pixel-hud-drawer .pixel-activity-panel {
+  width: 100%;
+  height: auto;
+  min-height: min(560px, 66vh);
+  border: 0;
+  grid-template-rows: auto minmax(280px, 1fr);
+  filter: none;
+}
+
+.pixel-hud-drawer .pixel-activity-header {
+  padding-top: 34px;
+  grid-template-columns: 1fr;
+}
+
+.pixel-hud-drawer .pixel-activity-tabs {
+  order: 2;
+}
+
+@media (max-width: 1420px) {
+  .pixel-town-shell.is-overview .pixel-activity-panel {
+    height: 360px;
+  }
+
+  .pixel-activity-header {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pixel-activity-heading {
+    display: none;
+  }
+
+  .pixel-activity-tabs button small {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .pixel-town-shell.is-overview .pixel-activity-panel {
+    height: 320px;
+    border-width: 9px;
+    grid-template-rows: 68px minmax(0, 1fr);
+  }
+
+  .pixel-activity-header {
+    padding: 5px;
+  }
+
+  .pixel-activity-tabs button {
+    min-height: 48px;
+    padding: 4px;
+    grid-template-columns: 18px minmax(0, 1fr) auto;
+  }
+
+  .pixel-activity-tabs button > i {
+    font-size: 17px;
+  }
+
+  .pixel-activity-tabs button strong {
+    font-size: 8px;
+  }
+
+  .pixel-activity-tabs button > b {
+    min-width: 17px;
+    padding: 2px;
+  }
+
+  .pixel-talk-content p {
+    font-size: var(--town-text-micro);
+  }
+
+  .pixel-activity-empty,
+  .pixel-activity-loading {
+    padding: 12px;
+  }
+
+  .pixel-hud-drawer .pixel-activity-panel {
+    min-height: min(540px, 70vh);
+    grid-template-rows: auto minmax(260px, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pixel-live-conversations > span > i,
+  .pixel-activity-loading > i {
+    animation: none;
+  }
+}

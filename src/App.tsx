@@ -15,6 +15,7 @@ import MusicButton from './components/buttons/MusicButton';
 import InteractButton from './components/buttons/InteractButton';
 import { getAnonymousOwnerId } from './features/create-me/storage';
 import { sanitizeCreateMeDraft } from '../shared/createMe';
+import { useTownActivityFeed } from './hooks/useTownActivityFeed';
 
 export default function Home() {
   const [ownerId] = useState(getAnonymousOwnerId);
@@ -24,6 +25,7 @@ export default function Home() {
   const generateUploadUrl = useMutation(api.createMe.generateUploadUrl);
   const discardUpload = useMutation(api.createMe.discardUpload);
   const dashboard = mergeLiveDashboard(financeState);
+  const activityFeed = useTownActivityFeed();
   const currentMe = useMemo(() => {
     if (!storedMe?.look || !storedMe.version) return null;
     return {
@@ -75,6 +77,7 @@ export default function Home() {
         dashboard={dashboard}
         dayViewDashboard={pandaDayViewDashboard}
         dayViewDashboards={pandaDayViewDashboards}
+        activityFeed={activityFeed}
         town={({ focusedCitizen }) => <Game focusedCitizen={focusedCitizen} />}
         townMode="live"
         currentMe={currentMe}

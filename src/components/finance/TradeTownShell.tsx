@@ -9,6 +9,11 @@ import type {
 import PixelCandles from './PixelCandles';
 import PixelAvatar from './PixelAvatar';
 import PixelMarketIcon from './PixelMarketIcon';
+import {
+  emptyTownActivityFeed,
+  type TownActivityFeed,
+} from '../../../shared/activity';
+import TownActivityPanel from './TownActivityPanel';
 import CreateMeModal, {
   CreatedMeView,
   CreateMePayload,
@@ -16,7 +21,7 @@ import CreateMeModal, {
 import { loadCreatedMe } from '../../features/create-me/storage';
 
 type ViewMode = 'overview' | 'immersive';
-type Drawer = 'markets' | 'agents' | 'events';
+type Drawer = 'markets' | 'agents' | 'activity';
 type ActivityTab = 'timeline' | 'social' | 'trades';
 type AgentTab = 'belief' | 'portfolio' | 'risk' | 'trades';
 type RecordSource = 'panda' | 'injective' | 'preview';
@@ -38,6 +43,7 @@ export default function TradeTownShell({
   dashboard,
   dayViewDashboard,
   dayViewDashboards,
+  activityFeed = emptyTownActivityFeed,
   town,
   townControls,
   currentMe,
@@ -46,6 +52,7 @@ export default function TradeTownShell({
   dashboard: TradeTownDashboard;
   dayViewDashboard: TradeTownDashboard;
   dayViewDashboards?: Record<string, TradeTownDashboard>;
+  activityFeed?: TownActivityFeed;
   town: ReactNode | ((state: TownRenderState) => ReactNode);
   townControls?: ReactNode;
   townMode?: 'live' | 'preview';
@@ -293,7 +300,7 @@ export default function TradeTownShell({
           </div>
 
           <TownSummary testnetDashboard={dashboard} dayViewDashboard={activeDashboard} />
-          <ActivityBoard testnetDashboard={dashboard} dayViewDashboard={activeDashboard} />
+          <TownActivityPanel activity={activityFeed} contextEvents={activeDashboard.events} />
         </section>
 
         <aside className="pixel-side-panel pixel-agent-panel" aria-label="Town citizens">
@@ -314,8 +321,11 @@ export default function TradeTownShell({
         <button type="button" onClick={() => setDrawer(drawer === 'agents' ? null : 'agents')}>
           <span aria-hidden="true">♟</span> Citizens
         </button>
-        <button type="button" onClick={() => setDrawer(drawer === 'events' ? null : 'events')}>
-          <span aria-hidden="true">!</span> Intel
+        <button
+          type="button"
+          onClick={() => setDrawer(drawer === 'activity' ? null : 'activity')}
+        >
+          <span aria-hidden="true">!</span> Activity
         </button>
         {!immersive && (
           <>
@@ -372,8 +382,12 @@ export default function TradeTownShell({
               }}
             />
           )}
-          {drawer === 'events' && (
-            <ActivityBoard testnetDashboard={dashboard} dayViewDashboard={activeDashboard} drawer />
+          {drawer === 'activity' && (
+            <TownActivityPanel
+              activity={activityFeed}
+              contextEvents={activeDashboard.events}
+              drawer
+            />
           )}
         </section>
       )}
