@@ -13,8 +13,7 @@ content remain in their original language.
 
 - A user can switch between English and Simplified Chinese without reloading.
 - An explicit language choice survives a browser restart.
-- A first-time visitor sees Simplified Chinese when the browser's preferred
-  language starts with `zh`; all other browser languages default to English.
+- A first-time visitor sees English regardless of browser language.
 - Static interface copy, map labels, product-owned profile copy, accessibility
   labels, and locale-sensitive date and number formatting follow the selected
   language.
@@ -102,14 +101,12 @@ branch, so `Home` and `DemoApp` behave identically. `useI18n()` exposes:
 
 Use this deterministic priority order:
 
-1. A valid value from the `trade-town.locale` local storage key.
-2. The first supported value in `navigator.languages` or
-   `navigator.language`.
-3. English.
+1. A valid value from the `trade-town.locale.v2` local storage key.
+2. English.
 
-Any browser language beginning with `zh`, including regional Chinese variants,
-maps to `zh-CN` for this two-language release. Every other browser language
-maps to English.
+Browser language does not change the first-visit locale. The versioned storage
+key resets locale values previously written automatically from browser
+detection; future explicit choices remain persistent.
 
 When the locale changes:
 
@@ -119,8 +116,7 @@ When the locale changes:
 - no network request, Convex mutation, or full-page reload occurs.
 
 Storage access is guarded because browsers can deny it. An invalid or
-unreadable stored value is ignored, and the application continues with browser
-detection or English.
+unreadable stored value is ignored, and the application continues in English.
 
 ## Language Switcher
 
@@ -202,7 +198,7 @@ format would reduce auditability.
 
 Add unit coverage for:
 
-- browser language mapping;
+- English default regardless of browser language;
 - stored-locale priority and invalid stored values;
 - storage failure fallback;
 - complete English/Chinese catalog key parity;
@@ -213,7 +209,7 @@ Add unit coverage for:
 
 Add component coverage for:
 
-- the initial language selected from browser preferences;
+- the initial English language even with a Chinese browser preference;
 - switching languages without reload;
 - persistence of an explicit choice;
 - updates to `<html lang>`;
@@ -243,8 +239,8 @@ overflow, drawer tabs, modal controls, Create ME forms, and Pixi label width.
 ## Rollout
 
 Ship both catalogs in the main frontend bundle. No data migration or backend
-deployment ordering is required. Existing visitors initially keep English
-unless they have a Chinese browser preference and no saved choice.
+deployment ordering is required. The versioned locale key makes existing and
+new visitors enter in English once; choices made after this release persist.
 
 The release is reversible by removing the provider and switcher; it does not
 rewrite stored world, chat, market, replay, or Agent data.
@@ -252,8 +248,7 @@ rewrite stored world, chat, market, replay, or Agent data.
 ## Acceptance Criteria
 
 - English and Simplified Chinese are selectable from every supported layout.
-- Browser detection and an explicit persisted choice follow the documented
-  priority.
+- English is the first-visit default and an explicit choice persists.
 - All in-scope static copy has entries in both catalogs.
 - Chat, generated Agent content, and dynamic activity bodies remain byte-for-
   byte unchanged.
