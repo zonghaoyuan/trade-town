@@ -80,8 +80,10 @@
   scroll-snap-align: start;
 }
 
-/* Tablet and mobile overview: the dock is an in-flow sticky navigation row. */
-@media (max-width: 1100px) {
+/* H5 overview: the dock is an in-flow sticky navigation row. Desktop browser
+ * zoom must not switch the whole dashboard to this one-column structure. */
+@media (max-width: 640px),
+  (max-width: 960px) and (hover: none) and (pointer: coarse) {
   .pixel-town-shell {
     --town-overview-dock-height: 62px;
   }
@@ -291,7 +293,8 @@
 }
 
 /* Compact-height overview for mobile landscape and small embedded windows. */
-@media (max-width: 960px) and (max-height: 500px) {
+@media (max-width: 640px) and (max-height: 500px),
+  (max-width: 960px) and (max-height: 500px) and (hover: none) and (pointer: coarse) {
   .pixel-town-shell {
     --town-overview-header-height: 62px;
     --town-overview-dock-height: 56px;
@@ -349,7 +352,8 @@
   );
 }
 
-@media (max-width: 1100px), (max-height: 600px) {
+@media (max-width: 640px),
+  (max-width: 960px) and (hover: none) and (pointer: coarse) {
   .pixel-town-shell {
     --town-immersive-top-inset: 80px;
     --town-immersive-bottom-inset: 78px;
@@ -586,7 +590,8 @@
 /* Medium laptops have enough height for one row, but not enough width for the
  * full-size global actions plus replay controls. Keep the actions compact while
  * restoring the complete replay control group. */
-@media (min-width: 1101px) and (max-width: 1320px) {
+@media (min-width: 961px) and (max-width: 1320px),
+  (min-width: 641px) and (max-width: 960px) and (hover: hover) and (pointer: fine) {
   .pixel-town-shell:is(.is-overview, .is-immersive) .pixel-town-header {
     grid-template-columns: minmax(0, 1fr) auto auto;
   }
@@ -596,9 +601,91 @@
   }
 }
 
+/* Desktop zoom still uses a mouse/trackpad. Keep descriptive actions visible
+ * instead of making the header look like the touch-oriented H5 toolbar. */
+@media (min-width: 641px) and (max-width: 1320px) and (hover: hover) and (pointer: fine) {
+  .pixel-town-shell:is(.is-overview, .is-immersive)
+    .pixel-header-actions
+    .pixel-create-me-trigger {
+    width: auto;
+    min-width: 104px;
+    padding-inline: 6px;
+    font-size: 9px;
+  }
+
+  .pixel-town-shell:is(.is-overview, .is-immersive)
+    .pixel-header-actions
+    .pixel-create-me-label-full {
+    display: inline;
+  }
+
+  .pixel-town-shell:is(.is-overview, .is-immersive)
+    .pixel-header-actions
+    .pixel-create-me-label-compact {
+    display: none;
+  }
+
+  .pixel-town-shell:is(.is-overview, .is-immersive)
+    .pixel-header-actions
+    .pixel-help-trigger {
+    width: auto;
+    min-width: 74px;
+    padding-inline: 5px;
+    font-size: 9px;
+  }
+
+  .pixel-town-shell:is(.is-overview, .is-immersive)
+    .pixel-header-actions
+    .pixel-help-trigger
+    > span {
+    font-size: 12px;
+  }
+}
+
+/* The built-in 13.6-inch display exposes 1176 CSS pixels at 125% browser zoom,
+ * which is sufficient for the complete desktop brand and network status. */
+@media (min-width: 1140px) and (max-width: 1320px) and (hover: hover) and (pointer: fine) {
+  .pixel-town-shell:is(.is-overview, .is-immersive) .pixel-brand {
+    gap: 13px;
+  }
+
+  .pixel-town-shell:is(.is-overview, .is-immersive) .pixel-brand h1 {
+    font-size: clamp(30px, 3vw, 42px);
+  }
+
+  .pixel-town-shell:is(.is-overview, .is-immersive) .pixel-brand-credit {
+    display: flex;
+  }
+
+  .pixel-town-shell:is(.is-overview, .is-immersive) .pixel-injective-status {
+    width: auto;
+    min-width: 0;
+    min-height: 44px;
+    padding: 5px 9px 5px 6px;
+  }
+
+  .pixel-town-shell:is(.is-overview, .is-immersive) .pixel-injective-status-copy {
+    display: grid;
+  }
+}
+
+/* A zoomed desktop may report the same CSS width as a tablet. Preserve the
+ * three-column information architecture and fluidly compress its columns. */
+@media (min-width: 641px) and (max-width: 960px) and (hover: hover) and (pointer: fine) {
+  .pixel-town-shell.is-overview .pixel-town-layout {
+    padding-inline: 7px;
+    grid-template-columns:
+      clamp(150px, 22vw, 210px)
+      minmax(240px, 1fr)
+      clamp(190px, 26vw, 250px);
+    gap: 6px;
+  }
+}
+
 /* Deterministic replay keeps its primary controls visible in a second compact
  * header row instead of dropping all controls at tablet widths. */
-@media (max-width: 1100px) {
+@media (max-width: 640px),
+  (max-width: 960px) and (hover: none) and (pointer: coarse) {
   .pixel-town-shell:has(.pixel-town-header.has-compact-replay) {
     --town-overview-header-height: 122px;
     --town-immersive-top-inset: 140px;
@@ -669,7 +756,8 @@
 
 /* Short landscape keeps the replay bar in the main header row so map height is
  * not reduced by a permanent second row. */
-@media (max-width: 1100px) and (max-height: 600px) {
+@media (max-width: 640px) and (max-height: 600px),
+  (max-width: 960px) and (max-height: 600px) and (hover: none) and (pointer: coarse) {
   .pixel-town-shell:has(.pixel-town-header.has-compact-replay) {
     --town-overview-header-height: 68px;
     --town-immersive-top-inset: 80px;
@@ -875,7 +963,8 @@
 
 /* Full-town data panels participate in the layout instead of covering the map.
  * The Pixi map observes its frame and refits itself when this column opens. */
-@media (min-width: 861px) {
+@media (min-width: 861px),
+  (min-width: 641px) and (hover: hover) and (pointer: fine) {
   .pixel-town-shell.is-immersive.has-hud-drawer {
     --town-immersive-drawer-gap: 10px;
     --town-immersive-drawer-inset: 14px;
@@ -912,7 +1001,8 @@
 
 /* A side-by-side split would make both panes unusably narrow on phones, so the
  * same non-overlapping contract becomes a map-above / panel-below split. */
-@media (max-width: 860px) {
+@media (max-width: 640px),
+  (max-width: 860px) and (hover: none) and (pointer: coarse) {
   .pixel-town-shell.is-immersive.has-hud-drawer {
     --town-immersive-mobile-drawer-gap: 8px;
     --town-immersive-mobile-drawer-max-height: calc(
@@ -952,7 +1042,8 @@
 
 /* When height cannot support both panes, the approved panel-first mode takes
  * over the usable viewport instead of leaving an unusable strip of map. */
-@media (max-width: 960px) and (max-height: 600px) {
+@media (max-width: 640px) and (max-height: 600px),
+  (max-width: 960px) and (max-height: 600px) and (hover: none) and (pointer: coarse) {
   .pixel-town-shell.is-immersive.has-hud-drawer .pixel-town-layout {
     inset: 0;
     width: 100%;

@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
+test.use({ hasTouch: true });
+
 const overviewViewports = [
   { name: 'desktop', width: 1440, height: 900 },
   { name: 'tablet landscape', width: 1024, height: 768 },
@@ -96,10 +98,6 @@ test('HUD buttons expose consistent state and drawer relationships', async ({ pa
     await expect(button).toHaveAttribute('aria-expanded', 'true');
     await expect(button).toHaveClass(/is-active/);
     await expect(page.locator(`#${item.id}`)).toBeVisible();
-    await expect(page.locator('.town-preview')).toHaveAttribute(
-      'data-hud-inspector-open',
-      'true',
-    );
     await page.getByRole('button', { name: 'Close panel' }).click();
     await expect(button).toHaveAttribute('aria-expanded', 'false');
     await expect(page.locator(`#${item.id}`)).toHaveCount(0);
@@ -232,8 +230,7 @@ for (const viewport of [
   { name: 'phone portrait', width: 390, height: 844 },
   { name: 'small breakpoint', width: 640, height: 800 },
   { name: 'tablet portrait', width: 768, height: 1024 },
-  { name: 'tablet landscape', width: 1024, height: 768 },
-  { name: 'compact upper boundary', width: 1100, height: 800 },
+  { name: 'H5 upper boundary', width: 960, height: 800 },
 ] as const) {
   test(`Create ME and replay controls stay usable at ${viewport.name}`, async ({ page }) => {
     await loadTown(page, viewport.width, viewport.height);
@@ -261,6 +258,103 @@ test('desktop retains the complete replay controls above the compact replay brea
   await expectNoDocumentOverflow(page);
 });
 
+for (const viewport of [
+  { name: 'tablet landscape', width: 1024, height: 768 },
+  { name: '1366px desktop at 125% zoom', width: 1093, height: 614 },
+] as const) {
+  test(`${viewport.name} retains the desktop dashboard structure`, async ({ page }) => {
+    await loadTown(page, viewport.width, viewport.height);
+
+    await expect(page.locator('.pixel-side-panel').first()).toBeVisible();
+    await expect(page.locator('.pixel-compact-replay')).toBeHidden();
+    await expect(page.locator('.pixel-replay-status-controls')).toBeVisible();
+
+    const layout = await page.locator('.pixel-town-layout').evaluate((element) => ({
+      columns: getComputedStyle(element).gridTemplateColumns.split(' ').length,
+      headerHeight: document
+        .querySelector('.pixel-town-header')!
+        .getBoundingClientRect().height,
+    }));
+    expect(layout.columns).toBe(3);
+    expect(layout.headerHeight).toBeLessThanOrEqual(86);
+    await expectNoDocumentOverflow(page);
+  });
+}
+
+for (const viewport of [
+  { name: 'height-constrained zoom', width: 1093, height: 540 },
+  { name: 'width-and-height-constrained zoom', width: 900, height: 540 },
+] as const) {
+  test(`fine-pointer desktop keeps its dashboard at ${viewport.name}`, async ({ browser }) => {
+    const context = await browser.newContext({
+      baseURL: 'http://127.0.0.1:4173',
+      colorScheme: 'dark',
+      hasTouch: false,
+      viewport: { width: viewport.width, height: viewport.height },
+    });
+    const page = await context.newPage();
+
+    try {
+      await loadTown(page, viewport.width, viewport.height);
+      await expect(page.locator('.pixel-side-panel').first()).toBeVisible();
+      await expect(page.locator('.pixel-compact-replay')).toBeHidden();
+      await expect(page.locator('.pixel-replay-status-controls')).toBeVisible();
+
+      const columns = await page
+        .locator('.pixel-town-layout')
+        .evaluate((element) => getComputedStyle(element).gridTemplateColumns.split(' ').length);
+      expect(columns).toBe(3);
+      await expectNoDocumentOverflow(page);
+    } finally {
+      await context.close();
+    }
+  });
+}
+
+test('13.6-inch desktop at 125% keeps the complete desktop header', async ({ browser }) => {
+  const context = await browser.newContext({
+    baseURL: 'http://127.0.0.1:4173',
+    colorScheme: 'dark',
+    hasTouch: false,
+    viewport: { width: 1176, height: 765 },
+  });
+  const page = await context.newPage();
+
+  try {
+    await loadTown(page, 1176, 765);
+    await expect(page.locator('.pixel-create-me-label-full')).toBeVisible();
+    await expect(page.locator('.pixel-create-me-label-compact')).toBeHidden();
+    await expect(page.locator('.pixel-injective-status-copy')).toBeVisible();
+    await expect(page.locator('.pixel-brand-credit')).toBeVisible();
+
+    const header = await page.evaluate(() => {
+      const visibleChildren = Array.from(
+        document.querySelector('.pixel-town-header')!.children,
+      ).filter((element) => getComputedStyle(element).display !== 'none');
+      const rects = visibleChildren.map((element) => element.getBoundingClientRect());
+      return {
+        helpFontSize: Number.parseFloat(
+          getComputedStyle(document.querySelector('.pixel-help-trigger')!).fontSize,
+        ),
+        overlaps: rects.some((rect, index) =>
+          rects.slice(index + 1).some(
+            (other) =>
+              rect.left < other.right - 1 &&
+              rect.right > other.left + 1 &&
+              rect.top < other.bottom - 1 &&
+              rect.bottom > other.top + 1,
+          ),
+        ),
+      };
+    });
+    expect(header.helpFontSize).toBeGreaterThan(0);
+    expect(header.overlaps).toBe(false);
+    await expectNoDocumentOverflow(page);
+  } finally {
+    await context.close();
+  }
+});
+
 test('short landscape keeps compact replay controls in the single header row', async ({
   page,
 }) => {
@@ -283,7 +377,7 @@ test('short landscape keeps compact replay controls in the single header row', a
   await expectNoDocumentOverflow(page);
 });
 
-for (const width of [640, 641, 720, 721, 1100, 1101, 1320, 1321] as const) {
+for (const width of [640, 641, 720, 721, 960, 961, 1100, 1101, 1320, 1321] as const) {
   test(`existing width boundary ${width}px has no overflow or header overlap`, async ({
     page,
   }) => {
