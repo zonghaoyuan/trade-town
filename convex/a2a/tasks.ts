@@ -1,8 +1,10 @@
 import { ConvexError, v } from 'convex/values';
 import { mutation, query } from '../_generated/server';
 
-const MAX_TASK_JSON_BYTES = 512_000;
-const MAX_ARTIFACT_JSON_BYTES = 256_000;
+// Convex documents are limited to 1 MiB. Keep a small margin for the other
+// persisted fields and Convex's document metadata while allowing large A2A reports.
+const MAX_TASK_JSON_BYTES = 1_000_000;
+const MAX_ARTIFACT_JSON_BYTES = 1_000_000;
 
 function byteLength(value: string) {
   return new TextEncoder().encode(value).byteLength;
