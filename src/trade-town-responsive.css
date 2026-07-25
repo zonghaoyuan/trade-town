@@ -42,7 +42,7 @@
   container: town-world / inline-size;
   height: auto;
   min-height: 0;
-  grid-template-rows: clamp(480px, 62dvh, 620px) auto minmax(220px, auto);
+  grid-template-rows: clamp(480px, 62dvh, 620px) auto;
 }
 
 .pixel-town-shell.is-overview .pixel-town-stage-wrap {
@@ -127,7 +127,7 @@
   }
 
   .pixel-town-shell.is-overview .pixel-world-column {
-    grid-template-rows: clamp(380px, 62dvh, 580px) auto minmax(220px, auto);
+    grid-template-rows: clamp(380px, 62dvh, 580px) auto;
   }
 }
 
@@ -158,7 +158,7 @@
   }
 
   .pixel-town-shell.is-overview .pixel-world-column {
-    grid-template-rows: clamp(320px, 52dvh, 500px) auto minmax(220px, auto);
+    grid-template-rows: clamp(320px, 52dvh, 500px) auto;
     gap: 7px;
   }
 
@@ -291,7 +291,7 @@
         calc(100dvh - var(--town-overview-header-height) - var(--town-overview-dock-height) - 18px),
         360px
       )
-      auto minmax(210px, auto);
+      auto;
   }
 }
 
@@ -403,8 +403,7 @@
   }
 }
 
-/* Activity feed occupies the existing intelligence row without changing the
- * established three-row overview or header geometry. */
+/* Activity feed follows the map in the overview's two-row content column. */
 .pixel-town-shell.is-overview .pixel-activity-panel {
   height: 426px;
 }
