@@ -5789,13 +5789,14 @@ textarea {
   border-bottom: 4px solid var(--town-night);
   background: #262b44;
   display: grid;
-  grid-template-columns: 128px minmax(0, 1fr);
+  grid-template-columns: 184px minmax(0, 1fr);
   align-items: center;
   gap: 8px;
 }
 
 .pixel-activity-heading {
   min-width: 0;
+  overflow: hidden;
 }
 
 .pixel-activity-heading > span {
