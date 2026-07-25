@@ -2673,6 +2673,17 @@ textarea {
   background: #4b5773;
 }
 
+.pixel-hud-dock button.is-active {
+  border-color: var(--town-gold);
+  color: var(--town-night);
+  background: var(--town-gold);
+  box-shadow: inset -3px -3px 0 var(--town-orange);
+}
+
+.pixel-hud-dock button.is-active > span {
+  color: var(--town-wine);
+}
+
 .pixel-hud-dock button > span {
   margin-right: 4px;
   color: var(--town-gold);

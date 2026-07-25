@@ -330,9 +330,13 @@ export default function TradeTownShell({
         </button>
         <button
           type="button"
+          className={drawer === 'activity' ? 'is-active' : undefined}
+          aria-expanded={drawer === 'activity'}
+          aria-controls="town-activity-drawer"
           onClick={() => setDrawer(drawer === 'activity' ? null : 'activity')}
         >
-          <span aria-hidden="true">!</span> Activity
+          <span aria-hidden="true">{immersive ? '“' : '!'}</span>
+          {immersive ? 'Agent Talk' : 'Activity'}
         </button>
         {!immersive && (
           <>
@@ -360,7 +364,11 @@ export default function TradeTownShell({
       </nav>
 
       {drawer && (
-        <section className={`pixel-hud-drawer drawer-${drawer}`} aria-label={`${drawer} panel`}>
+        <section
+          id={drawer === 'activity' ? 'town-activity-drawer' : undefined}
+          className={`pixel-hud-drawer drawer-${drawer}`}
+          aria-label={drawer === 'activity' ? 'Agent Talk panel' : `${drawer} panel`}
+        >
           <button
             type="button"
             className="pixel-drawer-close"
