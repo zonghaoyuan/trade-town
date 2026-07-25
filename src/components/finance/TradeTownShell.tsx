@@ -477,6 +477,11 @@ export default function TradeTownShell({
                 Testnet Explorer
               </a>
             </div>
+            <p>
+              Hackathon demo: your Agent is associated with this browser and joins a shared town
+              session; Panda replay Agent balances, positions, orders, fills, PnL, and returns are
+              simulated.
+            </p>
             <p className="pixel-asset-credits">
               Town visuals:{' '}
               <a href="https://kenney.nl/assets/rpg-urban-pack" target="_blank" rel="noreferrer">

@@ -48,7 +48,6 @@ const init = mutation({
       }
     }
     await ctx.scheduler.runAfter(0, (api as any).finance.bootstrapTown, {});
-    await ctx.scheduler.runAfter(0, (api as any).pandaReplay.bootstrap, {});
   },
 });
 export default init;

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { clampReplayDayIndex, PANDA_REPLAY_DAY_COUNT, pandaReplayDates } from './pandaMarket';
 
 export const PANDA_REPLAY_SPEEDS = [400, 1_000, 2_000] as const;
+const DEFAULT_PANDA_REPLAY_SPEED_MS = 2_000;
 
 export type PandaReplayController = {
   dayIndex: number;
@@ -21,7 +22,7 @@ export function usePandaReplay(enabled = true): PandaReplayController {
   const [dayIndex, setDayIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
   const [isLooping, setIsLooping] = useState(true);
-  const [speedMs, setSpeedMs] = useState<number>(PANDA_REPLAY_SPEEDS[1]);
+  const [speedMs, setSpeedMs] = useState<number>(DEFAULT_PANDA_REPLAY_SPEED_MS);
   const finalDayIndex = PANDA_REPLAY_DAY_COUNT - 1;
 
   useEffect(() => {
@@ -61,7 +62,7 @@ export function usePandaReplay(enabled = true): PandaReplayController {
   const setSpeed = useCallback((value: number) => {
     const next = PANDA_REPLAY_SPEEDS.includes(value as (typeof PANDA_REPLAY_SPEEDS)[number])
       ? value
-      : PANDA_REPLAY_SPEEDS[1];
+      : DEFAULT_PANDA_REPLAY_SPEED_MS;
     setSpeedMs(next);
   }, []);
 

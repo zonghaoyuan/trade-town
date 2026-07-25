@@ -5,7 +5,7 @@ import { Id } from '../convex/_generated/dataModel';
 import Game from './components/Game';
 import TradeTownShell from './components/finance/TradeTownShell';
 import { buildPandaDayViewDashboards, mergeLiveDashboard } from './finance/demoData';
-import { useSyncedPandaReplay } from './finance/useSyncedPandaReplay';
+import { usePandaReplay } from './finance/usePandaReplay';
 import { ToastContainer } from 'react-toastify';
 import FreezeButton from './components/FreezeButton';
 import MusicButton from './components/buttons/MusicButton';
@@ -25,7 +25,7 @@ export default function Home() {
   const discardUpload = useMutation(api.createMe.discardUpload);
   const dashboard = mergeLiveDashboard(financeState);
   const hasLlmReplay = Boolean(replayBundle?.dashboards?.length);
-  const pandaReplay = useSyncedPandaReplay(!hasLlmReplay);
+  const pandaReplay = usePandaReplay(!hasLlmReplay);
   const pandaDayViewDashboards = useMemo(
     () => buildPandaDayViewDashboards(pandaReplay.dayIndex),
     [pandaReplay.dayIndex],

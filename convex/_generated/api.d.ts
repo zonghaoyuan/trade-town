@@ -43,7 +43,6 @@ import type * as init from "../init.js";
 import type * as messages from "../messages.js";
 import type * as messagesFeed from "../messagesFeed.js";
 import type * as music from "../music.js";
-import type * as pandaReplay from "../pandaReplay.js";
 import type * as testing from "../testing.js";
 import type * as townReplay from "../townReplay.js";
 import type * as util_FastIntegerCompression from "../util/FastIntegerCompression.js";
@@ -102,7 +101,6 @@ declare const fullApi: ApiFromModules<{
   messages: typeof messages;
   messagesFeed: typeof messagesFeed;
   music: typeof music;
-  pandaReplay: typeof pandaReplay;
   testing: typeof testing;
   townReplay: typeof townReplay;
   "util/FastIntegerCompression": typeof util_FastIntegerCompression;
