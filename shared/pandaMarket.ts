@@ -82,7 +82,7 @@ const MARKET_ACCENTS: Record<string, string> = {
   '688981.SH': '#8b6fc0',
 };
 
-const PANDA_MARKET_DATASETS = [
+export const PANDA_MARKET_DATASETS = [
   bydDataset,
   catlDataset,
   moutaiDataset,
@@ -90,17 +90,22 @@ const PANDA_MARKET_DATASETS = [
   smicDataset,
 ] as PandaMarketDataset[];
 
-export function adaptPandaMarketDataset(source: PandaMarketDataset): PandaMarketAdapterResult {
-  const bars = source.bars
+export function adaptPandaMarketDataset(
+  source: PandaMarketDataset,
+  dayIndex = Number.POSITIVE_INFINITY,
+): PandaMarketAdapterResult {
+  const allBars = source.bars
     .filter((bar) => bar.symbol === source.symbol)
     .map(normalizeBar)
     .filter((bar): bar is NormalizedPandaBar => bar !== null)
     .sort((left, right) => left.date.localeCompare(right.date));
 
-  if (bars.length === 0) {
+  if (allBars.length === 0) {
     throw new Error(`Panda market dataset for ${source.symbol} contains no valid daily bars.`);
   }
 
+  const visibleDayIndex = clampReplayDayIndex(dayIndex, allBars.length);
+  const bars = allBars.slice(0, visibleDayIndex + 1);
   const latest = bars[bars.length - 1];
   const ma20 = latest.sma20 ?? mean(bars.slice(-20).map((bar) => bar.close));
   const rsi14 = latest.rsi14 ?? calculateRsi(bars.slice(-14));
@@ -269,6 +274,25 @@ function volatilityTone(value: number): Tone {
   return 'neutral';
 }
 
-export const pandaHistoricalMarkets = PANDA_MARKET_DATASETS.map(adaptPandaMarketDataset);
+export const pandaHistoricalMarkets = PANDA_MARKET_DATASETS.map((dataset) =>
+  adaptPandaMarketDataset(dataset),
+);
 
 export const pandaHistoricalMarket = pandaHistoricalMarkets[0];
+
+export const pandaReplayDates = PANDA_MARKET_DATASETS[0].bars
+  .filter((bar) => bar.symbol === PANDA_MARKET_DATASETS[0].symbol && isPandaDate(bar.date))
+  .map((bar) => bar.date)
+  .sort((left, right) => left.localeCompare(right));
+
+export const PANDA_REPLAY_DAY_COUNT = pandaReplayDates.length;
+
+export function buildPandaMarketsAtDay(dayIndex: number) {
+  return PANDA_MARKET_DATASETS.map((dataset) => adaptPandaMarketDataset(dataset, dayIndex));
+}
+
+export function clampReplayDayIndex(dayIndex: number, dayCount = PANDA_REPLAY_DAY_COUNT) {
+  if (dayCount <= 0) return 0;
+  if (!Number.isFinite(dayIndex)) return dayCount - 1;
+  return Math.min(dayCount - 1, Math.max(0, Math.floor(dayIndex)));
+}

@@ -1,4 +1,10 @@
-import { pandaHistoricalMarket, pandaHistoricalMarkets } from './pandaMarket';
+import {
+  buildPandaMarketsAtDay,
+  PANDA_REPLAY_DAY_COUNT,
+  pandaHistoricalMarket,
+  pandaHistoricalMarkets,
+  pandaReplayDates,
+} from './pandaMarket';
 
 describe('Panda market adapter', () => {
   it('maps all five real PandaAI market datasets', () => {
@@ -79,5 +85,21 @@ describe('Panda market adapter', () => {
       endDate: '2025-12-31',
       barCount: 304,
     });
+  });
+
+  it('builds a causal replay snapshot without exposing future candles', () => {
+    const dayIndex = 40;
+    const replayMarkets = buildPandaMarketsAtDay(dayIndex);
+
+    expect(PANDA_REPLAY_DAY_COUNT).toBe(304);
+    expect(pandaReplayDates[dayIndex]).toBe('2024-12-03');
+    expect(replayMarkets.every(({ market }) => market.candles.length === dayIndex + 1)).toBe(
+      true,
+    );
+    expect(
+      replayMarkets.every(
+        ({ asOf }) => new Date(asOf).toISOString().slice(0, 10) === pandaReplayDates[dayIndex],
+      ),
+    ).toBe(true);
   });
 });

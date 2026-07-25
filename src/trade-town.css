@@ -3400,7 +3400,7 @@ textarea {
 
 @media (max-width: 1320px) {
   .pixel-town-shell.is-overview .pixel-town-layout {
-    grid-template-columns: 230px minmax(460px, 1fr) 252px;
+    grid-template-columns: 230px minmax(430px, 1fr) 282px;
   }
 
   .pixel-town-shell.is-overview .pixel-network {
@@ -5347,16 +5347,43 @@ textarea {
 
 .pixel-unified-agent-board .pixel-agent-list button {
   min-height: 64px;
-  grid-template-columns: 40px minmax(0, 1fr) auto;
+  grid-template-columns: 22px 40px minmax(0, 1fr) auto;
   align-items: center;
+}
+
+.pixel-agent-panel .pixel-agent-list button {
+  grid-template-columns: 22px 40px minmax(0, 1fr) auto;
+}
+
+.pixel-agent-rank {
+  color: var(--town-mist);
+  font-size: 9px;
+  font-weight: 400;
+  text-align: center;
+}
+
+.pixel-agent-rank.rank-1 {
+  color: var(--town-gold);
+}
+
+.pixel-agent-rank.rank-2 {
+  color: var(--town-paper);
+}
+
+.pixel-agent-rank.rank-3 {
+  color: var(--town-orange);
 }
 
 .pixel-agent-identity {
   min-width: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .pixel-agent-scan-state {
-  min-width: 88px;
+  min-width: 70px;
   display: flex;
   align-items: flex-end;
   flex-direction: column;
@@ -5369,13 +5396,142 @@ textarea {
 
 .pixel-agent-scan-state > strong,
 .pixel-agent-chain-activity {
-  max-width: 96px;
+  max-width: 74px;
   overflow: hidden;
   font-size: 8px;
   font-weight: 400;
   line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.pixel-unified-agent-board .pixel-board-title-compact {
+  display: block;
+}
+
+.pixel-unified-agent-board .pixel-board-title-compact > span {
+  margin: 4px 0 0;
+  display: block;
+  white-space: normal;
+}
+
+.pixel-agent-scan-state > small.pixel-up,
+.pixel-agent-scan-state > small.pixel-down {
+  font-size: 8px;
+  font-weight: 400;
+}
+
+.pixel-replay-hud {
+  position: absolute;
+  z-index: 18;
+  top: 16px;
+  right: 18px;
+  min-width: 238px;
+  padding: 9px;
+  border: 4px solid var(--town-night);
+  color: var(--town-paper);
+  background: rgba(38, 43, 68, 0.95);
+  box-shadow:
+    inset -3px -3px 0 var(--town-clay),
+    var(--town-pixel-shadow);
+  text-transform: uppercase;
+}
+
+.pixel-replay-date {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 4px 10px;
+}
+
+.pixel-replay-date span {
+  color: var(--town-gold);
+  font-size: 9px;
+}
+
+.pixel-replay-date strong {
+  color: var(--town-paper);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.pixel-replay-date small {
+  grid-column: 1 / -1;
+  color: var(--town-green);
+  font-size: 7px;
+}
+
+.pixel-replay-controls {
+  margin-top: 7px;
+  padding-top: 7px;
+  border-top: 2px solid var(--town-slate);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pixel-replay-controls button,
+.pixel-replay-controls select {
+  min-width: 28px;
+  height: 27px;
+  border: 2px solid var(--town-night);
+  color: var(--town-paper);
+  background: var(--town-slate);
+  box-shadow: inset -2px -2px 0 var(--town-shadow);
+  font-family: inherit;
+  font-size: 9px;
+  cursor: pointer;
+}
+
+.pixel-replay-controls button:hover,
+.pixel-replay-controls button:focus-visible,
+.pixel-replay-controls select:focus-visible {
+  color: var(--town-night);
+  background: var(--town-gold);
+  outline: none;
+}
+
+.pixel-replay-controls button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.pixel-replay-controls button.pixel-replay-primary {
+  color: var(--town-night);
+  background: var(--town-gold);
+}
+
+.pixel-replay-controls label {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pixel-replay-controls label > span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.pixel-replay-controls select {
+  min-width: 48px;
+  padding: 0 3px;
+}
+
+@media (max-width: 640px) {
+  .pixel-replay-hud {
+    top: 9px;
+    right: 9px;
+    min-width: 200px;
+    padding: 7px;
+  }
+
+  .pixel-replay-date strong {
+    font-size: 10px;
+  }
 }
 
 .pixel-agent-chain-activity {
@@ -6404,5 +6560,190 @@ textarea {
 
   .pixel-town-shell.is-overview .pixel-market-list button {
     min-height: 48px;
+  }
+}
+
+/* The replay clock belongs beside the product title, not over the map. */
+.pixel-town-header,
+.pixel-town-shell.is-overview .pixel-town-header,
+.pixel-town-shell.is-immersive .pixel-town-header {
+  grid-template-columns: auto minmax(240px, 1fr) auto;
+}
+
+.pixel-replay-status {
+  min-width: 0;
+  width: fit-content;
+  min-height: 48px;
+  padding: 5px 7px;
+  border: 3px solid var(--town-night);
+  color: var(--town-paper);
+  background: #262b44;
+  display: flex;
+  align-items: stretch;
+  gap: 7px;
+  justify-self: end;
+  box-shadow:
+    inset -2px -2px 0 var(--town-clay),
+    3px 3px 0 rgba(18, 15, 28, 0.65);
+  text-transform: uppercase;
+}
+
+.pixel-replay-status-copy {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto auto;
+  align-content: center;
+  align-items: center;
+  gap: 3px 9px;
+}
+
+.pixel-replay-status-copy > span {
+  color: var(--town-gold);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.pixel-replay-status-copy > time {
+  color: var(--town-paper);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.pixel-replay-status-copy > small {
+  grid-column: 1 / -1;
+  color: var(--town-green);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 7px;
+  letter-spacing: 0.4px;
+}
+
+.pixel-replay-status-copy > small i {
+  width: 6px;
+  height: 6px;
+  background: currentColor;
+  display: block;
+  animation: town-replay-pulse 1s steps(2, end) infinite;
+}
+
+.pixel-replay-status.is-paused .pixel-replay-status-copy > small,
+.pixel-replay-status.is-waiting .pixel-replay-status-copy > small {
+  color: var(--town-orange);
+}
+
+.pixel-replay-status.is-completed .pixel-replay-status-copy > small {
+  color: var(--town-gold);
+}
+
+.pixel-replay-status.is-failed .pixel-replay-status-copy > small {
+  color: var(--town-red);
+}
+
+.pixel-replay-status.is-paused .pixel-replay-status-copy > small i,
+.pixel-replay-status.is-completed .pixel-replay-status-copy > small i,
+.pixel-replay-status.is-failed .pixel-replay-status-copy > small i {
+  animation: none;
+}
+
+.pixel-replay-status-controls {
+  padding-left: 7px;
+  border-left: 2px solid var(--town-slate);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.pixel-replay-status-controls button,
+.pixel-replay-status-controls select {
+  min-width: 27px;
+  height: 28px;
+  padding: 0 4px;
+  border: 2px solid var(--town-night);
+  color: var(--town-paper);
+  background: var(--town-slate);
+  box-shadow: inset -2px -2px 0 var(--town-shadow);
+  font-family: inherit;
+  font-size: 8px;
+  cursor: pointer;
+}
+
+.pixel-replay-status-controls button.is-primary {
+  color: var(--town-night);
+  background: var(--town-gold);
+}
+
+.pixel-replay-status-controls button:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+
+.pixel-replay-status-controls button:focus-visible,
+.pixel-replay-status-controls select:focus-visible {
+  outline: 2px solid var(--town-gold);
+  outline-offset: 1px;
+}
+
+.pixel-replay-status-controls select {
+  min-width: 46px;
+}
+
+.pixel-header-actions,
+.pixel-town-shell.is-immersive .pixel-header-actions {
+  grid-column: 3;
+}
+
+@keyframes town-replay-pulse {
+  50% {
+    opacity: 0.32;
+  }
+}
+
+@media (max-width: 1100px) {
+  .pixel-town-header,
+  .pixel-town-shell.is-overview .pixel-town-header,
+  .pixel-town-shell.is-immersive .pixel-town-header {
+    grid-template-columns: auto minmax(126px, 1fr) auto;
+  }
+
+  .pixel-replay-status-controls {
+    display: none;
+  }
+
+  .pixel-replay-status-copy > small {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .pixel-town-header,
+  .pixel-town-shell.is-overview .pixel-town-header,
+  .pixel-town-shell.is-immersive .pixel-town-header {
+    gap: 6px;
+  }
+
+  .pixel-replay-status {
+    min-height: 42px;
+    padding: 4px 5px;
+    border-width: 2px;
+  }
+
+  .pixel-replay-status-copy {
+    grid-template-columns: 1fr;
+    gap: 3px;
+  }
+
+  .pixel-replay-status-copy > span,
+  .pixel-replay-status-copy > time {
+    font-size: 8px;
+  }
+
+  .pixel-replay-status-copy > time {
+    font-size: 0;
+  }
+
+  .pixel-replay-status-copy > time::after {
+    font-size: 8px;
+    content: attr(data-short-date);
   }
 }

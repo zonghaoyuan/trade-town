@@ -6,9 +6,10 @@ import type {
   TownSpeechMessage,
   TownTransactionRecord,
 } from '../../../shared/activity';
-import type { CausalEvent } from '../../finance/demoData';
+import type { CausalEvent, DashboardExecution } from '../../finance/demoData';
 import PixelAvatar from './PixelAvatar';
 import { groupConsecutiveMessages } from './townActivityMessages';
+import { mergeTransactions } from './townActivityTransactions';
 
 type ActivityTab = 'talk' | 'trades' | 'events';
 
@@ -25,10 +26,14 @@ const tabs: Array<{
 export default function TownActivityPanel({
   activity,
   contextEvents,
+  contextExecutions = [],
+  contextAsOf,
   drawer = false,
 }: {
   activity: TownActivityFeed;
   contextEvents: CausalEvent[];
+  contextExecutions?: DashboardExecution[];
+  contextAsOf?: number;
   drawer?: boolean;
 }) {
   const [tab, setTab] = useState<ActivityTab>('talk');
@@ -36,9 +41,13 @@ export default function TownActivityPanel({
     () => mergeEvents(activity.events, contextEvents),
     [activity.events, contextEvents],
   );
+  const transactions = useMemo(
+    () => mergeTransactions(activity.transactions, contextExecutions, contextAsOf),
+    [activity.transactions, contextAsOf, contextExecutions],
+  );
   const counts: Record<ActivityTab, number> = {
     talk: activity.messages.length,
-    trades: activity.transactions.length,
+    trades: transactions.length,
     events: events.length,
   };
 
@@ -84,7 +93,7 @@ export default function TownActivityPanel({
         className="pixel-activity-body pixel-trade-body"
         hidden={tab !== 'trades'}
       >
-        <TradeFeed activity={activity} />
+        <TradeFeed loading={activity.loading} transactions={transactions} />
       </div>
 
       <div
@@ -218,16 +227,22 @@ function ExpandableMessage({ message }: { message: TownSpeechMessage }) {
   );
 }
 
-function TradeFeed({ activity }: { activity: TownActivityFeed }) {
-  if (activity.loading && activity.transactions.length === 0) {
+function TradeFeed({
+  loading,
+  transactions,
+}: {
+  loading: boolean;
+  transactions: TownTransactionRecord[];
+}) {
+  if (loading && transactions.length === 0) {
     return <ActivityLoading label="Connecting to the execution ledger…" />;
   }
-  if (activity.transactions.length === 0) {
+  if (transactions.length === 0) {
     return (
       <ActivityEmpty
         icon="↕"
         title="No trading activity yet"
-        detail="Agent intents, risk decisions, submissions and confirmed Injective fills will appear here."
+        detail="Panda paper fills and confirmed Injective fills will appear here as the replay advances."
       />
     );
   }
@@ -241,7 +256,7 @@ function TradeFeed({ activity }: { activity: TownActivityFeed }) {
         <span>Status</span>
         <span>Proof</span>
       </div>
-      {activity.transactions.map((transaction) => (
+      {transactions.map((transaction) => (
         <TransactionRow transaction={transaction} key={transaction.id} />
       ))}
     </div>
@@ -250,13 +265,16 @@ function TradeFeed({ activity }: { activity: TownActivityFeed }) {
 
 function TransactionRow({ transaction }: { transaction: TownTransactionRecord }) {
   const verified = transaction.source === 'injective';
+  const paper = transaction.source === 'paper';
   return (
     <article className={`pixel-trade-row state-${transaction.state}`}>
       <div className="pixel-trade-agent">
         <PixelAvatar index={avatarIndex(transaction.agentName)} />
         <span>
           <time dateTime={new Date(transaction.occurredAt).toISOString()}>
-            {formatTime(transaction.occurredAt)}
+            {paper
+              ? formatReplayTradeTime(transaction.occurredAt)
+              : formatTime(transaction.occurredAt)}
           </time>
           <strong>{transaction.agentName}</strong>
         </span>
@@ -271,11 +289,11 @@ function TransactionRow({ transaction }: { transaction: TownTransactionRecord })
         <strong>
           {transaction.price === undefined ? 'MARKET' : formatPrice(transaction.price)}
         </strong>
-        <small>{verified ? 'INJ' : 'LIMIT'}</small>
+        <small>{verified ? 'INJ' : paper ? 'CNY' : 'LIMIT'}</small>
       </div>
       <div className="pixel-trade-state">
         <strong>{formatTransactionState(transaction.state)}</strong>
-        <small>{verified ? '◆ CHAIN' : '◇ TOWN FLOW'}</small>
+        <small>{verified ? '◆ CHAIN' : paper ? '◇ PAPER' : '◇ TOWN FLOW'}</small>
       </div>
       <div className="pixel-trade-proof">
         {transaction.txHash ? (
@@ -289,8 +307,15 @@ function TransactionRow({ transaction }: { transaction: TownTransactionRecord })
           </a>
         ) : (
           <span title={transaction.detail}>
-            {transaction.state === 'risk_rejected' ? 'Risk log' : 'Pending'}
-            <small>{transaction.detail ?? 'No chain proof yet'}</small>
+            {transaction.state === 'risk_rejected'
+              ? 'Risk log'
+              : paper
+                ? 'Replay log'
+                : 'Pending'}
+            <small>
+              {transaction.detail ??
+                (paper ? 'Panda replay · no chain transaction' : 'No chain proof yet')}
+            </small>
           </span>
         )}
       </div>
@@ -332,7 +357,13 @@ function EventFeed({ activity, events }: { activity: TownActivityFeed; events: D
             <div className="pixel-history-copy">
               <header>
                 <b>{formatEventKind(kind)}</b>
-                <time>{live ? formatTime(record.occurredAt) : record.time}</time>
+                <time>
+                  {live
+                    ? formatTime(record.occurredAt)
+                    : record.occurredAt
+                      ? formatReplayTime(record.occurredAt)
+                      : record.time}
+                </time>
                 <span>{source === 'panda' ? '◇ PANDAAI' : txHash ? '◆ VERIFIED' : '◇ TOWN'}</span>
               </header>
               <strong>{record.title}</strong>
@@ -402,6 +433,29 @@ function formatTime(value: number) {
     minute: '2-digit',
     second: '2-digit',
     hour12: false,
+  }).format(value);
+}
+
+function formatReplayTime(value: number) {
+  return new Intl.DateTimeFormat('en-CA', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: 'Asia/Shanghai',
+  }).format(value);
+}
+
+function formatReplayTradeTime(value: number) {
+  return new Intl.DateTimeFormat('en-CA', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: 'Asia/Shanghai',
   }).format(value);
 }
 
