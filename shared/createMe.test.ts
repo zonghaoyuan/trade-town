@@ -2,6 +2,7 @@ import {
   CREATE_ME_DEFAULT_DRAFT,
   buildMeAgentNarrative,
   compileMeProfile,
+  getLpcWalkLayers,
   sanitizeCreateMeDraft,
 } from './createMe';
 
@@ -87,5 +88,27 @@ describe('Create ME profile compiler', () => {
     expect(narrative.identity).toContain('Veylor');
     expect(narrative.plan).toContain(`${compiled.cashBufferPct}% cash`);
     expect(narrative.plan).toContain(`${compiled.maxPositionPct}%`);
+  });
+
+  test('composes the modular LPC head between the body and clothing layers', () => {
+    const layers = getLpcWalkLayers({
+      ...CREATE_ME_DEFAULT_DRAFT,
+      appearanceMode: 'custom',
+      skinTone: 'deep',
+    });
+
+    expect(layers.map((layer) => layer.category)).toEqual([
+      'body',
+      'head',
+      'top',
+      'bottom',
+      'shoes',
+      'hair',
+    ]);
+    expect(layers[1]).toMatchObject({
+      category: 'head',
+      creditPath: 'head/heads/human/female/walk.png',
+      tint: '#8f6b5d',
+    });
   });
 });

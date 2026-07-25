@@ -180,7 +180,7 @@ export const LPC_CLOTHING_COLORS = [
 export type LpcClothingColorId = (typeof LPC_CLOTHING_COLORS)[number]['id'];
 
 export type LpcWalkLayer = {
-  category: 'body' | 'top' | 'bottom' | 'shoes' | 'hair';
+  category: 'body' | 'head' | 'top' | 'bottom' | 'shoes' | 'hair';
   url: string;
   tint: string;
   creditPath: string;
@@ -206,6 +206,12 @@ export function getLpcWalkLayers(draft: CreateMeDraft): LpcWalkLayer[] {
       url: `${LPC_RAW_ROOT}/body/bodies/female/walk.png`,
       tint: skin.tint,
       creditPath: 'body/bodies/female/walk.png',
+    },
+    {
+      category: 'head',
+      url: `${LPC_RAW_ROOT}/head/heads/human/female/walk.png`,
+      tint: skin.tint,
+      creditPath: 'head/heads/human/female/walk.png',
     },
     {
       category: 'top',
