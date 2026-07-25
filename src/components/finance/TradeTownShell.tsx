@@ -272,6 +272,7 @@ export default function TradeTownShell({
             <span aria-hidden="true">{immersive ? '↙' : '↗'}</span>
             {immersive ? 'Market view' : 'Full town'}
           </button>
+          <InjectiveConnectionStatus />
         </div>
       </header>
 
@@ -620,6 +621,28 @@ function ReplayStatus({ replay }: { replay: ReplayDisplayState }) {
   );
 }
 
+function InjectiveConnectionStatus() {
+  return (
+    <div
+      className="pixel-injective-status"
+      role="status"
+      aria-label="Injective Testnet connected"
+      title="Injective Testnet · Connected"
+    >
+      <span className="pixel-injective-status-mark" aria-hidden="true">
+        <img src="/assets/brand/inj-logo.png" alt="" />
+      </span>
+      <span className="pixel-injective-status-copy">
+        <span>Injective Testnet</span>
+        <strong>
+          <i aria-hidden="true" />
+          Connected
+        </strong>
+      </span>
+    </div>
+  );
+}
+
 function MarketBoard({
   dashboard,
   selectedSymbol,
@@ -642,13 +665,6 @@ function MarketBoard({
     <div className="pixel-board pixel-market-board">
       <div className="pixel-board-title">
         <h2>Markets</h2>
-      </div>
-      <div className="pixel-injective-market-status" aria-label="Injective Testnet connected">
-        <span>
-          <i aria-hidden="true" />
-          Injective Testnet
-        </span>
-        <strong>Connected</strong>
       </div>
       <div className="pixel-market-hero">
         <h3>{market.symbol}</h3>
