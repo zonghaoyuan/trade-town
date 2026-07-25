@@ -53,11 +53,7 @@ function browserStorage() {
 function initialLocale(): Locale {
   if (typeof window === 'undefined') return DEFAULT_LOCALE;
   const storedLocale = readStoredLocale(browserStorage());
-  const browserLanguages =
-    window.navigator.languages?.length > 0
-      ? window.navigator.languages
-      : [window.navigator.language];
-  return resolveLocale({ storedLocale, browserLanguages });
+  return resolveLocale({ storedLocale });
 }
 
 export function I18nProvider({ children }: { children: ReactNode }) {
