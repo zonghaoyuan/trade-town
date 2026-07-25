@@ -489,6 +489,74 @@
   }
 }
 
+/* Full-town data panels participate in the layout instead of covering the map.
+ * The Pixi map observes its frame and refits itself when this column opens. */
+@media (min-width: 721px) {
+  .pixel-town-shell.is-immersive.has-hud-drawer {
+    --town-immersive-drawer-gap: 10px;
+    --town-immersive-drawer-inset: 14px;
+    --town-immersive-drawer-width: clamp(340px, 32vw, 440px);
+  }
+
+  .pixel-town-shell.is-immersive.has-hud-drawer .pixel-town-layout {
+    right: calc(
+      var(--town-immersive-drawer-width) + var(--town-immersive-drawer-gap) +
+        var(--town-immersive-drawer-inset)
+    );
+    width: auto;
+  }
+
+  .pixel-town-shell.is-immersive.has-hud-drawer .pixel-hud-drawer {
+    top: var(--town-immersive-top-inset);
+    right: var(--town-immersive-drawer-inset);
+    bottom: calc(var(--town-immersive-bottom-inset) + var(--town-safe-bottom));
+    width: var(--town-immersive-drawer-width);
+    max-height: none;
+  }
+
+  .pixel-town-shell.is-immersive.has-hud-drawer .pixel-hud-dock {
+    right: var(--town-immersive-drawer-inset) !important;
+  }
+}
+
+.pixel-town-shell.is-immersive.has-hud-drawer
+  .pixel-hud-drawer
+  .pixel-activity-panel {
+  height: 100%;
+  min-height: 0;
+}
+
+/* A side-by-side split would make both panes unusably narrow on phones, so the
+ * same non-overlapping contract becomes a map-above / panel-below split. */
+@media (max-width: 720px) {
+  .pixel-town-shell.is-immersive.has-hud-drawer {
+    --town-immersive-mobile-drawer-gap: 8px;
+    --town-immersive-mobile-drawer-height: min(46dvh, 390px);
+  }
+
+  .pixel-town-shell.is-immersive.has-hud-drawer .pixel-town-layout {
+    right: 0;
+    bottom: calc(
+      var(--town-immersive-bottom-inset) + var(--town-safe-bottom) +
+        var(--town-immersive-mobile-drawer-height) + var(--town-immersive-mobile-drawer-gap)
+    );
+    width: auto;
+  }
+
+  .pixel-town-shell.is-immersive.has-hud-drawer .pixel-world-column {
+    padding-bottom: 0;
+  }
+
+  .pixel-town-shell.is-immersive.has-hud-drawer .pixel-hud-drawer {
+    top: auto;
+    right: 8px;
+    bottom: calc(var(--town-immersive-bottom-inset) + var(--town-safe-bottom));
+    width: calc(100vw - 16px);
+    height: var(--town-immersive-mobile-drawer-height);
+    max-height: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pixel-live-conversations > span > i,
   .pixel-activity-loading > i {
