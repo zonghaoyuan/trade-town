@@ -11,9 +11,8 @@ import { detectMismatchedLLMProvider } from './util/llm';
 import {
   DEFAULT_VISIBLE_AI_AGENTS,
   MAX_AGENT_COUNT,
+  TOWN_TRADERS,
 } from '../shared/finance';
-
-const RETIRED_TRADER_NAMES = new Set(['Delta-7', 'Sigma-2']);
 
 const init = mutation({
   args: {
@@ -22,7 +21,7 @@ const init = mutation({
   handler: async (ctx, args) => {
     detectMismatchedLLMProvider();
     const { worldStatus, engine } = await getOrCreateDefaultWorld(ctx);
-    await removeRetiredTradersFromSpatialWorld(ctx, worldStatus.worldId);
+    await removeMarketMakersFromSpatialWorld(ctx, worldStatus.worldId);
     if (worldStatus.status !== 'running') {
       console.warn(
         `Engine ${engine._id} is not active! Run "npx convex run testing:resume" to restart it.`,
@@ -160,19 +159,25 @@ async function synchronizeTraderCharacters(ctx: MutationCtx, worldId: Id<'worlds
 }
 
 /**
- * Older worlds may still contain the two retired liquidity profiles as spatial
- * residents. Remove those named players without touching the eight AI citizens.
+ * Delta-7 and Sigma-2 remain deterministic finance profiles, but they are not
+ * autonomous town residents. Older worlds created them as spatial AI agents,
+ * so remove only those named players while preserving all finance tables.
  */
-async function removeRetiredTradersFromSpatialWorld(
+async function removeMarketMakersFromSpatialWorld(
   ctx: MutationCtx,
   worldId: Id<'worlds'>,
 ) {
+  const marketMakerNames = new Set(
+    TOWN_TRADERS.filter((trader) => trader.kind === 'market_maker').map(
+      (trader) => trader.name,
+    ),
+  );
   const playerDescriptions = await ctx.db
     .query('playerDescriptions')
     .withIndex('worldId', (q) => q.eq('worldId', worldId))
     .collect();
   const staleDescriptions = playerDescriptions.filter((description) =>
-    RETIRED_TRADER_NAMES.has(description.name),
+    marketMakerNames.has(description.name),
   );
   if (staleDescriptions.length === 0) return;
 

@@ -79,7 +79,7 @@ INJECTIVE_MARKET_ACME=0x...
 
 ## 5. Fund exchange subaccounts
 
-The funding stage deposits 10 INJ and 2,000 ACME into each of the eight town subaccounts. It therefore
+The funding stage deposits 10 INJ and 2,000 ACME into each of the ten town subaccounts. It therefore
 uses 100 INJ plus gas, independently of the market listing fee. It batches messages through the one
 signer queue:
 

@@ -10,23 +10,20 @@ settlement authority.
 
 ## What is implemented
 
-- A variable-size AI Town population defaulting to 8 visible AI traders. Liquidity-only
-  market-maker agents are not part of the town or financial runtime.
-- PandaAI-sourced historical daily bars displayed without generated replacement prices, orders,
-  positions, P&L, or sentiment.
+- A variable-size AI Town population, defaulting to 8 visible AI traders and 2 explicitly labeled
+  deterministic market makers.
 - TwinMarket-inspired belief → desire → intention logic, behavioral biases, explainable rationales,
   and a deterministic portfolio risk gate.
 - A Convex finance domain separated from the real-time game document: markets, trader profiles,
   beliefs, events, intents, orders, fills, portfolios, transactions, and chain cursors.
 - A standalone Node Gateway with a serialized signing queue, Injective Indexer streams, idempotent
   fill ingestion, and read-only mode by default.
-- One operator wallet mapped to eight Injective subaccounts by nonce.
+- One operator wallet mapped to ten Injective subaccounts by nonce.
 - A single-market TokenFactory provisioning plan for the `ACME` token and the `ACME/INJ` MVP spot
   market. `TOWNUSD` remains the local simulation quote currency.
 - An 8-bit exchange terminal wrapped around the live Pixi town, with market state, agent inspection,
   a causal event replay, and responsive candlestick charts.
-- A standalone market-data view that works without Convex credentials and does not invent missing
-  chain values.
+- A standalone preview that works without Convex credentials.
 
 The repository does **not** contain a wallet or private key and has not spent testnet listing fees.
 The market catalogue remains `planned` until an operator funds a dedicated testnet wallet and runs
@@ -63,8 +60,8 @@ npm install
 npm run dev:frontend
 ```
 
-Open `http://localhost:5173`. Without `VITE_CONVEX_URL`, the UI shows the bundled PandaAI historical
-export and marks unavailable Injective fields instead of generating preview values.
+Open `http://localhost:5173`. Without `VITE_CONVEX_URL`, the UI runs in clearly labeled scenario
+preview mode.
 
 For a live town, configure Convex and the LLM provider as described in `.env.example`, then run:
 
@@ -105,19 +102,16 @@ The SDK is pinned exactly to `@injectivelabs/sdk-ts@1.20.26`. Do not downgrade t
 
 ## Market and agent defaults
 
-| Type          | Members                                         |
-| ------------- | ----------------------------------------------- |
-| PandaAI data  | `000001.SZ` sourced historical daily bars       |
-| Testnet MVP   | `ACME/INJ`                                      |
-| AI agents     | Mira, Theo, Imani, Sora, Omar, Lin, Jules, Neha |
+| Type              | Members                                         |
+| ----------------- | ----------------------------------------------- |
+| Local simulation  | `ACME/TOWNUSD` (future: NOVA, AURUM, CRUDE)     |
+| Testnet MVP       | `ACME/INJ`                                      |
+| AI agents         | Mira, Theo, Imani, Sora, Omar, Lin, Jules, Neha |
+| Deterministic MMs | Delta-7 for companies, Sigma-2 for commodities  |
 
-The default count is 8 and can be changed with `npx convex run init '{"numAgents": 16}'`, up to the
+The default count is 10 and can be changed with `npx convex run init '{"numAgents": 16}'`, up to the
 current safety cap of 32. Additional instances reuse a financial archetype but receive a unique town
 name.
-
-Deployments upgraded from an older release should run
-`npx convex run finance:retireLegacyFixtures` once before the final strict schema cleanup. The
-migration removes retired profiles and unverified seed portfolios while preserving chain history.
 
 ## Commands
 
@@ -130,16 +124,17 @@ npm run gateway:dev        # Long-running Gateway
 npm run provision:plan     # Zero-signature provisioning preview
 ```
 
-## Live-data story
+## Demo story
 
-The town follows this source boundary:
+The included replay follows the hackathon narrative:
 
-1. PandaAI supplies sourced market bars.
-2. AI citizens observe and discuss the market.
-3. A real run may emit a structured limit-order intent.
-4. The risk layer accepts or blocks it.
-5. The Gateway signs in sequence and submits to Injective.
-6. The UI shows execution and portfolio state only when chain evidence exists.
+1. The town central bank raises rates.
+2. A news agent publishes the decision.
+3. Agents revise beliefs and spread them through conversations.
+4. A trader emits a structured limit-order intent.
+5. The risk layer accepts or blocks it.
+6. The Gateway signs in sequence and submits to Injective.
+7. The UI closes the causal chain only when the fill is confirmed.
 
 See [docs/HACKATHON_DEMO.md](docs/HACKATHON_DEMO.md) for the operator runbook.
 

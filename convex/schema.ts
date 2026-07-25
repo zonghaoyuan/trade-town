@@ -20,7 +20,6 @@ export default defineSchema({
     text: v.string(),
     worldId: v.optional(v.id('worlds')),
   })
-    .index('by_world', ['worldId'])
     .index('conversationId', ['worldId', 'conversationId'])
     .index('messageUuid', ['conversationId', 'messageUuid']),
 

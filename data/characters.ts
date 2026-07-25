@@ -1,7 +1,7 @@
 import type { ISpritesheetData } from 'pixi.js';
 import { TOWN_TRADERS } from '../shared/finance';
 
-const roamingTraders = TOWN_TRADERS;
+const roamingTraders = TOWN_TRADERS.filter((trader) => trader.kind === 'ai');
 const characterByIndex = ['f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8'];
 const characterAssetByIndex = [
   'mira',

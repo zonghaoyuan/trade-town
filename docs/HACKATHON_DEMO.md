@@ -11,13 +11,14 @@ The town starts in equilibrium. The central bank unexpectedly raises rates by 75
 5. Imani's momentum signal and updated belief produce a sell intent.
 6. The deterministic risk layer checks cash, order size, and concentration.
 7. The Gateway submits a native Injective spot order.
-8. The K-line and causal evidence view update after confirmed fills.
+8. Delta-7 adjusts its deterministic two-sided quotes.
+9. The K-line and causal replay update after confirmed fills.
 
 ## What to show
 
-- Compare PandaAI sourced market bars with the Injective Testnet evidence area.
-- Click the eight AI citizens in the right rail and explain that missing financial state is not
-  replaced by demo values.
+- Switch between Panda DayView and Testnet. Explain that local replay uses TOWNUSD while the live
+  Testnet MVP settles `ACME/INJ`.
+- Click AI and MM agents in the right rail; point out the explicit `AI` and `MM` labels.
 - Select Imani and show her subaccount nonce, focus markets, risk tolerance, and activity.
 - Scroll the causal replay from policy event to chain proof.
 - Open the Injective explorer using the real transaction hash in live mode.
@@ -25,5 +26,5 @@ The town starts in equilibrium. The central bank unexpectedly raises rates by 75
 
 ## Failure-safe demo mode
 
-If the testnet or Gateway is unavailable, stop signing. The UI keeps PandaAI market data visible and
-marks chain fields unavailable; it does not generate transaction IDs, prices, balances, or fills.
+If the testnet or Gateway is unavailable, stop signing and use the clearly labeled illustrative
+scenario preview. Do not present preview transaction IDs, prices, or balances as live chain data.

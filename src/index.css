@@ -1182,6 +1182,11 @@ a:focus-visible {
   font-size: 8px;
 }
 
+.preview-mm > span {
+  color: var(--paper);
+  background: #2d6972;
+}
+
 .preview-agent small {
   margin-top: 3px;
   padding: 2px 3px;
