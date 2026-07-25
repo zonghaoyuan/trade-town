@@ -39,6 +39,12 @@ export const PixiGame = (props: {
   const humanPlayerId = [...props.game.world.players.values()].find(
     (p) => p.human === humanTokenIdentifier,
   )?.id;
+  const humanIsInConversation =
+    humanPlayerId !== undefined &&
+    [...props.game.world.conversations.values()].some(
+      (conversation) =>
+        conversation.participants.get(humanPlayerId)?.status.kind === 'participating',
+    );
 
   const moveTo = useSendInput(props.engineId, 'moveTo');
 
@@ -65,7 +71,7 @@ export const PixiGame = (props: {
         return;
       }
     }
-    if (!humanPlayerId) {
+    if (!humanPlayerId || humanIsInConversation) {
       return;
     }
     const viewport = viewportRef.current;
