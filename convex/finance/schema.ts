@@ -48,6 +48,15 @@ export const financeTables = {
     .index('by_session_day', ['sessionId', 'dayIndex'])
     .index('by_session_date', ['sessionId', 'tradeDate']),
 
+  pandaReplayState: defineTable({
+    key: v.string(),
+    currentDayIndex: v.number(),
+    isPlaying: v.boolean(),
+    speedMs: v.number(),
+    generation: v.number(),
+    updatedAt: v.number(),
+  }).index('by_key', ['key']),
+
   financeConfig: defineTable({
     key: v.string(),
     worldId: v.optional(v.id('worlds')),

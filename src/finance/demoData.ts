@@ -9,7 +9,11 @@ import type {
   SocialActivity,
   TownSummary,
 } from '../../shared/pandaTypes';
-import { pandaHistoricalMarket, pandaHistoricalMarkets } from './pandaMarket';
+import {
+  buildPandaMarketsAtDay,
+  PANDA_REPLAY_DAY_COUNT,
+  pandaHistoricalMarket,
+} from './pandaMarket';
 import { buildPandaSimulationRun } from './pandaSimulation';
 
 export type DashboardMode = 'panda_dayview' | 'injective_testnet' | 'local_sim';
@@ -62,17 +66,6 @@ function makeCandles(closes: number[], start = DAY_START, interval = 30 * 60): D
     };
   });
 }
-
-const pandaSimulationRuns = new Map(
-  pandaHistoricalMarkets.map((dataset) => [
-    dataset.market.symbol,
-    buildPandaSimulationRun(dataset.market),
-  ]),
-);
-const pandaMarkets: DashboardMarket[] = pandaHistoricalMarkets.map((dataset) => ({
-  ...dataset.market,
-  sentiment: pandaSimulationRuns.get(dataset.market.symbol)!.sentiment,
-}));
 
 const injectivePreviewMarket: DashboardMarket = {
   symbol: 'ACME',
@@ -136,30 +129,48 @@ const injectivePreviewTraders: DashboardTrader[] = TOWN_TRADERS.slice(0, 8).map(
   tradeCount: 0,
 }));
 
-export const pandaDayViewDashboards = Object.fromEntries(
-  pandaHistoricalMarkets.map((dataset) => {
-    const run = pandaSimulationRuns.get(dataset.market.symbol)!;
-    return [
+export function buildPandaDayViewDashboards(dayIndex: number) {
+  const datasets = buildPandaMarketsAtDay(dayIndex);
+  const simulationRuns = new Map(
+    datasets.map((dataset) => [
       dataset.market.symbol,
-      {
-        dataMode: 'panda_dayview',
-        source: 'panda',
-        sourceLabel: 'PANDA DAILY · GENERATED REPLAY',
-        runId: run.runId,
-        asOf: dataset.asOf,
-        gatewayStatus: 'read_only',
-        markets: pandaMarkets,
-        traders: run.traders,
-        marketMakers: [],
-        events: run.events,
-        social: run.social,
-        executions: run.executions,
-        summary: run.summary,
-        errors: run.errors,
-      } satisfies TradeTownDashboard,
-    ];
-  }),
-) as Record<string, TradeTownDashboard>;
+      buildPandaSimulationRun(dataset.market),
+    ]),
+  );
+  const markets: DashboardMarket[] = datasets.map((dataset) => ({
+    ...dataset.market,
+    sentiment: simulationRuns.get(dataset.market.symbol)!.sentiment,
+  }));
+
+  return Object.fromEntries(
+    datasets.map((dataset) => {
+      const run = simulationRuns.get(dataset.market.symbol)!;
+      return [
+        dataset.market.symbol,
+        {
+          dataMode: 'panda_dayview',
+          source: 'panda',
+          sourceLabel: 'PANDA DAILY · GENERATED REPLAY',
+          runId: run.runId,
+          asOf: dataset.asOf,
+          gatewayStatus: 'read_only',
+          markets,
+          traders: run.traders,
+          marketMakers: [],
+          events: run.events,
+          social: run.social,
+          executions: run.executions,
+          summary: run.summary,
+          errors: run.errors,
+        } satisfies TradeTownDashboard,
+      ];
+    }),
+  ) as Record<string, TradeTownDashboard>;
+}
+
+export const pandaDayViewDashboards = buildPandaDayViewDashboards(
+  PANDA_REPLAY_DAY_COUNT - 1,
+);
 
 export const pandaDayViewDashboard = pandaDayViewDashboards[pandaHistoricalMarket.market.symbol];
 

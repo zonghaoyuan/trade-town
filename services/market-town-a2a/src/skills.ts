@@ -1,7 +1,11 @@
 import { createHash } from 'node:crypto';
 import { Message } from '@a2a-js/sdk';
 import { formFinancialIntention } from '../../../convex/finance/decision';
-import { TOWN_MARKETS, TOWN_TRADERS } from '../../../shared/finance';
+import {
+  DEFAULT_INITIAL_AGENT_NAV,
+  TOWN_MARKETS,
+  TOWN_TRADERS,
+} from '../../../shared/finance';
 import { pandaHistoricalMarket, pandaHistoricalMarkets } from '../../../shared/pandaMarket';
 import { buildPandaSimulationRun } from '../../../shared/pandaSimulation';
 import { DataMode, EvidenceItem, SKILL_IDS, SkillId, SkillRequest, SkillResult } from './types';
@@ -244,10 +248,15 @@ function runRateShock(
         evidence: `利率冲击 ${shockBps}bp 对 ${symbol} 的情景敏感度为 ${impact.toFixed(2)}`,
       },
       portfolio: {
-        cash: 65_000 + index * 2_500,
-        netAssetValue: 100_000,
-        quantity: 300 + index * 25,
-        averagePrice: market.referencePrice * (0.94 + rng() * 0.12),
+        cash:
+          DEFAULT_INITIAL_AGENT_NAV -
+          Math.floor((DEFAULT_INITIAL_AGENT_NAV * 0.2) / market.referencePrice) *
+            market.referencePrice,
+        netAssetValue: DEFAULT_INITIAL_AGENT_NAV,
+        quantity: Math.floor(
+          (DEFAULT_INITIAL_AGENT_NAV * 0.2) / market.referencePrice,
+        ),
+        averagePrice: market.referencePrice,
       },
       riskTolerance: trader.riskTolerance,
     });
@@ -280,7 +289,7 @@ function runRateShock(
         intention.action === 'trade'
           ? round(
               ((intention.side === 'buy' ? 1 : -1) * intention.quantity * intention.limitPrice) /
-                100_000,
+                DEFAULT_INITIAL_AGENT_NAV,
               4,
             )
           : 0,

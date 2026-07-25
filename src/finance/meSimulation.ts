@@ -3,7 +3,10 @@ import {
   type CreateMeDraft,
   compileMeProfile,
 } from '../../shared/createMe';
-import { assessTradeRisk } from '../../shared/finance';
+import {
+  assessTradeRisk,
+  DEFAULT_INITIAL_AGENT_NAV,
+} from '../../shared/finance';
 import type {
   CausalEvent,
   DashboardExecution,
@@ -99,7 +102,7 @@ export function buildMeSimulation(
     features.date,
     me.version ?? 'local',
   ].join('-');
-  const navStart = 100_000;
+  const navStart = DEFAULT_INITIAL_AGENT_NAV;
   const initialWeightPct = clamp(compiled.maxPositionPct * 0.45, 4, 13);
   const initialQuantity = Math.max(
     1,

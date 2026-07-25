@@ -1,7 +1,8 @@
 import { ConvexError, v } from 'convex/values';
-import { mutation, query } from './_generated/server';
+import { MutationCtx, mutation, query } from './_generated/server';
 import {
   assessTradeRisk,
+  DEFAULT_INITIAL_AGENT_NAV,
   DEFAULT_MARKET_MAKERS,
   DEFAULT_VISIBLE_AI_AGENTS,
   makeOrderCid,
@@ -71,6 +72,7 @@ export const bootstrapTown = mutation({
       .withIndex('by_key', (q) => q.eq('key', DEFAULT_CONFIG_KEY))
       .unique();
     if (existing) {
+      await migrateLegacySeedCapital(ctx);
       return existing._id;
     }
 
@@ -123,9 +125,9 @@ export const bootstrapTown = mutation({
       await ctx.db.insert('portfolioSnapshots', {
         agentName: trader.name,
         subaccountNonce: trader.subaccountNonce,
-        townUsdAvailable: 100_000,
-        townUsdTotal: 100_000,
-        netAssetValue: 100_000,
+        townUsdAvailable: DEFAULT_INITIAL_AGENT_NAV,
+        townUsdTotal: DEFAULT_INITIAL_AGENT_NAV,
+        netAssetValue: DEFAULT_INITIAL_AGENT_NAV,
         pnl: 0,
         positions: [],
         observedAt: now,
@@ -157,6 +159,25 @@ export const bootstrapTown = mutation({
     return configId;
   },
 });
+
+async function migrateLegacySeedCapital(ctx: MutationCtx) {
+  const snapshots = await ctx.db.query('portfolioSnapshots').collect();
+  for (const snapshot of snapshots) {
+    const isLegacySeed =
+      snapshot.subaccountId === undefined &&
+      snapshot.blockHeight === undefined &&
+      snapshot.positions.length === 0 &&
+      snapshot.netAssetValue === 100_000 &&
+      snapshot.townUsdTotal === 100_000 &&
+      snapshot.pnl === 0;
+    if (!isLegacySeed) continue;
+    await ctx.db.patch(snapshot._id, {
+      townUsdAvailable: DEFAULT_INITIAL_AGENT_NAV,
+      townUsdTotal: DEFAULT_INITIAL_AGENT_NAV,
+      netAssetValue: DEFAULT_INITIAL_AGENT_NAV,
+    });
+  }
+}
 
 export const proposeTrade = mutation({
   args: {

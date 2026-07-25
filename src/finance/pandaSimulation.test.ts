@@ -1,4 +1,5 @@
-import { pandaHistoricalMarket } from './pandaMarket';
+import { DEFAULT_INITIAL_AGENT_NAV } from '../../shared/finance';
+import { buildPandaMarketsAtDay, pandaHistoricalMarket } from './pandaMarket';
 import { buildPandaSimulationRun } from './pandaSimulation';
 
 describe('Panda agent replay', () => {
@@ -69,5 +70,30 @@ describe('Panda agent replay', () => {
       2,
     );
     expect(JSON.stringify(run)).not.toContain('ACME');
+  });
+
+  it('starts every agent with the same one-million CNY NAV', () => {
+    const firstDayRun = buildPandaSimulationRun(buildPandaMarketsAtDay(0)[0].market);
+
+    expect(firstDayRun.traders).toHaveLength(8);
+    expect(
+      firstDayRun.traders.every(
+        (trader) =>
+          trader.navStart === DEFAULT_INITIAL_AGENT_NAV &&
+          trader.navEnd === DEFAULT_INITIAL_AGENT_NAV,
+      ),
+    ).toBe(true);
+  });
+
+  it('changes the NAV ranking as historical prices and paper trades advance', () => {
+    const early = buildPandaSimulationRun(buildPandaMarketsAtDay(20)[0].market);
+    const later = buildPandaSimulationRun(buildPandaMarketsAtDay(120)[0].market);
+    const ranking = (value: typeof early) =>
+      [...value.traders]
+        .sort((left, right) => right.navEnd - left.navEnd)
+        .map((trader) => trader.name);
+
+    expect(ranking(later)).not.toEqual(ranking(early));
+    expect(later.executions.every((execution) => execution.occurredAt !== undefined)).toBe(true);
   });
 });
