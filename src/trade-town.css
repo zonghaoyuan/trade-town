@@ -5735,7 +5735,7 @@ textarea {
   border-bottom: 4px solid var(--town-night);
   background: #262b44;
   display: grid;
-  grid-template-columns: 184px minmax(0, 1fr);
+  grid-template-columns: max-content minmax(0, 1fr);
   align-items: center;
   gap: 8px;
 }
@@ -5745,15 +5745,8 @@ textarea {
   overflow: hidden;
 }
 
-.pixel-activity-heading > span {
-  color: var(--town-mist);
-  font-size: 8px;
-  letter-spacing: 0.8px;
-  text-transform: uppercase;
-}
-
 .pixel-activity-heading h2 {
-  margin: 5px 0 0;
+  margin: 0;
   color: var(--town-gold);
   font-family: 'Upheaval Pro', sans-serif;
   font-size: 23px;
@@ -5819,7 +5812,6 @@ textarea {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 3px;
 }
 
 .pixel-activity-tabs button strong {
@@ -5829,15 +5821,6 @@ textarea {
   font-weight: 400;
   text-overflow: ellipsis;
   text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.pixel-activity-tabs button small {
-  overflow: hidden;
-  color: inherit;
-  font-size: 8px;
-  opacity: 0.74;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -5892,6 +5875,11 @@ textarea {
   height: 7px;
   background: var(--town-green);
   animation: pixel-pulse 1.2s steps(2, end) infinite;
+}
+
+.pixel-talk-message-copy button:focus-visible {
+  outline: 3px solid var(--town-blue);
+  outline-offset: 2px;
 }
 
 .pixel-talk-stream {
@@ -5966,12 +5954,13 @@ textarea {
   font-size: 9px;
 }
 
-.pixel-talk-content header b {
+.pixel-talk-content header > .pixel-talk-repeat {
   padding: 2px 4px;
-  color: var(--town-night);
-  background: var(--town-green);
+  color: var(--town-cream);
+  background: var(--town-clay);
   font-size: 7px;
   font-weight: 400;
+  white-space: nowrap;
 }
 
 .pixel-talk-content header time {
@@ -5980,11 +5969,32 @@ textarea {
   font-size: 8px;
 }
 
-.pixel-talk-content p {
+.pixel-talk-message-copy p {
   margin: 6px 0 0;
+  overflow: hidden;
   color: var(--town-paper);
+  display: -webkit-box;
   font-size: var(--town-text-caption);
   line-height: 1.5;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.pixel-talk-message-copy p.is-expanded {
+  overflow: visible;
+  display: block;
+}
+
+.pixel-talk-message-copy button {
+  margin-top: 5px;
+  padding: 0;
+  border: 0;
+  color: var(--town-blue);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 8px;
+  text-transform: uppercase;
 }
 
 .pixel-trade-ledger {

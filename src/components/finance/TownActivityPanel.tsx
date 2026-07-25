@@ -1,12 +1,14 @@
-import { useMemo, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { TOWN_TRADERS } from '../../../shared/finance';
 import type {
   TownActivityFeed,
   TownEventRecord,
+  TownSpeechMessage,
   TownTransactionRecord,
 } from '../../../shared/activity';
 import type { CausalEvent } from '../../finance/demoData';
 import PixelAvatar from './PixelAvatar';
+import { groupConsecutiveMessages } from './townActivityMessages';
 
 type ActivityTab = 'talk' | 'trades' | 'events';
 
@@ -14,11 +16,10 @@ const tabs: Array<{
   id: ActivityTab;
   icon: string;
   label: string;
-  description: string;
 }> = [
-  { id: 'talk', icon: '“', label: 'Agent Talk', description: 'What citizens are saying' },
-  { id: 'trades', icon: '↕', label: 'Live Trades', description: 'Intent to confirmed fill' },
-  { id: 'events', icon: '!', label: 'Event History', description: 'What happened in town' },
+  { id: 'talk', icon: '“', label: 'Agent Talk' },
+  { id: 'trades', icon: '↕', label: 'Live Trades' },
+  { id: 'events', icon: '!', label: 'Event History' },
 ];
 
 export default function TownActivityPanel({
@@ -45,7 +46,6 @@ export default function TownActivityPanel({
     <section className={`pixel-activity-panel ${drawer ? 'is-drawer' : ''}`}>
       <header className="pixel-activity-header">
         <div className="pixel-activity-heading">
-          <span>Live town feed</span>
           <h2>Town Activity</h2>
         </div>
         <div className="pixel-activity-tabs" role="tablist" aria-label="Town activity sections">
@@ -63,7 +63,6 @@ export default function TownActivityPanel({
               <i aria-hidden="true">{item.icon}</i>
               <span>
                 <strong>{item.label}</strong>
-                <small>{item.description}</small>
               </span>
               <b>{counts[item.id]}</b>
             </button>
@@ -105,6 +104,11 @@ export default function TownActivityPanel({
 }
 
 function TalkFeed({ activity }: { activity: TownActivityFeed }) {
+  const groupedMessages = useMemo(
+    () => groupConsecutiveMessages(activity.messages),
+    [activity.messages],
+  );
+
   if (activity.loading && activity.messages.length === 0) {
     return <ActivityLoading label="Listening for agent conversations…" />;
   }
@@ -141,7 +145,7 @@ function TalkFeed({ activity }: { activity: TownActivityFeed }) {
         </div>
       )}
       <div className="pixel-talk-stream" aria-live="polite">
-        {activity.messages.map((message, index) => (
+        {groupedMessages.map(({ message, repeatCount }, index) => (
           <article
             className={`pixel-talk-message ${
               message.conversationState === 'live' ? 'is-live' : 'is-ended'
@@ -154,17 +158,66 @@ function TalkFeed({ activity }: { activity: TownActivityFeed }) {
                 <strong>{message.author.name}</strong>
                 <span aria-hidden="true">→</span>
                 <em>{message.recipient.name}</em>
-                {message.conversationState === 'live' && <b>LIVE</b>}
+                {repeatCount > 1 && (
+                  <span
+                    className="pixel-talk-repeat"
+                    title={`${repeatCount} consecutive matching messages in this conversation`}
+                  >
+                    ×{repeatCount}
+                  </span>
+                )}
                 <time dateTime={new Date(message.createdAt).toISOString()}>
                   {formatTime(message.createdAt)}
                 </time>
               </header>
-              <p>{message.text}</p>
+              <ExpandableMessage message={message} />
             </div>
           </article>
         ))}
       </div>
     </>
+  );
+}
+
+function ExpandableMessage({ message }: { message: TownSpeechMessage }) {
+  const [expanded, setExpanded] = useState(false);
+  const [canExpand, setCanExpand] = useState(false);
+  const copyRef = useRef<HTMLParagraphElement>(null);
+
+  useLayoutEffect(() => {
+    if (expanded) return;
+    const copy = copyRef.current;
+    if (!copy) return;
+
+    const measure = () => setCanExpand(copy.scrollHeight > copy.clientHeight + 1);
+    measure();
+
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', measure);
+      return () => window.removeEventListener('resize', measure);
+    }
+
+    const observer = new ResizeObserver(measure);
+    observer.observe(copy);
+    return () => observer.disconnect();
+  }, [expanded, message.text]);
+
+  return (
+    <div className="pixel-talk-message-copy">
+      <p ref={copyRef} className={expanded ? 'is-expanded' : undefined}>
+        {message.text}
+      </p>
+      {canExpand && (
+        <button
+          type="button"
+          aria-expanded={expanded}
+          aria-label={`${expanded ? 'Collapse' : 'Expand'} message from ${message.author.name}`}
+          onClick={() => setExpanded((current) => !current)}
+        >
+          {expanded ? 'Show less' : 'Read more'}
+        </button>
+      )}
+    </div>
   );
 }
 

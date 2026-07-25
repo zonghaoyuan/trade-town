@@ -443,10 +443,6 @@
   .pixel-activity-heading {
     display: none;
   }
-
-  .pixel-activity-tabs button small {
-    display: none;
-  }
 }
 
 @media (max-width: 640px) {
@@ -479,7 +475,7 @@
     padding: 2px;
   }
 
-  .pixel-talk-content p {
+  .pixel-talk-message-copy p {
     font-size: var(--town-text-micro);
   }
 
