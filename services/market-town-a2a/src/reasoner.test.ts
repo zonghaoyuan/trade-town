@@ -1,11 +1,11 @@
 import { Message, Role } from '@a2a-js/sdk';
 import { jest } from '@jest/globals';
 import { A2AConfig } from './config';
-import { DeepSeekReasoner } from './reasoner';
+import { MarketTownReasoner } from './reasoner';
 import { runSkill } from './skills';
 import { SkillResult } from './types';
 
-describe('DeepSeek V4 Pro A2A reasoning', () => {
+describe('LLM-backed A2A reasoning', () => {
   const originalFetch = globalThis.fetch;
 
   afterEach(() => {
@@ -61,15 +61,15 @@ describe('DeepSeek V4 Pro A2A reasoning', () => {
       executionMode: 'competition',
       convexUrl: 'https://example.convex.cloud',
       convexSecret: 'persistence-secret',
-      deepseekBaseUrl: 'https://deepseek.example.com/v1',
-      deepseekApiKey: 'deepseek-token',
-      deepseekModel: 'deepseek-v4-pro',
+      llmBaseUrl: 'https://deepseek.example.com/v1',
+      llmApiKey: 'deepseek-token',
+      llmModel: 'deepseek-v4-pro',
       replayTotalDays: 30,
       maxTaskMs: 5_000,
       maxPromptChars: 8_000,
       rateLimitPerMinute: 60,
     };
-    const reasoner = new DeepSeekReasoner(config);
+    const reasoner = new MarketTownReasoner(config);
     const plan = await reasoner.planRequest(
       textMessage('请研究新能源汽车龙头并给出可审计的风险结论。'),
     );
@@ -88,7 +88,8 @@ describe('DeepSeek V4 Pro A2A reasoning', () => {
     const report = await reasoner.completeReport(result, Date.now(), plan);
 
     expect(report.model).toMatchObject({
-      requiredModel: 'DeepSeek V4 Pro',
+      requiredModel: 'OpenAI-compatible LLM',
+      provider: 'DeepSeek',
       configuredModel: 'deepseek-v4-pro',
       used: true,
       stages: {
@@ -107,9 +108,20 @@ describe('DeepSeek V4 Pro A2A reasoning', () => {
       expect(body.model).toBe('deepseek-v4-pro');
       expect(body.messages).toHaveLength(2);
     }
+
+    const synthesisBody = JSON.parse(String(fetchMock.mock.calls[1][1]?.body)) as {
+      messages: Array<{ content: string }>;
+    };
+    expect(JSON.parse(synthesisBody.messages[1].content)).toMatchObject({
+      question: '请研究新能源汽车龙头并给出可审计的风险结论。',
+      selectedSkill: 'panda-market-replay',
+      toolResult: {
+        marketData: { symbol: '300750.SZ' },
+      },
+    });
   });
 
-  test('uses DeepSeek for town-agent-history while keeping the model input bounded', async () => {
+  test('uses the LLM for town-agent-history while keeping the model input bounded', async () => {
     const responses = [
       jsonCompletion({
         skillId: 'town-agent-history',
@@ -129,7 +141,7 @@ describe('DeepSeek V4 Pro A2A reasoning', () => {
     );
     globalThis.fetch = fetchMock;
 
-    const reasoner = new DeepSeekReasoner(deepSeekConfig());
+    const reasoner = new MarketTownReasoner(llmConfig());
     const plan = await reasoner.planRequest(
       textMessage('调取 agentId=agent-01 的 30 个交易日数据，并总结风险变化。'),
     );
@@ -156,9 +168,13 @@ describe('DeepSeek V4 Pro A2A reasoning', () => {
       messages: Array<{ content: string }>;
     };
     const synthesisInput = JSON.parse(synthesisBody.messages[1].content) as {
-      findings: { dailySummary: unknown[] };
+      question: string;
+      toolResult: { findings: { dailySummary: unknown[] } };
     };
-    expect(synthesisInput.findings.dailySummary).toHaveLength(30);
+    expect(synthesisInput.question).toContain('总结风险变化');
+    expect(synthesisInput.toolResult.findings.dailySummary).toHaveLength(30);
+    expect(synthesisBody.messages[1].content).toContain('降低了风险敞口');
+    expect(synthesisBody.messages[1].content).toContain('基本面走弱');
     expect(synthesisBody.messages[1].content).not.toContain('raw unverified post');
   });
 });
@@ -166,22 +182,24 @@ describe('DeepSeek V4 Pro A2A reasoning', () => {
 function jsonCompletion(content: unknown) {
   return new Response(
     JSON.stringify({
-      choices: [{ message: { content: typeof content === 'string' ? content : JSON.stringify(content) } }],
+      choices: [
+        { message: { content: typeof content === 'string' ? content : JSON.stringify(content) } },
+      ],
     }),
     { status: 200, headers: { 'Content-Type': 'application/json' } },
   );
 }
 
-function deepSeekConfig(): A2AConfig {
+function llmConfig(): A2AConfig {
   return {
     port: 41241,
     publicBaseUrl: 'https://agent.example.com',
     executionMode: 'competition',
     convexUrl: 'https://example.convex.cloud',
     convexSecret: 'persistence-secret',
-    deepseekBaseUrl: 'https://deepseek.example.com/v1',
-    deepseekApiKey: 'deepseek-token',
-    deepseekModel: 'deepseek-v4-pro',
+    llmBaseUrl: 'https://deepseek.example.com/v1',
+    llmApiKey: 'deepseek-token',
+    llmModel: 'deepseek-v4-pro',
     replayTotalDays: 30,
     maxTaskMs: 5_000,
     maxPromptChars: 8_000,
@@ -224,13 +242,16 @@ function historyResult(): SkillResult {
         agent: {
           beliefScoreBefore: 0.4,
           beliefScoreAfter: 0.5,
+          beliefBefore: '继续保持原有仓位。',
+          beliefAfter: '基本面走弱，因此降低了风险敞口。',
+          memory: '近期波动上升。',
           account: { equity: 1_000_000 + index },
           positions: [],
           riskRejections: 0,
           orderCount: 1,
           fillCount: 1,
         },
-        views: [{}],
+        views: [{ symbol: '002594.SZ', rationale: '基本面走弱，需要控制回撤。' }],
         posts: [{ content: 'raw unverified post' }],
         transactions: [{}],
         errors: [],

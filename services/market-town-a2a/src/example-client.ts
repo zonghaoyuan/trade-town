@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { Role, Task, TaskState } from '@a2a-js/sdk';
 import { ClientFactory } from '@a2a-js/sdk/client';
 
-const prompts = [
+const defaultPrompts = [
   '分析 PandaAI 数据中 002594.SZ 的历史走势，并总结 8 个居民的分歧。',
   '运行加息 100bp 实验，seed=20260722，并总结 8 个居民的分歧。',
   '分析 ACME 谣言的传播路径，并比较权威更正前后的居民决策。',
@@ -16,6 +16,8 @@ async function main() {
     '',
   );
   const client = await new ClientFactory().createFromUrl(baseUrl);
+  const onePrompt = process.env.A2A_EXAMPLE_PROMPT?.trim();
+  const prompts = onePrompt ? [onePrompt] : [...defaultPrompts];
 
   const agentId = process.env.TOWN_EXAMPLE_AGENT_ID;
   if (agentId) {
@@ -56,6 +58,9 @@ async function main() {
     const report = response.artifacts
       .flatMap((artifact) => artifact.parts)
       .find((part) => part.content?.$case === 'data');
+    const answer = response.artifacts
+      .flatMap((artifact) => artifact.parts)
+      .find((part) => part.content?.$case === 'text');
     const reportValue =
       report?.content?.$case === 'data'
         ? (report.content.value as
@@ -79,7 +84,14 @@ async function main() {
       state: TaskState[response.status?.state ?? TaskState.TASK_STATE_UNSPECIFIED],
       skillId: reportValue?.skillId,
       dataMode: reportValue?.execution?.dataMode,
-      model: reportValue?.model,
+      model: reportValue?.model
+        ? {
+            configuredModel: reportValue.model.configuredModel,
+            used: reportValue.model.used,
+            stages: reportValue.model.stages,
+          }
+        : undefined,
+      answer: answer?.content?.$case === 'text' ? answer.content.value : undefined,
     });
   }
 }

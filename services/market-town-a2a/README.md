@@ -10,8 +10,8 @@ that serves the frontend. It never imports the Injective signer.
 - `POST /a2a/v1` using JSON-RPC
 - A2A 1.0 with the official SDK's v0.3 compatibility layer
 - blocking, polling, and streaming task flows
-- DeepSeek V4 Pro task planning, parameter extraction, and final report synthesis for all five
-  declared Skills in competition mode
+- OpenAI-compatible LLM task planning, parameter extraction, and direct question answering over tool
+  results for all five declared Skills
 - `Task` persistence in Convex when configured, with an in-memory local fallback
 - five whitelisted skills:
   - `town-agent-history`
@@ -24,7 +24,9 @@ that serves the frontend. It never imports the Injective signer.
 request supplies `agentId` and may supply `symbol`; the returned JSON artifact contains that one
 Agent's daily beliefs, five-symbol views, account, positions, posts, intents, risk results,
 simulated fills and backend errors. It reads only validated `translation-cache/v2` English text and
-fails the task when any day or translation proof is missing.
+fails the task when any day or translation proof is missing. The LLM receives the caller's original
+question plus a bounded summary of those records, so the text artifact is an answer rather than a
+generic retrieval summary.
 
 `panda-market-replay` reads the authorized PandaAI daily-bar datasets for `002594.SZ`, `300750.SZ`,
 `600519.SH`, `601318.SH`, and `688981.SH` (`2024-10-08`–`2025-12-31`) through the shared market
@@ -93,7 +95,9 @@ To retrieve one Agent:
 }
 ```
 
-Each successful task contains a text summary and an `application/json` `MarketTownReport` artifact.
+Each successful task contains a direct text answer and an `application/json` `MarketTownReport`
+artifact. The final task status also carries the answer for A2A clients that primarily render
+messages instead of artifacts.
 
 ## Competition configuration
 
@@ -104,10 +108,13 @@ A2A_EXECUTION_MODE=competition
 A2A_PUBLIC_BASE_URL=https://agent.example.com
 A2A_CONVEX_URL=<convex-url>
 A2A_CONVEX_SHARED_SECRET=<random-secret>
-LLM_API_URL=<deepseek-openai-compatible-endpoint>
-LLM_API_KEY=<deepseek-api-key>
-LLM_MODEL=<deepseek-v4-pro-model-id>
+LLM_API_URL=<openai-compatible-chat-completions-endpoint>
+LLM_API_KEY=<provider-api-key>
+LLM_MODEL=<provider-model-id>
 ```
+
+For Volcano Ark, `ARK_API_KEY` may be used instead of `LLM_API_KEY`; keep `LLM_API_URL` and
+`LLM_MODEL` configured. Never commit either secret.
 
 Set the same persistence secret in Convex:
 
@@ -127,10 +134,11 @@ npx convex env set LLM_MODEL '<deepseek-v4-pro-model-id>'
 These Convex `LLM_*` values are optional for A2A. The A2A Worker itself reads `LLM_*` from
 Cloudflare, while Convex only needs `A2A_CONVEX_SHARED_SECRET` to persist A2A tasks and artifacts.
 
-Competition mode refuses to start without HTTPS, Convex persistence, and all three `LLM_*` settings
-for PandaAI DeepSeek V4 Pro. The A2A endpoint is public and rate-limited. DeepSeek plans every
-competition task before deterministic financial tools run, then synthesizes the evidence-backed
-report. Do not add `INJECTIVE_PRIVATE_KEY` or `INJECTIVE_CONTROL_SECRET` to this process.
+Competition mode refuses to start without HTTPS, Convex persistence, and a complete LLM
+configuration. The A2A endpoint is public and rate-limited. The model plans every competition task
+before deterministic financial tools run, then directly answers the caller's question from the
+bounded, evidence-backed tool result. Do not add `INJECTIVE_PRIVATE_KEY` or
+`INJECTIVE_CONTROL_SECRET` to this process.
 
 ## Verification
 
