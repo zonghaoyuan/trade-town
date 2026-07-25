@@ -46,7 +46,7 @@ export type TownTransactionRecord = {
   quantity: number;
   price?: number;
   state: TownTransactionState;
-  source: 'town' | 'injective';
+  source: 'town' | 'injective' | 'paper';
   txHash?: string;
   blockHeight?: number;
   detail?: string;

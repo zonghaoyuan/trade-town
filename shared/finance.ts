@@ -192,6 +192,7 @@ export const TOWN_TRADERS: readonly TraderProfileSeed[] = [
 export const DEFAULT_VISIBLE_AI_AGENTS = 8;
 export const DEFAULT_MARKET_MAKERS = 2;
 export const DEFAULT_AGENT_COUNT = DEFAULT_VISIBLE_AI_AGENTS + DEFAULT_MARKET_MAKERS;
+export const DEFAULT_INITIAL_AGENT_NAV = 1_000_000;
 export const MAX_AGENT_COUNT = 32;
 
 export function deriveSubaccountId(ethereumAddress: string, nonce: number): string {

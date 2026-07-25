@@ -7,6 +7,7 @@ describe('Market Town A2A skills', () => {
     ['运行加息 100bp 实验，seed=42', 'rate-shock-experiment'],
     ['分析 ACME 谣言传播和权威更正', 'rumor-propagation-analysis'],
     ['复盘保守型用户的从众行为并给出反事实', 'user-behavior-review'],
+    ['调取 agentId=agent-01 的 30 个交易日数据', 'town-agent-history'],
   ] as const)('routes natural language: %s', (prompt, expectedSkill) => {
     expect(parseSkillRequest(textMessage(prompt), 8_000).skillId).toBe(expectedSkill);
   });

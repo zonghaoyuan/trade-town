@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { TOWN_TRADERS } from '../../../shared/finance';
+import { DEFAULT_INITIAL_AGENT_NAV, TOWN_TRADERS } from '../../../shared/finance';
 import type {
   ReplayDayPayload,
   ReplayEvent,
@@ -31,14 +31,20 @@ export function buildReplayDayPayload(args: {
   sessionId: string;
   translations: TranslationMap;
   sourceHash: string;
+  translationMode: 'llm' | 'already_english';
+  translationContentHash: string;
+  translationCacheVersion: 2;
+  translationBatchCount: number;
+  translationItemCount: number;
 }): ReplayDayPayload {
   const { bootstrap, history, dayIndex, totalDays, publishedAt, sessionId, translations } = args;
   const day = history[history.length - 1];
   if (!day) throw new Error('Replay history must include the current day.');
   const previousDay = history[history.length - 2];
   const names = agentNames(bootstrap);
+  const capitalScales = buildCapitalScales(history[0]);
   const label = `Day ${dayIndex}/${totalDays} · ${day.trade_date}`;
-  const transactions = mapTransactions(day, names, label, translations, sessionId);
+  const transactions = mapTransactions(day, names, label, translations, sessionId, capitalScales);
   const events = mapEvents(day, transactions, names, label, publishedAt, translations, sessionId);
   const messages = mapMessages(day, names, label, publishedAt, translations, sessionId);
   const bundle = buildDashboardBundle({
@@ -51,6 +57,7 @@ export function buildReplayDayPayload(args: {
     translations,
     transactions,
     label,
+    capitalScales,
   });
 
   return {
@@ -60,6 +67,12 @@ export function buildReplayDayPayload(args: {
     dayIndex,
     totalDays,
     sourceHash: args.sourceHash,
+    translationMode: args.translationMode,
+    translationSourceHash: args.sourceHash,
+    translationContentHash: args.translationContentHash,
+    translationCacheVersion: args.translationCacheVersion,
+    translationBatchCount: args.translationBatchCount,
+    translationItemCount: args.translationItemCount,
     snapshotJson: JSON.stringify(bundle),
     publishedAt,
     transactions,
@@ -78,6 +91,7 @@ function buildDashboardBundle(args: {
   translations: TranslationMap;
   transactions: ReplayTransaction[];
   label: string;
+  capitalScales: Map<string, number>;
 }) {
   const { bootstrap, history, previousDay, day, dayIndex, totalDays, translations } = args;
   const symbols = bootstrap.symbols.map((item) => item.symbol);
@@ -95,7 +109,8 @@ function buildDashboardBundle(args: {
   }));
   const executions = day.transactions.slice(0, 80).flatMap((transaction, index) => {
     const side = transaction.side.toUpperCase();
-    const quantity = finite(transaction.quantity);
+    const quantity =
+      (finite(transaction.quantity) ?? 0) * (args.capitalScales.get(transaction.account_id) ?? 1);
     if ((side !== 'BUY' && side !== 'SELL') || quantity === undefined || quantity <= 0) return [];
     const price = finite(transaction.fill?.price) ?? marketClose(day, transaction.symbol) ?? 0;
     return [
@@ -114,19 +129,36 @@ function buildDashboardBundle(args: {
         quantity,
         price,
         priceUnit: 'CNY',
-        state: transaction.fill ? 'SIMULATED FILLED' : transaction.state ?? 'SIMULATED',
+        state: transaction.fill ? 'SIMULATED FILLED' : (transaction.state ?? 'SIMULATED'),
         isSimulated: true,
-        reason: `${translated(translations, `risk:${transaction.intent_id}`, 'Simulated risk check completed.')} · SIMULATED_NO_CHAIN`,
+        reason: translated(translations, `risk:${transaction.intent_id}`, 'Simulated risk check completed.'),
       },
     ];
   });
   const dashboards = symbols.map((symbol) => {
     const traders = day.citizens.slice(0, 8).map((citizen, index) =>
-      mapTrader({ bootstrap, citizen, previousDay, symbol, translations, index }),
+      mapTrader({
+        bootstrap,
+        citizen,
+        previousDay,
+        symbol,
+        translations,
+        index,
+        capitalScale: args.capitalScales.get(citizen.agent_id) ?? 1,
+      }),
     );
     const profitable = traders.filter((trader) => trader.pnl > 0);
     const top = [...traders].sort((left, right) => right.pnl - left.pnl)[0];
-    const aum = finite(day.scoreboard?.aum) ?? traders.reduce((sum, trader) => sum + trader.navEnd, 0);
+    const aum = traders.reduce((sum, trader) => sum + trader.navEnd, 0);
+    const totalExposure = traders.reduce(
+      (sum, trader) =>
+        sum +
+        trader.positions.reduce(
+          (positionSum, position) => positionSum + (position.weightPct / 100) * trader.navEnd,
+          0,
+        ),
+      0,
+    );
     return {
       symbol,
       dashboard: {
@@ -144,7 +176,7 @@ function buildDashboardBundle(args: {
         executions,
         summary: {
           aum,
-          totalExposure: finite(day.scoreboard?.gross_exposure) ?? 0,
+          totalExposure,
           volume: executions.reduce((sum, item) => sum + item.price * item.quantity, 0),
           profitableAgents: profitable.length,
           topAgent: top?.name ?? 'No active Agent',
@@ -216,7 +248,12 @@ function mapMarket(current: TownMarketBar, history: TownGameDay[]) {
       {
         label: 'RSI14',
         value: rsi === undefined ? 'N/A' : rsi.toFixed(1),
-        tone: rsi === undefined || (rsi >= 45 && rsi <= 55) ? 'neutral' : rsi > 55 ? 'positive' : 'negative',
+        tone:
+          rsi === undefined || (rsi >= 45 && rsi <= 55)
+            ? 'neutral'
+            : rsi > 55
+              ? 'positive'
+              : 'negative',
       },
       {
         label: 'MA20',
@@ -247,29 +284,32 @@ function mapTrader(args: {
   symbol: string;
   translations: TranslationMap;
   index: number;
+  capitalScale: number;
 }) {
-  const { bootstrap, citizen, previousDay, symbol, translations, index } = args;
+  const { bootstrap, citizen, previousDay, symbol, translations, index, capitalScale } = args;
   const seed = TOWN_TRADERS[index] ?? TOWN_TRADERS[0];
   const name = frontendName(bootstrap, citizen.agent_id);
   const view = citizen.views?.find((candidate) => candidate.symbol === symbol);
   const direction = Number(view?.direction ?? 0);
   const action = direction > 0 ? 'BUY' : direction < 0 ? 'SELL' : 'HOLD';
   const confidence = Math.max(0, Math.min(1, Number(view?.confidence ?? 0)));
-  const navEnd = finite(citizen.account?.equity) ?? 0;
+  const rawNavEnd = finite(citizen.account?.equity) ?? 0;
   const previousCitizen = previousDay?.citizens.find((item) => item.agent_id === citizen.agent_id);
   const derivedStart =
-    navEnd -
+    rawNavEnd -
     (finite(citizen.account?.realized_pnl) ?? 0) -
     (finite(citizen.account?.unrealized_pnl) ?? 0);
-  const navStart = finite(previousCitizen?.account?.equity) ?? derivedStart;
+  const rawNavStart = finite(previousCitizen?.account?.equity) ?? derivedStart;
+  const navEnd = rawNavEnd * capitalScale;
+  const navStart = rawNavStart * capitalScale;
   const positions = (citizen.positions ?? []).map((position) => {
-    const quantity = finite(position.quantity) ?? 0;
+    const quantity = (finite(position.quantity) ?? 0) * capitalScale;
     const markPrice = finite(position.mark_price) ?? 0;
     return {
       symbol: position.symbol,
       quantity,
       weightPct: navEnd > 0 ? (Math.abs(quantity * markPrice) / navEnd) * 100 : 0,
-      pnl: finite(position.unrealized_pnl) ?? 0,
+      pnl: (finite(position.unrealized_pnl) ?? 0) * capitalScale,
     };
   });
   return {
@@ -303,11 +343,11 @@ function mapTrader(args: {
     evidence: [
       `Panda daily bar · ${symbol}`,
       `LLM confidence · ${Math.round(confidence * 100)}%`,
-      'SIMULATED_NO_CHAIN',
+      'Simulated execution',
     ],
     navStart,
     navEnd,
-    cash: finite(citizen.account?.balance) ?? 0,
+    cash: (finite(citizen.account?.balance) ?? 0) * capitalScale,
     positions,
     riskRejections: citizen.risk_rejections ?? 0,
     orderCount: citizen.order_count ?? 0,
@@ -321,10 +361,11 @@ function mapTransactions(
   label: string,
   translations: TranslationMap,
   sessionId: string,
+  capitalScales: Map<string, number>,
 ): ReplayTransaction[] {
   return day.transactions.slice(0, 80).flatMap((item) => {
     const side = item.side.toLowerCase();
-    const quantity = finite(item.quantity);
+    const quantity = (finite(item.quantity) ?? 0) * (capitalScales.get(item.account_id) ?? 1);
     if ((side !== 'buy' && side !== 'sell') || quantity === undefined || quantity <= 0) return [];
     const rejected = item.risk?.status?.toUpperCase() === 'REJECTED';
     const originalState = item.state?.toUpperCase();
@@ -346,7 +387,7 @@ function mapTransactions(
         side: side as 'buy' | 'sell',
         quantity,
         limitPrice: finite(item.fill?.price),
-        rationale: `${label} · ${translated(translations, `risk:${item.intent_id}`, 'Simulated risk check completed.')} · SIMULATED_NO_CHAIN`,
+        rationale: `${label} · ${translated(translations, `risk:${item.intent_id}`, 'Simulated risk check completed.')}`,
         state,
         riskCode: rejected ? 'simulated_risk_rejected' : undefined,
       },
@@ -369,7 +410,8 @@ function mapEvents(
       kind: 'news',
       source: 'Town Replay',
       headline: label,
-      summary: 'LLM Agents processed this historical market checkpoint. Simulation only; no Injective chain proof.',
+      summary:
+        'LLM Agents processed this historical market checkpoint. Simulation only; no Injective chain proof.',
       severity: 0.2,
       symbols: day.market_board.map((item) => item.symbol),
       occurredAt: publishedAt,
@@ -417,7 +459,10 @@ function mapMessages(
   const messages: ReplayMessage[] = [];
   for (const [index, post] of day.social.posts.slice(0, 20).entries()) {
     const author = names.get(post.agent_id) ?? 'Town Agent';
-    const authorIndex = Math.max(0, FRONTEND_AGENT_NAMES.findIndex((candidate) => candidate === author));
+    const authorIndex = Math.max(
+      0,
+      FRONTEND_AGENT_NAMES.findIndex((candidate) => candidate === author),
+    );
     const recipient = FRONTEND_AGENT_NAMES[(authorIndex + 1) % FRONTEND_AGENT_NAMES.length];
     const identity = `${sessionId}:${day.trade_date}:${post.post_id}`;
     messages.push({
@@ -460,6 +505,18 @@ function dashboardEvents(
       ),
     })),
   ];
+}
+
+function buildCapitalScales(firstDay?: TownGameDay) {
+  return new Map(
+    (firstDay?.citizens ?? []).map((citizen) => {
+      const initialEquity = finite(citizen.account?.equity);
+      return [
+        citizen.agent_id,
+        initialEquity && initialEquity > 0 ? DEFAULT_INITIAL_AGENT_NAV / initialEquity : 1,
+      ];
+    }),
+  );
 }
 
 function agentNames(bootstrap: TownBootstrap) {

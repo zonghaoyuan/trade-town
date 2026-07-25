@@ -41,12 +41,28 @@ export const financeTables = {
     dayIndex: v.number(),
     totalDays: v.number(),
     sourceHash: v.string(),
+    // Optional only for schema migration of pre-v2 rows; publishDay requires every field.
+    translationMode: v.optional(v.union(v.literal('llm'), v.literal('already_english'))),
+    translationSourceHash: v.optional(v.string()),
+    translationContentHash: v.optional(v.string()),
+    translationCacheVersion: v.optional(v.number()),
+    translationBatchCount: v.optional(v.number()),
+    translationItemCount: v.optional(v.number()),
     snapshotJson: v.string(),
     publishedAt: v.number(),
     updatedAt: v.number(),
   })
     .index('by_session_day', ['sessionId', 'dayIndex'])
     .index('by_session_date', ['sessionId', 'tradeDate']),
+
+  pandaReplayState: defineTable({
+    key: v.string(),
+    currentDayIndex: v.number(),
+    isPlaying: v.boolean(),
+    speedMs: v.number(),
+    generation: v.number(),
+    updatedAt: v.number(),
+  }).index('by_key', ['key']),
 
   financeConfig: defineTable({
     key: v.string(),

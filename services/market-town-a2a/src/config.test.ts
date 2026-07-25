@@ -28,4 +28,29 @@ describe('A2A configuration', () => {
       }),
     ).toThrow('LLM_API_URL, LLM_API_KEY and LLM_MODEL must be configured together');
   });
+
+  test('also supports the Panda-prefixed DeepSeek variables', () => {
+    const config = loadA2AConfig({
+      PANDA_DEEPSEEK_BASE_URL: 'https://panda-deepseek.example.com/v1',
+      PANDA_DEEPSEEK_API_KEY: 'panda-token',
+      PANDA_DEEPSEEK_MODEL: 'deepseek-v4-pro',
+    });
+
+    expect(config).toMatchObject({
+      deepseekBaseUrl: 'https://panda-deepseek.example.com/v1',
+      deepseekApiKey: 'panda-token',
+      deepseekModel: 'deepseek-v4-pro',
+    });
+  });
+
+  test('rejects a partial Panda-prefixed DeepSeek configuration', () => {
+    expect(() =>
+      loadA2AConfig({
+        PANDA_DEEPSEEK_BASE_URL: 'https://panda-deepseek.example.com/v1',
+        PANDA_DEEPSEEK_API_KEY: 'panda-token',
+      }),
+    ).toThrow(
+      'PANDA_DEEPSEEK_BASE_URL, PANDA_DEEPSEEK_API_KEY and PANDA_DEEPSEEK_MODEL must be configured together',
+    );
+  });
 });

@@ -73,7 +73,7 @@ function day(tradeDate: string, closeOffset: number): TownGameDay {
         state: 'CONFIRMED',
         risk: { status: 'ACCEPTED', reason: 'Risk check passed.' },
         fill: { price: 101 + closeOffset },
-        simulation_label: 'SIMULATED_NO_CHAIN',
+        simulation_label: 'SIMULATED',
       },
     ],
     social: {
@@ -115,15 +115,55 @@ describe('30-day Town replay mapping', () => {
       sessionId: 'session-1',
       translations: translations(history),
       sourceHash: 'hash',
+      translationMode: 'llm' as const,
+      translationContentHash: 'content-hash',
+      translationCacheVersion: 2 as const,
+      translationBatchCount: 1,
+      translationItemCount: 1,
     });
     const bundle = JSON.parse(payload.snapshotJson);
     expect(bundle.dashboards).toHaveLength(5);
     const first = bundle.dashboards[0].dashboard;
     expect(first.markets).toHaveLength(5);
-    expect(first.markets[0]).toMatchObject({ symbol: symbols[0], lastPrice: 104, referencePrice: 103 });
+    expect(first.markets[0]).toMatchObject({
+      symbol: symbols[0],
+      lastPrice: 104,
+      referencePrice: 103,
+    });
     expect(first.markets[0].candles).toHaveLength(2);
     expect(first.traders).toHaveLength(8);
     expect(first.traders[0]).toMatchObject({ name: FRONTEND_AGENT_NAMES[0], action: 'BUY' });
+    expect(first.traders[0].navEnd).toBeCloseTo(1_000_030);
+    expect(first.traders[1].navEnd).toBeCloseTo((100_004 / 100_001) * 1_000_000);
+    expect(first.summary.aum).toBeCloseTo(
+      first.traders.reduce((sum: number, trader: { navEnd: number }) => sum + trader.navEnd, 0),
+    );
+  });
+
+  test('normalizes every LLM agent to the same 1M CNY starting capital', () => {
+    const history = [day('2025-01-02', 0)];
+    const payload = buildReplayDayPayload({
+      bootstrap: bootstrap(),
+      history,
+      dayIndex: 1,
+      totalDays: 30,
+      publishedAt: 1_000,
+      sessionId: 'session-1',
+      translations: translations(history),
+      sourceHash: 'hash',
+      translationMode: 'llm' as const,
+      translationContentHash: 'content-hash',
+      translationCacheVersion: 2 as const,
+      translationBatchCount: 1,
+      translationItemCount: 1,
+    });
+    const first = JSON.parse(payload.snapshotJson).dashboards[0].dashboard;
+    expect(
+      first.traders.every(
+        (trader: { navEnd: number }) => Math.abs(trader.navEnd - 1_000_000) < 0.001,
+      ),
+    ).toBe(true);
+    expect(first.summary.aum).toBeCloseTo(8_000_000);
   });
 
   test('keeps simulated fills out of Injective proof fields and is stable across retries', () => {
@@ -137,12 +177,19 @@ describe('30-day Town replay mapping', () => {
       sessionId: 'session-1',
       translations: translations(history),
       sourceHash: 'hash',
+      translationMode: 'llm' as const,
+      translationContentHash: 'content-hash',
+      translationCacheVersion: 2 as const,
+      translationBatchCount: 1,
+      translationItemCount: 1,
     };
     const first = buildReplayDayPayload(input);
     const second = buildReplayDayPayload(input);
     expect(first.transactions[0]).toMatchObject({ state: 'proposed', side: 'buy' });
-    expect(first.transactions[0].rationale).toContain('SIMULATED_NO_CHAIN');
+    expect(first.transactions[0].rationale).not.toContain(['SIMULATED', 'NO', 'CHAIN'].join('_'));
     expect(first.events.every((event) => !('txHash' in event))).toBe(true);
-    expect(first.events.map((event) => event.eventId)).toEqual(second.events.map((event) => event.eventId));
+    expect(first.events.map((event) => event.eventId)).toEqual(
+      second.events.map((event) => event.eventId),
+    );
   });
 });

@@ -1,4 +1,5 @@
 import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { TOWN_TRADERS } from '../../../shared/finance';
 import type {
   CausalEvent,
   DashboardExecution,
@@ -14,6 +15,7 @@ import TownActivityPanel from './TownActivityPanel';
 import CreateMeModal, { CreatedMeView, CreateMePayload } from '../create-me/CreateMeModal';
 import { loadCreatedMe } from '../../features/create-me/storage';
 import { augmentDashboardWithMe, getMeAgentName } from '../../finance/meSimulation';
+import { PANDA_REPLAY_SPEEDS, type PandaReplayController } from '../../finance/usePandaReplay';
 
 type ViewMode = 'overview' | 'immersive';
 type Drawer = 'markets' | 'agents' | 'activity';
@@ -35,6 +37,15 @@ type TownRenderState = {
   focusedCitizen: FocusedTownCitizen | null;
 };
 
+export type ReplayDisplayState = {
+  mode: 'llm' | 'deterministic';
+  dayIndex: number;
+  dayCount: number;
+  currentDate: string;
+  status: 'replaying' | 'waiting' | 'completed' | 'failed' | 'paused';
+  controller?: PandaReplayController;
+};
+
 export default function TradeTownShell({
   dashboard,
   dayViewDashboard,
@@ -44,6 +55,7 @@ export default function TradeTownShell({
   townControls,
   currentMe,
   onCreateMe,
+  replay,
 }: {
   dashboard: TradeTownDashboard;
   dayViewDashboard: TradeTownDashboard;
@@ -54,6 +66,7 @@ export default function TradeTownShell({
   townMode?: 'live' | 'preview';
   currentMe?: CreatedMeView | null;
   onCreateMe?: (payload: CreateMePayload) => Promise<unknown>;
+  replay?: ReplayDisplayState;
 }) {
   const [selectedSymbol, setSelectedSymbol] = useState(
     dayViewDashboard.markets[0]?.symbol ?? 'ACME',
@@ -167,10 +180,7 @@ export default function TradeTownShell({
         role: focusedTrader.role,
         pnl: focusedFinancialTrader!.pnl,
         pnlSource: focusedFinancialTrader === focusedTrader ? 'simulated' : 'verified',
-        avatarIndex: Math.max(
-          0,
-          activeDashboard.traders.findIndex((candidate) => candidate.name === focusedTrader.name),
-        ),
+        avatarIndex: Math.max(0, townTraderAvatarIndex(focusedTrader.name)),
         avatarUrl: focusedTrader.avatarUrl,
       }
     : null;
@@ -213,6 +223,8 @@ export default function TradeTownShell({
             </a>
           </div>
         </div>
+
+        {replay && <ReplayStatus replay={replay} />}
 
         <div className="pixel-header-actions">
           <button
@@ -275,7 +287,12 @@ export default function TradeTownShell({
             )}
           </div>
 
-          <TownActivityPanel activity={activityFeed} contextEvents={activeDashboard.events} />
+          <TownActivityPanel
+            activity={activityFeed}
+            contextEvents={activeDashboard.events}
+            contextExecutions={replay?.mode === 'llm' ? [] : activeDashboard.executions}
+            contextAsOf={activeDashboard.asOf}
+          />
         </section>
 
         <aside className="pixel-side-panel pixel-agent-panel" aria-label="Town citizens">
@@ -368,6 +385,8 @@ export default function TradeTownShell({
             <TownActivityPanel
               activity={activityFeed}
               contextEvents={activeDashboard.events}
+              contextExecutions={replay?.mode === 'llm' ? [] : activeDashboard.executions}
+              contextAsOf={activeDashboard.asOf}
               drawer
             />
           )}
@@ -390,10 +409,7 @@ export default function TradeTownShell({
             <AgentDetailDrawer
               reasoningTrader={trader}
               financialTrader={financialTrader}
-              avatarIndex={Math.max(
-                0,
-                activeDashboard.traders.findIndex((candidate) => candidate.name === trader.name),
-              )}
+              avatarIndex={townTraderAvatarIndex(trader.name)}
               executions={executions}
               onClose={() => setAgentDetailOpen(false)}
             />
@@ -503,6 +519,81 @@ export default function TradeTownShell({
         />
       )}
     </main>
+  );
+}
+
+function ReplayStatus({ replay }: { replay: ReplayDisplayState }) {
+  const controller = replay.mode === 'deterministic' ? replay.controller : undefined;
+  const atStart = replay.dayIndex <= 0;
+  const atEnd = replay.dayIndex >= replay.dayCount - 1;
+  const statusLabel = {
+    replaying: 'REPLAYING',
+    waiting: 'WAITING',
+    completed: 'COMPLETED',
+    failed: 'FAILED',
+    paused: 'PAUSED',
+  }[replay.status];
+
+  return (
+    <section
+      className={`pixel-replay-status is-${replay.status}`}
+      aria-label={`Replay day ${replay.dayIndex + 1} of ${replay.dayCount}, ${replay.currentDate}, ${statusLabel.toLowerCase()}`}
+      aria-live="polite"
+    >
+      <div className="pixel-replay-status-copy">
+        <span>
+          DAY {replay.dayIndex + 1}/{replay.dayCount}
+        </span>
+        <time dateTime={replay.currentDate} data-short-date={replay.currentDate.slice(5)}>
+          {replay.currentDate}
+        </time>
+        <small>
+          <i aria-hidden="true" />
+          {statusLabel}
+        </small>
+      </div>
+      {controller && (
+        <div className="pixel-replay-status-controls" aria-label="Panda replay controls">
+          <button
+            type="button"
+            aria-label="Previous Panda day"
+            title="Previous day"
+            onClick={() => controller.step(-1)}
+            disabled={atStart}
+          >
+            ◀
+          </button>
+          <button
+            type="button"
+            className="is-primary"
+            aria-label={controller.isPlaying ? 'Pause replay' : 'Play replay'}
+            onClick={controller.togglePlaying}
+          >
+            {controller.isPlaying ? 'Ⅱ' : atEnd ? '↺' : '▶'}
+          </button>
+          <button
+            type="button"
+            aria-label="Next Panda day"
+            title="Next day"
+            onClick={() => controller.step(1)}
+            disabled={atEnd}
+          >
+            ▶
+          </button>
+          <select
+            aria-label="Replay speed"
+            value={controller.speedMs}
+            onChange={(event) => controller.setSpeed(Number(event.target.value))}
+          >
+            {PANDA_REPLAY_SPEEDS.map((speed) => (
+              <option value={speed} key={speed}>
+                {speed === 400 ? '2.5×' : speed === 1_000 ? '1×' : '0.5×'}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -643,55 +734,58 @@ function AgentBoard({
     testnetDashboard.traders.find((candidate) => candidate.name === pandaTrader.name),
     testnetDashboard,
   );
-
-  const traderIndex = Math.max(
-    0,
-    dayViewDashboard.traders.findIndex((candidate) => candidate.name === pandaTrader.name),
+  const rankedTraders = [...dayViewDashboard.traders].sort(
+    (left, right) => right.navEnd - left.navEnd || left.name.localeCompare(right.name),
   );
+  const traderIndex = townTraderAvatarIndex(pandaTrader.name);
+  const selectedRank =
+    rankedTraders.findIndex((candidate) => candidate.name === pandaTrader.name) + 1;
 
   return (
-    <div className="pixel-board pixel-agent-board">
-      <div className="pixel-board-title">
-        <h2>Citizens</h2>
+    <div className="pixel-board pixel-unified-agent-board">
+      <div className="pixel-board-title pixel-board-title-compact">
+        <h2>Agent NAV Ranking</h2>
+        <span>same 1M CNY start · live replay</span>
       </div>
       <div className="pixel-agent-list">
-        {dayViewDashboard.traders.map((agent, index) => {
-          const agentFinancials = resolveAgentFinancialTrader(
-            agent,
-            testnetDashboard.traders.find((candidate) => candidate.name === agent.name),
-            testnetDashboard,
-          );
-          return (
-            <button
-              type="button"
-              key={agent.name}
-              className={agent.name === pandaTrader.name ? 'is-selected' : ''}
-              data-town-citizen-focus
-              onClick={() => onSelect(agent.name)}
-            >
-              <PixelAvatar index={index} textureUrl={agent.avatarUrl} />
-              <span className="pixel-agent-identity">
-                <strong>{agent.name}</strong>
-                <small title={agent.role}>{agent.role}</small>
-              </span>
-              <span className="pixel-agent-scan-state">
-                <em className={`pixel-action action-${agent.action.toLowerCase()}`}>
-                  {agent.action}
-                </em>
-                <strong className={agentFinancials.pnl >= 0 ? 'pixel-up' : 'pixel-down'}>
-                  {formatSignedCompact(agentFinancials.pnl)} {agentFinancials.currency ?? 'CNY'}
-                </strong>
-              </span>
-            </button>
-          );
-        })}
+        {rankedTraders.map((agent, index) => (
+          <button
+            type="button"
+            key={agent.name}
+            className={agent.name === pandaTrader.name ? 'is-selected' : ''}
+            data-town-citizen-focus
+            onClick={() => onSelect(agent.name)}
+          >
+            <strong className={`pixel-agent-rank rank-${index + 1}`}>#{index + 1}</strong>
+            <PixelAvatar index={townTraderAvatarIndex(agent.name)} textureUrl={agent.avatarUrl} />
+            <span className="pixel-agent-identity">
+              <strong>{agent.name}</strong>
+              <small title={agent.role}>{agent.role}</small>
+            </span>
+            <span className="pixel-agent-scan-state">
+              <em className={`pixel-action action-${agent.action.toLowerCase()}`}>
+                {agent.action}
+              </em>
+              <strong className={agent.pnl >= 0 ? 'pixel-up' : 'pixel-down'}>
+                {formatCompact(agent.navEnd)} {agent.currency ?? 'CNY'}
+              </strong>
+              <small className={agent.pnl >= 0 ? 'pixel-up' : 'pixel-down'}>
+                {formatSignedPercent(agent.navStart > 0 ? (agent.pnl / agent.navStart) * 100 : 0)}
+              </small>
+            </span>
+          </button>
+        ))}
       </div>
       <article className="pixel-agent-card pixel-agent-summary-card">
         <div className="pixel-agent-card-identity">
           <PixelAvatar index={traderIndex} textureUrl={pandaTrader.avatarUrl} />
           <div>
-            <h3>{pandaTrader.name}</h3>
-            <span>{pandaTrader.role}</span>
+            <h3>
+              #{selectedRank} {pandaTrader.name}
+            </h3>
+            <span>
+              {formatCompact(pandaTrader.navEnd)} {pandaTrader.currency ?? 'CNY'} NAV
+            </span>
           </div>
           <em className={`pixel-action action-${pandaTrader.action.toLowerCase()}`}>
             {pandaTrader.action}
@@ -1178,6 +1272,17 @@ function formatSignedCompact(value: number) {
     maximumFractionDigits: 1,
     signDisplay: 'always',
   }).format(value);
+}
+
+function formatSignedPercent(value: number) {
+  return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
+}
+
+function townTraderAvatarIndex(name: string) {
+  const knownIndex = TOWN_TRADERS.findIndex((candidate) => candidate.name === name);
+  if (knownIndex >= 0) return knownIndex;
+  const hash = [...name].reduce((sum, character) => sum + character.charCodeAt(0), 0);
+  return hash % Math.max(1, TOWN_TRADERS.length);
 }
 
 function formatMoney(value: number, currency = 'TOWNUSD') {

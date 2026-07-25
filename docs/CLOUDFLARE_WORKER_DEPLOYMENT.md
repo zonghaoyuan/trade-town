@@ -17,7 +17,7 @@ Wrangler 需要 Node.js 22 或更高版本。比赛环境建议使用 Workers Pa
 
 ```json
 {
-  "name": "injective-trade-town"
+  "name": "tradetown"
 }
 ```
 

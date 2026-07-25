@@ -4,11 +4,8 @@ import { api } from '../convex/_generated/api';
 import { Id } from '../convex/_generated/dataModel';
 import Game from './components/Game';
 import TradeTownShell from './components/finance/TradeTownShell';
-import {
-  mergeLiveDashboard,
-  pandaDayViewDashboard,
-  pandaDayViewDashboards,
-} from './finance/demoData';
+import { buildPandaDayViewDashboards, mergeLiveDashboard } from './finance/demoData';
+import { useSyncedPandaReplay } from './finance/useSyncedPandaReplay';
 import { ToastContainer } from 'react-toastify';
 import FreezeButton from './components/FreezeButton';
 import MusicButton from './components/buttons/MusicButton';
@@ -27,15 +24,38 @@ export default function Home() {
   const generateUploadUrl = useMutation(api.createMe.generateUploadUrl);
   const discardUpload = useMutation(api.createMe.discardUpload);
   const dashboard = mergeLiveDashboard(financeState);
+  const hasLlmReplay = Boolean(replayBundle?.dashboards?.length);
+  const pandaReplay = useSyncedPandaReplay(!hasLlmReplay);
+  const pandaDayViewDashboards = useMemo(
+    () => buildPandaDayViewDashboards(pandaReplay.dayIndex),
+    [pandaReplay.dayIndex],
+  );
+  const pandaDayViewDashboard = Object.values(pandaDayViewDashboards)[0];
   const activityFeed = useTownActivityFeed();
   const replayDayViewDashboards = useMemo(() => {
     if (!replayBundle?.dashboards?.length) return pandaDayViewDashboards;
     return Object.fromEntries(
       replayBundle.dashboards.map((item: any) => [item.symbol, item.dashboard]),
     );
-  }, [replayBundle]);
+  }, [pandaDayViewDashboards, replayBundle]);
   const replayDayViewDashboard =
     replayDayViewDashboards[replayBundle?.defaultSymbol] ?? pandaDayViewDashboard;
+  const replay = hasLlmReplay
+    ? {
+        mode: 'llm' as const,
+        dayIndex: Math.max(0, Number(replayBundle?.dayIndex ?? 1) - 1),
+        dayCount: Math.max(1, Number(replayBundle?.totalDays ?? 1)),
+        currentDate: String(replayBundle?.tradeDate ?? ''),
+        status: replayBundle?.status ?? 'replaying',
+      }
+    : {
+        mode: 'deterministic' as const,
+        dayIndex: pandaReplay.dayIndex,
+        dayCount: pandaReplay.dayCount,
+        currentDate: pandaReplay.currentDate,
+        status: pandaReplay.isPlaying ? ('replaying' as const) : ('paused' as const),
+        controller: pandaReplay,
+      };
   const ensuredMeVersion = useRef<number | null>(null);
   const currentMe = useMemo(() => {
     if (!storedMe?.look || !storedMe.version) return null;
@@ -98,6 +118,7 @@ export default function Home() {
         dashboard={dashboard}
         dayViewDashboard={replayDayViewDashboard}
         dayViewDashboards={replayDayViewDashboards}
+        replay={replay}
         activityFeed={activityFeed}
         town={({ focusedCitizen }) => <Game focusedCitizen={focusedCitizen} />}
         townMode="live"

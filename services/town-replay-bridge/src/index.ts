@@ -53,6 +53,11 @@ async function main() {
         sessionId: config.sessionId,
         translations: translation.translations,
         sourceHash: translation.sourceHash,
+        translationMode: translation.mode,
+        translationContentHash: translation.contentHash,
+        translationCacheVersion: translation.cacheVersion,
+        translationBatchCount: translation.proof.batchCount,
+        translationItemCount: translation.proof.translatedCount,
       });
       if (convex) {
         const result = await convex.publishDay(payload);
@@ -137,7 +142,7 @@ async function prepareTranslations(
     }
     const days: TownGameDay[] = [];
     for (const tradeDate of availableDays) days.push(await backend.day(runId, tradeDate));
-    const translatedDays = await mapWithConcurrency(days, 4, async (day) => ({
+    const translatedDays = await mapWithConcurrency(days, 2, async (day) => ({
       tradeDate: day.trade_date,
       result: await translator.translate(bootstrap, day),
     }));
@@ -148,7 +153,6 @@ async function prepareTranslations(
       modes[result.mode] = (modes[result.mode] ?? 0) + 1;
       console.log(JSON.stringify({ status: 'translated', tradeDate, mode: result.mode }));
     }
-    if (externalCalls > totalDays) throw new Error('Translation call budget exceeded.');
     console.log(JSON.stringify({ status: 'translation-cache-ready', days: totalDays, externalCalls, modes }));
     return;
   }

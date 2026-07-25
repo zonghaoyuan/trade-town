@@ -76,6 +76,7 @@ export type DashboardTrader = {
 export type CausalEvent = {
   id: string;
   time: string;
+  occurredAt?: number;
   kind:
     | 'policy'
     | 'news'
@@ -106,6 +107,7 @@ export type SocialActivity = {
 export type DashboardExecution = {
   id: string;
   time: string;
+  occurredAt?: number;
   agentName: string;
   symbol: string;
   type: 'risk_rejected' | 'order' | 'fill';

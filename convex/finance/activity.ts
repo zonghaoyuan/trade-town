@@ -49,19 +49,24 @@ export function buildTransactionFeed(
   fills: ActivityFill[],
   limit: number,
 ): TownTransactionRecord[] {
-  const intentRecords: TownTransactionRecord[] = intents.map((intent) => ({
-    id: `intent:${intent.intentId}`,
-    occurredAt: intent.updatedAt,
-    agentName: intent.agentName,
-    symbol: intent.symbol,
-    side: intent.side,
-    quantity: intent.quantity,
-    price: intent.limitPrice,
-    state: intent.state,
-    source: intent.txHash ? 'injective' : 'town',
-    txHash: intent.txHash,
-    detail: intent.error ?? intent.riskCode ?? intent.rationale,
-  }));
+  const intentRecords: TownTransactionRecord[] = intents.map((intent) => {
+    const isPaperReplay =
+      intent.intentId.startsWith('replay:') ||
+      intent.riskCode?.startsWith('simulated_');
+    return {
+      id: `intent:${intent.intentId}`,
+      occurredAt: intent.updatedAt,
+      agentName: intent.agentName,
+      symbol: intent.symbol,
+      side: intent.side,
+      quantity: intent.quantity,
+      price: intent.limitPrice,
+      state: intent.state,
+      source: intent.txHash ? 'injective' : isPaperReplay ? 'paper' : 'town',
+      txHash: intent.txHash,
+      detail: intent.error ?? intent.riskCode ?? intent.rationale,
+    };
+  });
   const fillRecords: TownTransactionRecord[] = fills.map((fill) => ({
     id: `fill:${fill.tradeId}`,
     occurredAt: fill.executedAt,

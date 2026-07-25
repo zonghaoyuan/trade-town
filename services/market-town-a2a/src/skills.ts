@@ -1,7 +1,11 @@
 import { createHash } from 'node:crypto';
 import { Message } from '@a2a-js/sdk';
 import { formFinancialIntention } from '../../../convex/finance/decision';
-import { TOWN_MARKETS, TOWN_TRADERS } from '../../../shared/finance';
+import {
+  DEFAULT_INITIAL_AGENT_NAV,
+  TOWN_MARKETS,
+  TOWN_TRADERS,
+} from '../../../shared/finance';
 import { pandaHistoricalMarket, pandaHistoricalMarkets } from '../../../shared/pandaMarket';
 import { buildPandaSimulationRun } from '../../../shared/pandaSimulation';
 import { DataMode, EvidenceItem, SKILL_IDS, SkillId, SkillRequest, SkillResult } from './types';
@@ -34,13 +38,18 @@ export function parseSkillRequest(message: Message, maxPromptChars: number): Ski
   const seed = normalizeSeed(readNumber(input.seed) ?? readSeedFromText(prompt) ?? 20260722);
   const dataMode = readDataMode(
     readString(input.dataMode) ?? readString(structured.dataMode),
-    skillId === 'panda-market-replay' ? 'verified-replay' : 'simulated',
+    skillId === 'panda-market-replay' || skillId === 'town-agent-history'
+      ? 'verified-replay'
+      : 'simulated',
   );
 
   return { skillId, prompt, input, seed, dataMode };
 }
 
 export function runSkill(request: SkillRequest, executionMode: 'local-demo' | 'competition') {
+  if (request.skillId === 'town-agent-history') {
+    throw new Error('town-agent-history must be executed through the connected Town data provider.');
+  }
   if (request.skillId === 'panda-market-replay') {
     if (request.dataMode !== 'verified-replay') {
       throw new Error(
@@ -244,10 +253,15 @@ function runRateShock(
         evidence: `利率冲击 ${shockBps}bp 对 ${symbol} 的情景敏感度为 ${impact.toFixed(2)}`,
       },
       portfolio: {
-        cash: 65_000 + index * 2_500,
-        netAssetValue: 100_000,
-        quantity: 300 + index * 25,
-        averagePrice: market.referencePrice * (0.94 + rng() * 0.12),
+        cash:
+          DEFAULT_INITIAL_AGENT_NAV -
+          Math.floor((DEFAULT_INITIAL_AGENT_NAV * 0.2) / market.referencePrice) *
+            market.referencePrice,
+        netAssetValue: DEFAULT_INITIAL_AGENT_NAV,
+        quantity: Math.floor(
+          (DEFAULT_INITIAL_AGENT_NAV * 0.2) / market.referencePrice,
+        ),
+        averagePrice: market.referencePrice,
       },
       riskTolerance: trader.riskTolerance,
     });
@@ -280,7 +294,7 @@ function runRateShock(
         intention.action === 'trade'
           ? round(
               ((intention.side === 'buy' ? 1 : -1) * intention.quantity * intention.limitPrice) /
-                100_000,
+                DEFAULT_INITIAL_AGENT_NAV,
               4,
             )
           : 0,
@@ -534,6 +548,9 @@ function baseResult(
 
 function detectSkill(prompt: string): SkillId {
   const normalized = prompt.toLowerCase();
+  if (/agent\s*(?:id|数据|history)|居民数据|智能体数据|30\s*(?:个)?交易日/.test(normalized)) {
+    return 'town-agent-history';
+  }
   if (
     readPandaSymbol(prompt) ||
     /panda|真实行情|历史行情|历史数据|行情回放|market replay|historical market/.test(normalized)

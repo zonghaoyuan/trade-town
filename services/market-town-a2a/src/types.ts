@@ -3,6 +3,7 @@ export const SKILL_IDS = [
   'rate-shock-experiment',
   'rumor-propagation-analysis',
   'user-behavior-review',
+  'town-agent-history',
 ] as const;
 
 export type SkillId = (typeof SKILL_IDS)[number];

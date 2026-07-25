@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "injective-trade-town",
+  "name": "tradetown",
   "main": "services/market-town-a2a/src/cloudflare.ts",
   "compatibility_date": "2026-07-25",
   "compatibility_flags": ["nodejs_compat"],
@@ -17,5 +17,11 @@
   },
   "observability": {
     "enabled": true
-  }
+  },
+  "routes": [
+    {
+      "pattern": "tradetown.net",
+      "custom_domain": true
+    }
+  ]
 }

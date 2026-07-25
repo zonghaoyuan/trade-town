@@ -44,7 +44,7 @@ export const currentDashboardBundle = query({
         q.eq('sessionId', session.sessionId).eq('dayIndex', session.dayIndex),
       )
       .unique();
-    if (!day) return null;
+    if (!day || !hasV2TranslationProof(day)) return null;
     const snapshot = parseSnapshot(day.snapshotJson);
     return {
       ...snapshot,
@@ -79,6 +79,12 @@ export const publishDay = mutation({
     dayIndex: v.number(),
     totalDays: v.number(),
     sourceHash: v.string(),
+    translationMode: v.union(v.literal('llm'), v.literal('already_english')),
+    translationSourceHash: v.string(),
+    translationContentHash: v.string(),
+    translationCacheVersion: v.number(),
+    translationBatchCount: v.number(),
+    translationItemCount: v.number(),
     snapshotJson: v.string(),
     publishedAt: v.number(),
     transactions: v.array(
@@ -121,6 +127,7 @@ export const publishDay = mutation({
   handler: async (ctx, args) => {
     assertReplaySecret(args.sharedSecret);
     validateDay(args);
+    validateTranslationProof(args);
     parseSnapshot(args.snapshotJson);
     if (args.snapshotJson.length > 900_000) throw new ConvexError('Replay snapshot is too large.');
     if (args.transactions.length > 80 || args.events.length > 120 || args.messages.length > 40) {
@@ -175,6 +182,12 @@ export const publishDay = mutation({
       tradeDate: args.tradeDate,
       totalDays: args.totalDays,
       sourceHash: args.sourceHash,
+      translationMode: args.translationMode,
+      translationSourceHash: args.translationSourceHash,
+      translationContentHash: args.translationContentHash,
+      translationCacheVersion: args.translationCacheVersion,
+      translationBatchCount: args.translationBatchCount,
+      translationItemCount: args.translationItemCount,
       snapshotJson: args.snapshotJson,
       publishedAt: args.publishedAt,
       updatedAt: Date.now(),
@@ -376,6 +389,51 @@ function validateDay(args: { dayIndex: number; totalDays: number; tradeDate: str
     throw new ConvexError('totalDays must be an integer greater than or equal to dayIndex.');
   }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(args.tradeDate)) throw new ConvexError('Invalid tradeDate.');
+}
+
+function validateTranslationProof(args: {
+  sourceHash: string;
+  translationMode: 'llm' | 'already_english';
+  translationSourceHash: string;
+  translationContentHash: string;
+  translationCacheVersion: number;
+  translationBatchCount: number;
+  translationItemCount: number;
+}) {
+  if (args.translationCacheVersion !== 2) {
+    throw new ConvexError('Replay translation cache version must be v2.');
+  }
+  if (args.translationSourceHash !== args.sourceHash) {
+    throw new ConvexError('Replay translation source proof does not match the source payload.');
+  }
+  if (!/^[a-f0-9]{64}$/.test(args.translationSourceHash) || !/^[a-f0-9]{64}$/.test(args.translationContentHash)) {
+    throw new ConvexError('Replay translation proof hashes are invalid.');
+  }
+  if (!Number.isInteger(args.translationBatchCount) || args.translationBatchCount < 0) {
+    throw new ConvexError('Replay translation batch proof is invalid.');
+  }
+  if (!Number.isInteger(args.translationItemCount) || args.translationItemCount < 1) {
+    throw new ConvexError('Replay translation item proof is missing.');
+  }
+  if (args.translationMode === 'llm' && args.translationBatchCount < 1) {
+    throw new ConvexError('LLM translation must include at least one completed batch.');
+  }
+  if (args.translationMode === 'already_english' && args.translationBatchCount !== 0) {
+    throw new ConvexError('Already-English replay data must not claim LLM batches.');
+  }
+}
+
+function hasV2TranslationProof(day: any) {
+  return (
+    day.translationCacheVersion === 2 &&
+    (day.translationMode === 'llm' || day.translationMode === 'already_english') &&
+    typeof day.translationSourceHash === 'string' &&
+    day.translationSourceHash === day.sourceHash &&
+    typeof day.translationContentHash === 'string' &&
+    Number.isInteger(day.translationBatchCount) &&
+    Number.isInteger(day.translationItemCount) &&
+    day.translationItemCount > 0
+  );
 }
 
 function parseSnapshot(value: string): any {

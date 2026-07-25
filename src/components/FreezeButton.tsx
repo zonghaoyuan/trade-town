@@ -1,5 +1,6 @@
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
+import freezeImg from '../../assets/star.svg';
 import Button from './buttons/Button';
 
 export default function FreezeButton() {
@@ -27,7 +28,7 @@ export default function FreezeButton() {
         onClick={flipSwitch}
         className="hidden lg:block"
         title="When freezing a world, the agents will take some time to stop what they are doing before they become frozen. "
-        imgUrl="/assets/star.svg"
+        imgUrl={freezeImg}
       >
         {frozen ? 'Unfreeze' : 'Freeze'}
       </Button>

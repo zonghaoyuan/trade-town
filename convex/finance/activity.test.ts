@@ -97,4 +97,29 @@ describe('town activity feed', () => {
       },
     ]);
   });
+
+  test('labels LLM replay intents as paper trades', () => {
+    const transactions = buildTransactionFeed(
+      [
+        {
+          intentId: 'replay:day-1:intent-1',
+          updatedAt: 100,
+          agentName: 'Mira Chen',
+          symbol: '002594.SZ',
+          side: 'buy',
+          quantity: 20,
+          limitPrice: 101,
+          state: 'proposed',
+          rationale: 'Day 1/30 · simulated fill',
+        },
+      ],
+      [],
+      10,
+    );
+
+    expect(transactions[0]).toMatchObject({
+      source: 'paper',
+      state: 'proposed',
+    });
+  });
 });

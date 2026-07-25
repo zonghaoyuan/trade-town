@@ -64,6 +64,7 @@ describe('DeepSeek V4 Pro A2A reasoning', () => {
       deepseekBaseUrl: 'https://deepseek.example.com/v1',
       deepseekApiKey: 'deepseek-token',
       deepseekModel: 'deepseek-v4-pro',
+      replayTotalDays: 30,
       maxTaskMs: 5_000,
       maxPromptChars: 8_000,
       rateLimitPerMinute: 60,

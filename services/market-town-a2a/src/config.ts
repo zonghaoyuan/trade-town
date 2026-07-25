@@ -10,6 +10,10 @@ export type A2AConfig = {
   deepseekBaseUrl?: string;
   deepseekApiKey?: string;
   deepseekModel?: string;
+  townBackendUrl?: string;
+  townRunId?: string;
+  translationCacheDir?: string;
+  replayTotalDays: number;
   maxTaskMs: number;
   maxPromptChars: number;
   rateLimitPerMinute: number;
@@ -24,9 +28,34 @@ export function loadA2AConfig(env: NodeJS.ProcessEnv = process.env): A2AConfig {
   const apiKey = optional(env.A2A_API_KEY);
   const convexUrl = optional(env.A2A_CONVEX_URL);
   const convexSecret = optional(env.A2A_CONVEX_SHARED_SECRET);
-  const deepseekBaseUrl = optional(env.LLM_API_URL);
-  const deepseekApiKey = optional(env.LLM_API_KEY);
-  const deepseekModel = optional(env.LLM_MODEL);
+  const sharedDeepseek = {
+    baseUrl: optional(env.LLM_API_URL),
+    apiKey: optional(env.LLM_API_KEY),
+    model: optional(env.LLM_MODEL),
+  };
+  const pandaDeepseek = {
+    baseUrl: optional(env.PANDA_DEEPSEEK_BASE_URL),
+    apiKey: optional(env.PANDA_DEEPSEEK_API_KEY),
+    model: optional(env.PANDA_DEEPSEEK_MODEL),
+  };
+  validateOptionalGroup(sharedDeepseek, 'LLM_API_URL, LLM_API_KEY and LLM_MODEL');
+  validateOptionalGroup(
+    pandaDeepseek,
+    'PANDA_DEEPSEEK_BASE_URL, PANDA_DEEPSEEK_API_KEY and PANDA_DEEPSEEK_MODEL',
+  );
+  const deepseekBaseUrl = sharedDeepseek.baseUrl ?? pandaDeepseek.baseUrl;
+  const deepseekApiKey = sharedDeepseek.apiKey ?? pandaDeepseek.apiKey;
+  const deepseekModel = sharedDeepseek.model ?? pandaDeepseek.model;
+  const townBackendUrl = optional(env.TOWN_BACKEND_URL)?.replace(/\/+$/, '');
+  const townRunId = optional(env.TOWN_RUN_ID);
+  const translationCacheDir = optional(env.TOWN_TRANSLATION_CACHE_DIR);
+  const replayTotalDays = readInteger(
+    env.TOWN_REPLAY_TOTAL_DAYS,
+    30,
+    30,
+    30,
+    'TOWN_REPLAY_TOTAL_DAYS',
+  );
   const maxTaskMs = readInteger(
     env.A2A_MAX_TASK_MS,
     18 * 60 * 1000,
@@ -52,14 +81,6 @@ export function loadA2AConfig(env: NodeJS.ProcessEnv = process.env): A2AConfig {
   if (Boolean(convexUrl) !== Boolean(convexSecret)) {
     throw new Error('A2A_CONVEX_URL and A2A_CONVEX_SHARED_SECRET must be configured together.');
   }
-  if (
-    [deepseekBaseUrl, deepseekApiKey, deepseekModel].some(Boolean) &&
-    ![deepseekBaseUrl, deepseekApiKey, deepseekModel].every(Boolean)
-  ) {
-    throw new Error(
-      'LLM_API_URL, LLM_API_KEY and LLM_MODEL must be configured together.',
-    );
-  }
   if (executionMode === 'competition') {
     if (!apiKey) {
       throw new Error('A2A_EXECUTION_MODE=competition requires A2A_API_KEY.');
@@ -69,7 +90,7 @@ export function loadA2AConfig(env: NodeJS.ProcessEnv = process.env): A2AConfig {
     }
     if (!deepseekBaseUrl || !deepseekApiKey || !deepseekModel) {
       throw new Error(
-        'A2A_EXECUTION_MODE=competition requires LLM_API_URL, LLM_API_KEY and LLM_MODEL for DeepSeek V4 Pro.',
+        'A2A_EXECUTION_MODE=competition requires a complete LLM_* or PANDA_DEEPSEEK_* configuration for DeepSeek V4 Pro.',
       );
     }
     if (!publicBaseUrl.startsWith('https://')) {
@@ -87,6 +108,10 @@ export function loadA2AConfig(env: NodeJS.ProcessEnv = process.env): A2AConfig {
     deepseekBaseUrl,
     deepseekApiKey,
     deepseekModel,
+    townBackendUrl,
+    townRunId,
+    translationCacheDir,
+    replayTotalDays,
     maxTaskMs,
     maxPromptChars,
     rateLimitPerMinute,
@@ -123,6 +148,16 @@ function readInteger(
 function optional(value: string | undefined) {
   const normalized = value?.trim();
   return normalized || undefined;
+}
+
+function validateOptionalGroup(
+  values: { baseUrl?: string; apiKey?: string; model?: string },
+  names: string,
+) {
+  const configured = [values.baseUrl, values.apiKey, values.model];
+  if (configured.some(Boolean) && !configured.every(Boolean)) {
+    throw new Error(`${names} must be configured together.`);
+  }
 }
 
 function normalizeBaseUrl(value: string) {
