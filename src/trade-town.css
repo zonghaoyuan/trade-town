@@ -6581,7 +6581,7 @@ textarea {
   display: flex;
   align-items: stretch;
   gap: 7px;
-  justify-self: start;
+  justify-self: end;
   box-shadow:
     inset -2px -2px 0 var(--town-clay),
     3px 3px 0 rgba(18, 15, 28, 0.65);
